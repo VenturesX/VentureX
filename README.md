@@ -8,6 +8,48 @@ This repository ships the first vertical slice:
 
 **Airport arrival meet-and-greet → curb queue → dispatch assignment → driver status sequence → live client view.**
 
+## Open in Cursor (founder path)
+
+1. Open this repo in Cursor from [Codebase](https://cursor.com/codebase/venturex/tmp-948d703211f0ca7d).
+2. Ask the agent to walk the demo, or use **Preview** if a cloud agent already has the app running.
+3. That preview is on the agent desktop only — **it is not a phone URL**.
+
+For a link you can open on a phone, deploy to Vercel (below). Demo logins stay the same.
+
+## Founder: get a preview URL (phone)
+
+You cannot use the local `npm` commands on a phone. Host it on **Vercel + a free Postgres**.
+
+SQLite (`file:./dev.db`) is **local only**. Vercel’s filesystem is ephemeral, so a hosted preview **requires Postgres** (Neon or Supabase free tier).
+
+### 1. Create a free Postgres
+
+- [Neon](https://neon.tech) → New project → copy the **direct / non-pooled** connection string, or
+- [Supabase](https://supabase.com) → New project → Project Settings → Database → URI  
+
+It must start with `postgresql://` and include `?sslmode=require`.
+
+### 2. Deploy on Vercel
+
+1. Go to [vercel.com](https://vercel.com) → **Add New…** → **Project**.
+2. Import Origin repo **`venturex/tmp-948d703211f0ca7d`**.  
+   If Origin is not in the Git list: **Import Third-Party Git Repository** and use  
+   `https://origin.cursor.com/git/venturex/tmp-948d703211f0ca7d`.
+3. Framework: **Next.js** (auto).
+4. Paste these **Environment Variables** (Production + Preview):
+
+| Name | Value |
+| --- | --- |
+| `DATABASE_URL` | Your Neon/Supabase `postgresql://…?sslmode=require` URI |
+| `AUTH_SECRET` | Any long random string (e.g. `venture-directors-preview-2026`) |
+| `NEXT_PUBLIC_APP_NAME` | `Venture Directors` |
+| `PROVIDER_MODE` | `mock` |
+
+5. Deploy. First build runs `prisma db push` and **re-seeds the demo** (Whitaker walkthrough ready).
+6. Open the `*.vercel.app` URL on your phone.
+
+No other env vars are required. Do **not** set `DATABASE_URL` to `file:./dev.db` on Vercel.
+
 ## Stack choice
 
 | Layer | Choice | Why |
@@ -38,11 +80,7 @@ Dev server: [http://127.0.0.1:43127](http://127.0.0.1:43127)
 
 ### Environment
 
-```
-DATABASE_URL="file:./dev.db"
-AUTH_SECRET="replace-with-a-long-random-string"
-PROVIDER_MODE="mock"
-```
+See `.env.example`. Local uses SQLite (`DATABASE_URL=file:./dev.db`). Vercel preview must use Postgres — see **Founder: get a preview URL** above.
 
 ## Seed accounts
 
@@ -120,7 +158,8 @@ Admin can CRUD: clients, events, locations, circular geofences, routes, users, o
 - **Partner operators** exist as records only. No partner load board, no multi-operator marketplace.
 - **Wait target** defaults to 15–20 minutes and is configurable per event.
 - **Realtime is single-process SSE.** Multiple Node instances would need a shared pub/sub (Redis, etc.).
-- **SQLite is the local SoR.** Postgres is the intended production database.
+- **SQLite is the local SoR.** Hosted preview/production uses Postgres via `DATABASE_URL`. Each Vercel build re-seeds the demo unless `SKIP_DEMO_SEED=1`.
+- **Realtime SSE is single-process.** Vercel serverless may drop long SSE connections; portals also poll every 12s.
 - Production SMS, FlightAware, Stripe, public quote/booking, polygon geofences, native apps, and AI dispatch are **out of scope**.
 
 ## PWA
