@@ -50,6 +50,30 @@ It must start with `postgresql://` and include `?sslmode=require`.
 
 No other env vars are required. Do **not** set `DATABASE_URL` to `file:./dev.db` on Vercel.
 
+### If Vercel only sees GitHub (Origin not listed)
+
+This app lives on **Cursor Origin**, not GitHub. Keep Origin as source of truth; GitHub is a deploy mirror.
+
+1. On GitHub (the same account/org connected to Vercel): **New repository** → name `venture-directors` → **do not** add a README. Prefer `VenturesX/venture-directors` or `venturex/venture-directors` if that org exists; otherwise use `YOUR_USER/venture-directors`.
+2. From a machine where you are logged into GitHub:
+
+```bash
+git clone https://origin.cursor.com/git/venturex/tmp-948d703211f0ca7d.git venture-directors
+cd venture-directors
+git remote add github https://github.com/YOUR_USER/venture-directors.git
+git push -u github main
+```
+
+Or with the GitHub CLI (after `gh auth login`):
+
+```bash
+gh repo create VenturesX/venture-directors --private --source=. --remote=github --push
+```
+
+3. In Vercel → Import **GitHub** → select `venture-directors` → paste the same env vars as above.
+
+Later code changes: push to Origin first, then `git push github main` to update the deploy mirror.
+
 ## Stack choice
 
 | Layer | Choice | Why |
