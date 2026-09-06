@@ -70,7 +70,9 @@ export function DriverBoard() {
         <div className="text-lg font-medium">{assignment.movement.origin.name}</div>
         <div className="text-xs uppercase tracking-wide text-muted-foreground pt-2">Drop</div>
         <div className="text-lg font-medium">{assignment.movement.destination.name}</div>
-        <p className="text-sm text-muted-foreground">{pax} pax · {assignment.guests.length} names · {assignment.vehicle.capacity} seats</p>
+        <p className="text-sm text-muted-foreground">
+          {pax} pax · {assignment.guests.length} {assignment.guests.length === 1 ? "guest" : "guests"} · {assignment.vehicle.capacity} seats
+        </p>
       </section>
 
       <a
