@@ -1,0 +1,5 @@
+firstName,lastName,email,phone,partySize,partyCode,flightNumber,flightEta,hotelName,confirmationCode,priority,notes,assistanceNotes
+Ingrid,Holm,ingrid.holm@example.com,+1-407-555-1401,2,HLM-02,LH 442,2026-11-16T19:10:00-05:00,Hyatt Regency Orlando,IAAPA-HLM-02,VIP,Hosted buyer from Hamburg,
+Tomas,Holm,tomas.holm@example.com,+1-407-555-1402,1,HLM-02,LH 442,2026-11-16T19:10:00-05:00,Hyatt Regency Orlando,IAAPA-HLM-02B,NORMAL,,
+Keiko,Arata,keiko.arata@example.com,+1-407-555-1403,1,ART-01,NH 12,2026-11-16T20:05:00-05:00,Hyatt Regency Orlando,IAAPA-ART-01,ACCESSIBILITY,,Low-vision assist to curb
+Samuel,Osei,samuel.osei@example.com,+1-407-555-1404,3,OSE-03,BA 2037,2026-11-16T18:40:00-05:00,Hyatt Regency Orlando,IAAPA-OSE-03,NORMAL,,

@@ -1,0 +1,407 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  DISPATCHER
+  MEET_GREET
+  DRIVER
+  CLIENT
+}
+
+enum GuestStatus {
+  EXPECTED
+  ARRIVED
+  FOUND
+  CHECKED_IN
+  QUEUED
+  ASSIGNED
+  BOARDED
+  DEPARTED
+  COMPLETED
+  NO_SHOW
+  CANCELLED
+  NEEDS_ASSISTANCE
+}
+
+enum VehicleStatus {
+  OFFLINE
+  AVAILABLE
+  ASSIGNED
+  EN_ROUTE
+  STAGED
+  ARRIVED
+  LOADING
+  IN_SERVICE
+  COMPLETED
+  DELAYED
+  BREAKDOWN
+  REMOVED
+}
+
+enum MovementStatus {
+  PLANNED
+  OPEN
+  ASSIGNED
+  ACTIVE
+  COMPLETED
+  HOLD
+  CANCELLED
+  INCIDENT
+}
+
+enum Priority {
+  NORMAL
+  VIP
+  ACCESSIBILITY
+}
+
+enum LocationType {
+  AIRPORT
+  HOTEL
+  VENUE
+  STAGING
+  CURB
+}
+
+enum VehicleType {
+  SEDAN
+  SUV
+  SPRINTER
+  MOTORCOACH
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String
+  name          String
+  role          Role
+  phone         String?
+  clientId      String?
+  client        Client?   @relation(fields: [clientId], references: [id])
+  driver        Driver?
+  deletedAt     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  assignmentsMade Assignment[]    @relation("AssignedBy")
+  auditLogs       AuditLog[]
+  statusChanges   StatusHistory[]
+}
+
+model Client {
+  id           String    @id @default(cuid())
+  name         String
+  contactName  String?
+  contactEmail String?
+  contactPhone String?
+  notes        String?
+  deletedAt    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  events       Event[]
+  users        User[]
+}
+
+model Event {
+  id                String    @id @default(cuid())
+  clientId          String
+  client            Client    @relation(fields: [clientId], references: [id])
+  name              String
+  code              String    @unique
+  city              String    @default("Orlando")
+  timezone          String    @default("America/New_York")
+  startsAt          DateTime
+  endsAt            DateTime
+  waitTargetMinutes Int       @default(18)
+  status            String    @default("ACTIVE")
+  deletedAt         DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  locations     Location[]
+  geofences     Geofence[]
+  routes        Route[]
+  movements     Movement[]
+  guests        Guest[]
+  vehicles      Vehicle[]
+  exceptions    Exception[]
+  alertConfig   AlertConfig?
+  timingPresets TimingPreset[]
+}
+
+model Location {
+  id        String       @id @default(cuid())
+  eventId   String?
+  event     Event?       @relation(fields: [eventId], references: [id])
+  name      String
+  type      LocationType
+  address   String?
+  lat       Float
+  lng       Float
+  notes     String?
+  deletedAt DateTime?
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  geofences         Geofence[]
+  originRoutes      Route[]    @relation("RouteOrigin")
+  destRoutes        Route[]    @relation("RouteDest")
+  originMovements   Movement[] @relation("MoveOrigin")
+  destMovements     Movement[] @relation("MoveDest")
+}
+
+model Geofence {
+  id           String    @id @default(cuid())
+  eventId      String
+  event        Event     @relation(fields: [eventId], references: [id])
+  locationId   String?
+  location     Location? @relation(fields: [locationId], references: [id])
+  name         String
+  kind         String    @default("QUEUE_ZONE")
+  centerLat    Float
+  centerLng    Float
+  radiusMeters Int
+  deletedAt    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model Route {
+  id               String    @id @default(cuid())
+  eventId          String
+  event            Event     @relation(fields: [eventId], references: [id])
+  name             String
+  originId         String
+  origin           Location  @relation("RouteOrigin", fields: [originId], references: [id])
+  destinationId    String
+  destination      Location  @relation("RouteDest", fields: [destinationId], references: [id])
+  estimatedMinutes Int
+  deletedAt        DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  movements        Movement[]
+}
+
+model Operator {
+  id           String    @id @default(cuid())
+  name         String
+  contactEmail String?
+  phone        String?
+  notes        String?
+  deletedAt    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  vehicles     Vehicle[]
+  drivers      Driver[]
+}
+
+model Vehicle {
+  id         String        @id @default(cuid())
+  eventId    String?
+  event      Event?        @relation(fields: [eventId], references: [id])
+  operatorId String?
+  operator   Operator?     @relation(fields: [operatorId], references: [id])
+  name       String
+  fleetNumber String
+  type       VehicleType
+  capacity   Int
+  status     VehicleStatus @default(AVAILABLE)
+  notes      String?
+  deletedAt  DateTime?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  currentDriver Driver?       @relation("CurrentVehicle")
+  assignments   Assignment[]
+}
+
+model Driver {
+  id               String        @id @default(cuid())
+  userId           String        @unique
+  user             User          @relation(fields: [userId], references: [id])
+  operatorId       String?
+  operator         Operator?     @relation(fields: [operatorId], references: [id])
+  licenseNumber    String?
+  phone            String?
+  status           VehicleStatus @default(AVAILABLE)
+  currentVehicleId String?       @unique
+  currentVehicle   Vehicle?      @relation("CurrentVehicle", fields: [currentVehicleId], references: [id])
+  deletedAt        DateTime?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  assignments      Assignment[]
+}
+
+model Movement {
+  id            String         @id @default(cuid())
+  eventId       String
+  event         Event          @relation(fields: [eventId], references: [id])
+  routeId       String?
+  route         Route?         @relation(fields: [routeId], references: [id])
+  name          String
+  type          String         @default("AIRPORT_ARRIVAL")
+  status        MovementStatus @default(PLANNED)
+  scheduledAt   DateTime
+  originId      String
+  origin        Location       @relation("MoveOrigin", fields: [originId], references: [id])
+  destinationId String
+  destination   Location       @relation("MoveDest", fields: [destinationId], references: [id])
+  notes         String?
+  deletedAt     DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  guests        Guest[]
+  assignments   Assignment[]
+}
+
+model Guest {
+  id               String      @id @default(cuid())
+  eventId          String
+  event            Event       @relation(fields: [eventId], references: [id])
+  movementId       String?
+  movement         Movement?   @relation(fields: [movementId], references: [id])
+  firstName        String
+  lastName         String
+  email            String?
+  phone            String?
+  partySize        Int         @default(1)
+  partyCode        String?
+  flightNumber     String?
+  flightEta        DateTime?
+  hotelName        String?
+  confirmationCode String?
+  priority         Priority    @default(NORMAL)
+  status           GuestStatus @default(EXPECTED)
+  notes            String?
+  assistanceNotes  String?
+  foundAt          DateTime?
+  checkedInAt      DateTime?
+  queuedAt         DateTime?
+  assignedAt       DateTime?
+  boardedAt        DateTime?
+  departedAt       DateTime?
+  completedAt      DateTime?
+  deletedAt        DateTime?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  assignmentGuests AssignmentGuest[]
+
+  @@index([eventId, lastName])
+  @@index([eventId, confirmationCode])
+  @@index([eventId, partyCode])
+  @@index([eventId, status])
+  @@index([eventId, flightNumber])
+}
+
+model Assignment {
+  id           String    @id @default(cuid())
+  movementId   String
+  movement     Movement  @relation(fields: [movementId], references: [id])
+  vehicleId    String
+  vehicle      Vehicle   @relation(fields: [vehicleId], references: [id])
+  driverId     String
+  driver       Driver    @relation(fields: [driverId], references: [id])
+  assignedById String
+  assignedBy   User      @relation("AssignedBy", fields: [assignedById], references: [id])
+  status       String    @default("ACTIVE")
+  notes        String?
+  assignedAt   DateTime  @default(now())
+  completedAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  guests       AssignmentGuest[]
+}
+
+model AssignmentGuest {
+  assignmentId String
+  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  guestId      String
+  guest        Guest      @relation(fields: [guestId], references: [id])
+
+  @@id([assignmentId, guestId])
+}
+
+model StatusHistory {
+  id         String   @id @default(cuid())
+  entityType String
+  entityId   String
+  fromStatus String?
+  toStatus   String
+  actorId    String?
+  actor      User?    @relation(fields: [actorId], references: [id])
+  reason     String?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actor      User?    @relation(fields: [actorId], references: [id])
+  action     String
+  entityType String
+  entityId   String
+  beforeJson String?
+  afterJson  String?
+  reason     String?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
+
+model Exception {
+  id           String    @id @default(cuid())
+  eventId      String
+  event        Event     @relation(fields: [eventId], references: [id])
+  type         String
+  severity     String    @default("WARNING")
+  title        String
+  detail       String?
+  status       String    @default("OPEN")
+  guestId      String?
+  vehicleId    String?
+  assignmentId String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  resolvedAt   DateTime?
+}
+
+model AlertConfig {
+  id                      String  @id @default(cuid())
+  eventId                 String  @unique
+  event                   Event   @relation(fields: [eventId], references: [id])
+  waitThresholdMinutes    Int     @default(18)
+  vipWaitThresholdMinutes Int     @default(10)
+  queueCapacityAlert      Int     @default(40)
+  enabled                 Boolean @default(true)
+}
+
+model TimingPreset {
+  id            String @id @default(cuid())
+  eventId       String
+  event         Event  @relation(fields: [eventId], references: [id])
+  name          String
+  loadMinutes   Int
+  travelMinutes Int
+  bufferMinutes Int
+}
+
+model MockOutboundMessage {
+  id        String   @id @default(cuid())
+  channel   String
+  to        String
+  body      String
+  status    String   @default("MOCK_SENT")
+  createdAt DateTime @default(now())
+}
