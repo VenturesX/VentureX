@@ -1,5 +1,6 @@
 import { PortalShell } from "@/components/portal-shell";
 import { ClientBoard } from "@/components/portals/client-board";
+import { GuestAccessPanel } from "@/components/portals/guest-access-panel";
 import { directLineForEvent } from "@/lib/ops-settings";
 import { requirePortal } from "@/lib/session-server";
 
@@ -14,6 +15,7 @@ export default async function ClientPage() {
       eventName={event.name}
       nav={[{ href: "/client", label: "Movement" }]}
     >
+      <GuestAccessPanel />
       <ClientBoard eventId={event.id} directLine={line.phone} />
     </PortalShell>
   );

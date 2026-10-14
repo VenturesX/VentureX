@@ -1,6 +1,7 @@
 import { PortalShell } from "@/components/portal-shell";
 import { AdminBoard } from "@/components/portals/admin-board";
 import { FieldSettings } from "@/components/portals/field-settings";
+import { GuestAccessPanel } from "@/components/portals/guest-access-panel";
 import { requirePortal } from "@/lib/session-server";
 
 export default async function AdminPage() {
@@ -21,6 +22,7 @@ export default async function AdminPage() {
         { href: "/client", label: "Client" },
       ]}
     >
+      <GuestAccessPanel />
       <FieldSettings eventId={event.id} />
       <AdminBoard eventId={event.id} />
     </PortalShell>

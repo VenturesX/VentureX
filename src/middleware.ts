@@ -15,9 +15,12 @@ function isPublic(pathname: string, method: string) {
   if (pathname === "/api/quotes/preview" && method === "POST") return true;
   if (pathname === "/api/places" && method === "GET") return true;
   if (pathname === "/traveling" || pathname.startsWith("/traveling/")) return true;
+  if (pathname === "/t" || pathname.startsWith("/t/")) return true;
   if (pathname === "/api/help" && method === "GET") return true;
   if (pathname === "/api/callbacks" && method === "POST") return true;
   if (pathname === "/api/guest/board" && method === "GET") return true;
+  if (pathname === "/api/guest/code" && method === "POST") return true;
+  if (pathname === "/api/guest/unlock" && method === "POST") return true;
   if (pathname === "/api/guest/requests" && method === "POST") return true;
   return PUBLIC.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }

@@ -6,6 +6,7 @@ import {
 } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { DEFAULT_EXPERT_PHONE, OWNER_OFFICE_HOURS, SETTINGS_KEYS } from "../src/lib/guidance";
+import { defaultGuestExpiry, makeGuestCode, makeGuestToken } from "../src/lib/guest-codes";
 
 const db = new PrismaClient();
 const PASSWORD = "VentureOps!26";
@@ -27,6 +28,7 @@ async function main() {
   await db.vehicle.deleteMany();
   await db.user.deleteMany();
   await db.location.deleteMany();
+  await db.guestAccessAttempt.deleteMany();
   await db.guestRequest.deleteMany();
   await db.eventFaq.deleteMany();
   await db.event.deleteMany();
@@ -196,6 +198,18 @@ async function main() {
       notes: "Primary vertical slice: meet-and-greet → queue → assign → driver sequence.",
     },
   });
+
+  const guestCode = makeGuestCode();
+  await db.event.update({
+    where: { id: event.id },
+    data: {
+      guestToken: makeGuestToken(),
+      guestCode,
+      guestAccess: "TOKEN",
+      guestTokenExpiresAt: defaultGuestExpiry(endsAt, movement.scheduledAt),
+    },
+  });
+  console.log(`Guest trip code: ${guestCode}`);
 
   const operator = await db.operator.create({
     data: {

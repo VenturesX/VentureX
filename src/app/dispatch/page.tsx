@@ -1,5 +1,6 @@
 import { PortalShell } from "@/components/portal-shell";
 import { DispatchBoard } from "@/components/portals/dispatch-board";
+import { GuestAccessPanel } from "@/components/portals/guest-access-panel";
 import { requirePortal } from "@/lib/session-server";
 
 export default async function DispatchPage() {
@@ -17,6 +18,7 @@ export default async function DispatchPage() {
       ]}
       tone="field"
     >
+      <GuestAccessPanel />
       <DispatchBoard eventId={event.id} />
     </PortalShell>
   );

@@ -133,8 +133,13 @@ model Event {
   guests        Guest[]
   vehicles      Vehicle[]
   exceptions    Exception[]
-  directLinePhone   String?
-  guestPhoneEnabled Boolean   @default(false)
+  directLinePhone     String?
+  guestPhoneEnabled   Boolean   @default(false)
+  guestToken          String?   @unique
+  guestCode           String?   @unique
+  guestAccess         String    @default("TOKEN")
+  guestPin            String?
+  guestTokenExpiresAt DateTime?
   alertConfig       AlertConfig?
   timingPresets     TimingPreset[]
   faqs              EventFaq[]
@@ -259,11 +264,14 @@ model Movement {
   destinationId String
   destination   Location       @relation("MoveDest", fields: [destinationId], references: [id])
   notes         String?
+  guestToken    String?        @unique
+  guestCode     String?        @unique
   deletedAt     DateTime?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   guests        Guest[]
   assignments   Assignment[]
+  guestRequests GuestRequest[]
 }
 
 model Guest {
@@ -520,10 +528,20 @@ model EventFaq {
   @@index([eventId])
 }
 
+model GuestAccessAttempt {
+  id        String   @id @default(cuid())
+  ip        String
+  createdAt DateTime @default(now())
+
+  @@index([ip, createdAt])
+}
+
 model GuestRequest {
-  id             String   @id @default(cuid())
+  id             String    @id @default(cuid())
   eventId        String
-  event          Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  event          Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  movementId     String?
+  movement       Movement? @relation(fields: [movementId], references: [id], onDelete: SetNull)
   category       String
   message        String
   name           String?

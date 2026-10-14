@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import { TravelingBoard } from "@/components/marketing/traveling-board";
+import { TripCodeForm } from "@/components/marketing/trip-code";
 
 export const metadata: Metadata = {
   title: "Traveling with us now — Venture Directors",
-  description: "Pickup notes, schedule, and a way to ask the event team a question.",
+  description: "Enter the event code from your planner to open your group's trip.",
 };
 
 export default function TravelingPage() {
-  return <TravelingBoard />;
+  return <TripCodeForm />;
 }

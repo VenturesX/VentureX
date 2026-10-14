@@ -13,6 +13,7 @@ type Row = {
   duplicateCount: number;
   status: string;
   createdAt: string;
+  movementName?: string | null;
 };
 
 const LABELS: Record<string, string> = {
@@ -86,6 +87,7 @@ export function GuestInbox() {
               {row.duplicateCount > 1 ? `${row.duplicateCount} guests asked this. ` : ""}
               {row.name || "No name"}
               {row.phone ? ` · ${row.phone}` : ""}
+              {row.movementName ? ` · ${row.movementName}` : ""}
             </p>
             <div className="mt-3">
               {row.status === "OPEN" ? (

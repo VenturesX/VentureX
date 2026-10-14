@@ -59,6 +59,8 @@ export function canMutate(role: Role, action: string) {
       return admin;
     case "ops.inbox":
       return admin || role === "DISPATCHER" || role === "MEET_GREET";
+    case "ops.guest_access":
+      return admin || role === "DISPATCHER" || role === "CLIENT";
     default:
       return admin;
   }
