@@ -185,8 +185,8 @@ const quoteSchema = z
         ctx.addIssue({ code: "custom", path: ["passengerCount"], message: "Enter a passenger count from 1 to 50,000" });
       }
     }
-    if (data.vehicleCount && (!/^\d+$/.test(data.vehicleCount) || Number(data.vehicleCount) > 200)) {
-      ctx.addIssue({ code: "custom", path: ["vehicleCount"], message: "Enter a vehicle count from 0 to 200" });
+    if (data.vehicleCount && (!/^\d+$/.test(data.vehicleCount) || Number(data.vehicleCount) > 10000)) {
+      ctx.addIssue({ code: "custom", path: ["vehicleCount"], message: "Enter a vehicle count from 0 to 10,000" });
     }
     if (data.vehiclePreference && !oneOf(data.vehiclePreference, QUOTE_VEHICLES)) {
       ctx.addIssue({ code: "custom", path: ["vehiclePreference"], message: "Choose a vehicle preference" });
@@ -194,8 +194,8 @@ const quoteSchema = z
     if (data.luggage && !oneOf(data.luggage, QUOTE_LUGGAGE)) {
       ctx.addIssue({ code: "custom", path: ["luggage"], message: "Choose a luggage level" });
     }
-    if (data.representativeCount && (!/^\d+$/.test(data.representativeCount) || Number(data.representativeCount) > 200)) {
-      ctx.addIssue({ code: "custom", path: ["representativeCount"], message: "Enter 200 Venture Reps or fewer" });
+    if (data.representativeCount && (!/^\d+$/.test(data.representativeCount) || Number(data.representativeCount) > 4000)) {
+      ctx.addIssue({ code: "custom", path: ["representativeCount"], message: "Enter 4,000 Venture Reps or fewer" });
     }
     if (data.contactName && data.contactName.length > 120) {
       ctx.addIssue({ code: "custom", path: ["contactName"], message: "Name is too long" });

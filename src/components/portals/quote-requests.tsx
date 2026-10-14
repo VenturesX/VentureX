@@ -202,7 +202,7 @@ export function QuoteRequestsBoard({ canEditPrice = false }: { canEditPrice?: bo
                     {row.passengerCount > 0 ? `${row.passengerCount.toLocaleString()} passengers` : "Passenger count not given"}
                     {" · "}
                     {row.vehicleCount > 0
-                      ? `${row.vehicleCount} vehicle${row.vehicleCount === 1 ? "" : "s"}`
+                      ? `${row.vehicleCount.toLocaleString()} vehicle${row.vehicleCount === 1 ? "" : "s"}`
                       : "vehicles not sized yet"}
                     {" · "}
                     {labelFor(VEHICLE_OPTIONS, row.vehiclePreference)} · luggage {labelFor(LUGGAGE_OPTIONS, row.luggage).toLowerCase()}
@@ -275,8 +275,8 @@ export function QuoteRequestsBoard({ canEditPrice = false }: { canEditPrice?: bo
 function repSummary(row: QuoteRow) {
   if (!row.coordinatorNeeded) return "Not requested";
   const recommended = recommendedRepCount(row.vehicleCount);
-  const count = `${row.representativeCount} Venture Rep${row.representativeCount === 1 ? "" : "s"}`;
-  const compared = row.representativeCount === recommended ? count : `${count} (recommended ${recommended})`;
+  const count = `${row.representativeCount.toLocaleString()} Venture Rep${row.representativeCount === 1 ? "" : "s"}`;
+  const compared = row.representativeCount === recommended ? count : `${count} (recommended ${recommended.toLocaleString()})`;
   return `${compared} · ${formatRepPrice(row.repPriceCents)}`;
 }
 

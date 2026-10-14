@@ -47,6 +47,26 @@ export type OfficeHours = {
   timezone: "America/New_York";
 };
 
+/** Quick-tap bands for large groups. `size` is the top of the band, so the plan does not come up short. */
+export const GUEST_COUNT_MAX = 50_000;
+
+export const GUEST_RANGES = [
+  { id: "under-50", label: "Under 50", size: 49, min: 1, max: 49 },
+  { id: "50-100", label: "50-100", size: 100, min: 50, max: 100 },
+  { id: "100-250", label: "100-250", size: 250, min: 101, max: 250 },
+  { id: "250-500", label: "250-500", size: 500, min: 251, max: 500 },
+  { id: "500-1000", label: "500-1,000", size: 1000, min: 501, max: 1000 },
+  { id: "1000-plus", label: "1,000+", size: 1500, min: 1001, max: GUEST_COUNT_MAX },
+] as const;
+
+export function guestRangeFor(count: number) {
+  return GUEST_RANGES.find((range) => count >= range.min && count <= range.max) ?? null;
+}
+
+export function formatGuestCount(count: number) {
+  return Math.round(count).toLocaleString("en-US");
+}
+
 export const DEFAULT_FLEET: FleetVehicle[] = [
   { id: "COACH", label: "Motorcoach", seats: 56, usable: 50, isDefault: true },
   { id: "MINIBUS", label: "Minicoach", seats: 28, usable: 24, isDefault: true },
@@ -299,7 +319,7 @@ function recommendPoint(input: QuotePlanInput, vehicle: FleetVehicle, blanks: bo
   }
   const count = Math.max(1, Math.ceil(input.passengerCount / vehicle.usable));
   const noun = vehicleNoun(vehicle.label, count);
-  const headline = `We suggest ${count} ${noun} for ${input.passengerCount} guests.`;
+  const headline = `We suggest ${formatGuestCount(count)} ${noun} for ${formatGuestCount(input.passengerCount)} guests.`;
   const detail = `We plan on ${vehicle.usable} usable seats out of ${vehicle.seats}. This is a recommendation, not a confirmed plan.`;
   return finishPlan(headline, null, detail, count, vehicle, null, "none", blanks || input.unsureSteps.length > 0);
 }
@@ -323,10 +343,12 @@ function recommendLoop(input: QuotePlanInput, vehicle: FleetVehicle, timing: Tim
     return finishPlan(headline, math, detail, 0, vehicle, cycle, source, true);
   }
   const noun = vehicleNoun(vehicle.label, count);
-  const headline = `We suggest ${count} ${noun}.`;
+  const headline = input.passengerCount
+    ? `We suggest ${formatGuestCount(count)} ${noun} for ${formatGuestCount(input.passengerCount)} guests.`
+    : `We suggest ${formatGuestCount(count)} ${noun}.`;
   const bits = [`Full loop about ${cycle} min.`];
-  if (byHeadway && input.waitMinutes) bits.push(`A ${input.waitMinutes}-minute wait needs ${byHeadway}.`);
-  if (byCapacity && input.passengerCount) bits.push(`${input.passengerCount} guests need room on ${byCapacity} at ${vehicle.usable} usable seats.`);
+  if (byHeadway && input.waitMinutes) bits.push(`A ${input.waitMinutes}-minute wait needs ${formatGuestCount(byHeadway)}.`);
+  if (byCapacity && input.passengerCount) bits.push(`${formatGuestCount(input.passengerCount)} guests need room on ${formatGuestCount(byCapacity)} at ${vehicle.usable} usable seats.`);
   bits.push("This is a recommendation, not a confirmed plan.");
   if (source === "table") bits.push("Drive time is the default for this route pair.");
   if (source === "manual") bits.push("Drive time is the number you entered.");
@@ -362,7 +384,7 @@ function finishPlan(
 ): QuotePlan {
   const repCount = vehicleCount > 0 ? Math.ceil(vehicleCount / 3) : 0;
   const repLine = repCount
-    ? ` We suggest ${repCount} Venture Rep${repCount === 1 ? "" : "s"} on site (1 per 1 to 3 vehicles).`
+    ? ` We suggest ${formatGuestCount(repCount)} Venture Rep${repCount === 1 ? "" : "s"} on site (1 per 1 to 3 vehicles).`
     : "";
   const recommendation = [headline, math, detail].filter(Boolean).join(" ") + repLine;
   return {
@@ -487,7 +509,7 @@ export const DEFAULT_QUICK_ANSWERS: QuickAnswer[] = [
   {
     id: "buses",
     kind: "buses",
-    chip: "How many buses for 200 guests?",
+    chip: "How many buses for 500 guests?",
     keywords: ["bus", "buses", "coach", "coaches", "vehicle", "vehicles", "how many"],
     answer: "We size motorcoaches from usable seats.",
   },
@@ -624,7 +646,8 @@ export function parseQuickAnswers(stored: string | null | undefined): QuickAnswe
     const rows = parsed
       .slice(0, 12)
       .map((row, index) => {
-        const chip = String(row.chip ?? "").trim().slice(0, 80);
+        const rawChip = String(row.chip ?? "").trim().slice(0, 80);
+        const chip = rawChip === "How many buses for 200 guests?" ? "How many buses for 500 guests?" : rawChip;
         const answer = String(row.answer ?? "").trim().slice(0, 600);
         const fallback = defaults.find((item) => item.id === row.id);
         const keywords = Array.isArray(row.keywords)
@@ -650,16 +673,17 @@ export function answerQuickQuestion(question: string, answers: QuickAnswer[], us
   if (!asked) return null;
   const usable = Math.max(1, usableSeats || 50);
   const direct = answers.find((row) => row.chip.toLowerCase() === asked.toLowerCase());
-  const guestMatch = asked.match(/(\d{1,5})/);
+  const guestMatch = asked.replace(/,/g, "").match(/(\d{1,6})/);
   const buses = answers.find((row) => row.kind === "buses");
   const wantsCount = direct?.kind === "buses" || Boolean(buses && guestMatch && /bus|coach|vehicle|sprinter|suv/.test(asked.toLowerCase()));
   if (wantsCount && buses) {
-    const guests = Number((direct?.kind === "buses" ? direct.chip.match(/(\d{1,5})/)?.[1] : guestMatch?.[1]) ?? guestMatch?.[1] ?? 0);
+    const raw = Number((direct?.kind === "buses" ? direct.chip.replace(/,/g, "").match(/(\d{1,6})/)?.[1] : guestMatch?.[1]) ?? guestMatch?.[1] ?? 0);
+    const guests = Math.min(GUEST_COUNT_MAX, raw);
     if (!guests) return { text: buses.answer };
     const count = Math.max(1, Math.ceil(guests / usable));
     const noun = count === 1 ? "motorcoach" : "motorcoaches";
     return {
-      text: `${buses.answer} For ${guests} guests we suggest ${count} ${noun}, assuming ${usable} usable seats per motorcoach. This is a recommendation, not a confirmed plan.`,
+      text: `${buses.answer} For ${formatGuestCount(guests)} guests we suggest ${formatGuestCount(count)} ${noun}, assuming ${usable} usable seats per motorcoach. This is a recommendation, not a confirmed plan.`,
     };
   }
   const match = direct ?? bestQuickMatch(asked, answers.filter((row) => row.kind !== "buses"));

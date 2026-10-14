@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { PlaceField } from "@/components/marketing/place-field";
 import { TalkLine } from "@/components/marketing/talk-line";
 import { manifestError, PROFILE_OPTIONS, type QuoteProfile } from "@/lib/quotes";
-import type { QuotePlan } from "@/lib/guidance";
+import { GUEST_COUNT_MAX, GUEST_RANGES, formatGuestCount, guestRangeFor, type QuotePlan } from "@/lib/guidance";
 
 const MOVES = [
   ["AIRPORT_TRANSFER", "Airport transfer"],
@@ -14,19 +14,11 @@ const MOVES = [
   ["DINE_AROUND", "Dine-around"],
 ] as const;
 
-const GUEST_CHOICES = [
-  ["15", "Under 15"],
-  ["30", "15 to 30"],
-  ["56", "31 to 56"],
-  ["100", "57 to 100"],
-] as const;
-
 const WAITS = ["15", "20", "30"] as const;
 
 export function QuoteForm() {
   const router = useRouter();
   const [service, setService] = useState("");
-  const [guestBand, setGuestBand] = useState("");
   const [guestExact, setGuestExact] = useState("");
   const [vehiclePreference, setVehiclePreference] = useState("");
   const [pickup, setPickup] = useState("");
@@ -46,7 +38,9 @@ export function QuoteForm() {
   const [pending, setPending] = useState(false);
   const [manifestName, setManifestName] = useState<string | null>(null);
 
-  const guestCount = guestExact || guestBand;
+  const guestCount = guestExact;
+  const guestNumber = Number(guestExact) || 0;
+  const activeRange = guestRangeFor(guestNumber);
   const ready = Boolean(service && guestCount && pickup.trim().length >= 2 && dropoff.trim().length >= 2 && startTime && (service !== "SHUTTLE_LOOP" || waitMinutes));
   const repTotal = plan ? plan.repCount + repBump : 0;
   const stopValues = stops.map((stop) => stop.value.trim()).filter((stop) => stop.length >= 2);
@@ -141,17 +135,29 @@ export function QuoteForm() {
         </div>
       </section>
 
-      <section className="space-y-3">
+      <section id="guests" className="space-y-3">
         <h2 className="text-xl font-semibold">Guests</h2>
+        <p className="text-sm text-white/70">Tap a range. We size to the top of it, and you can type the exact count.</p>
         <div className="grid grid-cols-2 gap-2">
-          {GUEST_CHOICES.map(([value, label]) => (
-            <Choice key={value} selected={guestBand === value && !guestExact} onClick={() => { setGuestBand(value); setGuestExact(""); }}>
-              {label}
+          {GUEST_RANGES.map((range) => (
+            <Choice key={range.id} selected={activeRange?.id === range.id} onClick={() => setGuestExact(String(range.size))}>
+              {range.label}
             </Choice>
           ))}
         </div>
-        <label className="block text-sm" htmlFor="guestExact">Exact count, if you have it</label>
-        <input id="guestExact" inputMode="numeric" value={guestExact} onChange={(event) => setGuestExact(event.target.value.replace(/\D/g, "").slice(0, 5))} className={fieldClass} placeholder="80" />
+        <label className="block text-sm" htmlFor="guestExact">Exact guest count</label>
+        <input
+          id="guestExact"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          enterKeyHint="done"
+          autoComplete="off"
+          value={guestExact}
+          onChange={(event) => setGuestExact(readGuestCount(event.target.value))}
+          className="h-14 w-full rounded-xl border border-white/15 bg-black px-3 text-2xl font-semibold tracking-wide text-white outline-none focus:border-[#1E90FF]"
+          placeholder="500"
+        />
+        {guestNumber >= 1000 ? <p className="text-sm text-white/60">{formatGuestCount(guestNumber)} guests</p> : null}
       </section>
 
       <section className="space-y-3">
@@ -218,7 +224,7 @@ export function QuoteForm() {
         <PlaceField id="dropoff" name="dropoff-visible" value={dropoff} onChange={setDropoff} placeholder="Hotel, venue, or address" />
       </section>
 
-      <section aria-live="polite" className="rounded-2xl border border-[#1E90FF]/40 bg-[#1E90FF]/10 p-4">
+      <section id="live-plan" aria-live="polite" className="rounded-2xl border border-[#1E90FF]/40 bg-[#1E90FF]/10 p-4">
         {ready && plan ? (
           <div className="space-y-2">
             <p className="text-lg font-semibold">{plan.headline}</p>
@@ -330,6 +336,14 @@ function tomorrowET() {
   const date = new Date(Date.UTC(year, month - 1, day));
   date.setUTCDate(date.getUTCDate() + 1);
   return date.toISOString().slice(0, 10);
+}
+
+function readGuestCount(value: string) {
+  const digits = value.replace(/\D/g, "").slice(0, 5);
+  if (!digits) return "";
+  const count = Number(digits);
+  if (count > GUEST_COUNT_MAX) return String(GUEST_COUNT_MAX);
+  return String(count);
 }
 
 function Field({ label, name, children }: { label: string; name: string; children: ReactNode }) {
