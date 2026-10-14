@@ -2,23 +2,31 @@
 
 import { useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
+import { PlaceField } from "@/components/marketing/place-field";
 import {
   LUGGAGE_OPTIONS,
+  MAX_STOPS,
   PROFILE_OPTIONS,
   SERVICE_OPTIONS,
   VEHICLE_OPTIONS,
   manifestError,
   parseQuoteFields,
+  recommendedRepCount,
   type QuoteProfile,
 } from "@/lib/quotes";
 
 const fieldClass =
   "h-12 w-full min-w-0 rounded-xl border border-white/15 bg-black px-3 text-base text-white outline-none placeholder:text-white/45 focus:border-[#1E90FF] focus:ring-2 focus:ring-[#1E90FF]/40";
 
-export function QuoteForm() {
+export function QuoteForm({ repPriceLabel }: { repPriceLabel: string }) {
   const router = useRouter();
   const [profile, setProfile] = useState<QuoteProfile>("PLANNER");
   const [coordinator, setCoordinator] = useState("");
+  const [pickup, setPickup] = useState("");
+  const [dropoff, setDropoff] = useState("");
+  const [stops, setStops] = useState<{ id: string; value: string }[]>([]);
+  const [vehicleCount, setVehicleCount] = useState("");
+  const [repCount, setRepCount] = useState("");
   const [manifestName, setManifestName] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
@@ -29,6 +37,10 @@ export function QuoteForm() {
     [profile],
   );
   const companyRequired = profile !== "GROUP";
+  const vehicles = /^\d+$/.test(vehicleCount) ? Number(vehicleCount) : 0;
+  const recommended = vehicles >= 1 ? recommendedRepCount(vehicles) : null;
+  const chosenReps = /^\d+$/.test(repCount) ? Number(repCount) : 0;
+  const repTotal = recommended == null ? 0 : Math.max(recommended, chosenReps);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -133,10 +145,99 @@ export function QuoteForm() {
           </Field>
         </div>
         <Field label="Pickup" name="pickup" error={errors.pickup} required>
-          <input id="pickup" name="pickup" className={inputClass(errors.pickup)} placeholder="MCO Terminal C, baggage claim" autoComplete="off" aria-invalid={Boolean(errors.pickup)} />
+          <PlaceField
+            id="pickup"
+            name="pickup"
+            value={pickup}
+            onChange={setPickup}
+            invalid={Boolean(errors.pickup)}
+            placeholder="Start typing a hotel, park, or address"
+          />
         </Field>
-        <Field label="Drop-off" name="dropoff" error={errors.dropoff} required>
-          <input id="dropoff" name="dropoff" className={inputClass(errors.dropoff)} placeholder="Hotel or venue" autoComplete="off" aria-invalid={Boolean(errors.dropoff)} />
+        <div data-field-error={errors.stops ? "" : undefined}>
+          <div className="mb-1.5 flex items-center justify-between gap-3">
+            <p className="text-sm font-medium">Stops</p>
+            <button
+              type="button"
+              className="text-sm font-semibold text-[#1E90FF] disabled:opacity-40"
+              disabled={stops.length >= MAX_STOPS}
+              onClick={() => setStops((current) => [...current, { id: crypto.randomUUID(), value: "" }])}
+            >
+              Add stop
+            </button>
+          </div>
+          {stops.length === 0 ? (
+            <p className="text-xs text-white/50">Optional. Add stops between pickup and the final drop-off.</p>
+          ) : (
+            <ol className="space-y-2">
+              {stops.map((stop, index) => (
+                <li key={stop.id} className="rounded-xl border border-white/10 p-2">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <span className="text-xs font-semibold tracking-[0.14em] text-[#1E90FF]">STOP {index + 1}</span>
+                    <div className="flex gap-1">
+                      <button
+                        type="button"
+                        className="h-10 rounded-lg px-2 text-xs text-white/80 disabled:opacity-30"
+                        disabled={index === 0}
+                        onClick={() =>
+                          setStops((current) => {
+                            const next = [...current];
+                            const [item] = next.splice(index, 1);
+                            next.splice(index - 1, 0, item);
+                            return next;
+                          })
+                        }
+                      >
+                        Up
+                      </button>
+                      <button
+                        type="button"
+                        className="h-10 rounded-lg px-2 text-xs text-white/80 disabled:opacity-30"
+                        disabled={index === stops.length - 1}
+                        onClick={() =>
+                          setStops((current) => {
+                            const next = [...current];
+                            const [item] = next.splice(index, 1);
+                            next.splice(index + 1, 0, item);
+                            return next;
+                          })
+                        }
+                      >
+                        Down
+                      </button>
+                      <button
+                        type="button"
+                        className="h-10 rounded-lg px-2 text-xs text-rose-200"
+                        onClick={() => setStops((current) => current.filter((item) => item.id !== stop.id))}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                  <PlaceField
+                    id={`stop-${stop.id}`}
+                    name="stops"
+                    value={stop.value}
+                    onChange={(next) =>
+                      setStops((current) => current.map((item) => (item.id === stop.id ? { ...item, value: next } : item)))
+                    }
+                    placeholder="Hotel, venue, or address"
+                  />
+                </li>
+              ))}
+            </ol>
+          )}
+          <FieldError message={errors.stops} />
+        </div>
+        <Field label="Final drop-off" name="dropoff" error={errors.dropoff} required>
+          <PlaceField
+            id="dropoff"
+            name="dropoff"
+            value={dropoff}
+            onChange={setDropoff}
+            invalid={Boolean(errors.dropoff)}
+            placeholder="Hotel, venue, or address"
+          />
         </Field>
         <Field label="Passengers" name="passengerCount" error={errors.passengerCount} required>
           <input
@@ -176,11 +277,26 @@ export function QuoteForm() {
             ))}
           </select>
         </Field>
-        <fieldset data-field-error={errors.coordinatorNeeded ? "" : undefined}>
+        <Field label="Vehicles" name="vehicleCount" error={errors.vehicleCount} required hint="How many vehicles this move needs.">
+          <input
+            id="vehicleCount"
+            name="vehicleCount"
+            inputMode="numeric"
+            value={vehicleCount}
+            onChange={(event) => setVehicleCount(event.target.value)}
+            className={inputClass(errors.vehicleCount)}
+            placeholder="2"
+            aria-invalid={Boolean(errors.vehicleCount)}
+          />
+        </Field>
+        <fieldset data-field-error={errors.coordinatorNeeded || errors.representativeCount ? "" : undefined}>
           <legend className="text-sm font-medium">
-            On-site coordinator needed <span className="text-[#1E90FF]">*</span>
+            On-site Venture Representative needed <span className="text-[#1E90FF]">*</span>
           </legend>
-          <div className="mt-2 grid grid-cols-2 gap-2" role="radiogroup" aria-label="On-site coordinator needed">
+          <p className="mt-1 text-xs leading-relaxed text-white/55">
+            A Venture Rep is a real person on site to guide and assist. The live tools can carry the move without one.
+          </p>
+          <div className="mt-2 grid grid-cols-2 gap-2" role="radiogroup" aria-label="On-site Venture Representative needed">
             {[
               ["yes", "Yes"],
               ["no", "No"],
@@ -200,7 +316,45 @@ export function QuoteForm() {
             ))}
           </div>
           <input type="hidden" name="coordinatorNeeded" value={coordinator} />
+          <input type="hidden" name="representativeCount" value={coordinator === "yes" ? String(repTotal) : "0"} />
           <FieldError message={errors.coordinatorNeeded} />
+          {coordinator === "yes" ? (
+            <div className="mt-3 rounded-xl border border-[#1E90FF]/40 bg-[#1E90FF]/10 p-3">
+              {recommended == null ? (
+                <p className="text-sm text-white/80">Enter the number of vehicles to see the recommended Venture Reps.</p>
+              ) : (
+                <>
+                  <p className="text-sm leading-relaxed text-white">
+                    Recommended: {recommended} Venture Rep{recommended === 1 ? "" : "s"} for {vehicles} vehicle{vehicles === 1 ? "" : "s"}. One rep covers 1 to 3 vehicles. You can add more.
+                  </p>
+                  <div className="mt-3 flex items-center gap-2">
+                    <button
+                      type="button"
+                      className="grid size-11 place-items-center rounded-lg border border-white/20 text-lg disabled:opacity-30"
+                      disabled={repTotal <= recommended}
+                      onClick={() => setRepCount(String(repTotal - 1))}
+                      aria-label="Fewer Venture Reps"
+                    >
+                      −
+                    </button>
+                    <div className="min-w-16 text-center text-2xl font-semibold tabular-nums" aria-live="polite">
+                      {repTotal}
+                    </div>
+                    <button
+                      type="button"
+                      className="grid size-11 place-items-center rounded-lg border border-white/20 text-lg"
+                      onClick={() => setRepCount(String(repTotal + 1))}
+                      aria-label="More Venture Reps"
+                    >
+                      +
+                    </button>
+                  </div>
+                  <p className="mt-2 text-sm text-white/75">{repPriceLabel}</p>
+                </>
+              )}
+              <FieldError message={errors.representativeCount} />
+            </div>
+          ) : null}
         </fieldset>
       </section>
 
@@ -218,7 +372,7 @@ export function QuoteForm() {
         <Field label="Phone" name="phone" error={errors.phone} required>
           <input id="phone" name="phone" type="tel" autoComplete="tel" inputMode="tel" className={inputClass(errors.phone)} aria-invalid={Boolean(errors.phone)} />
         </Field>
-        <Field label="Notes" name="notes" error={errors.notes} hint="Optional. Extra stops, flight numbers, hotel, or access needs.">
+        <Field label="Notes" name="notes" error={errors.notes} hint="Optional. Flight numbers, hotel details, or access needs.">
           <textarea id="notes" name="notes" className={`${inputClass(errors.notes)} min-h-28 py-3`} aria-invalid={Boolean(errors.notes)} />
         </Field>
         <div data-field-error={errors.manifest ? "" : undefined}>

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { cn, formatDateTime } from "@/lib/utils";
 import {
   LUGGAGE_OPTIONS,
@@ -12,7 +13,9 @@ import {
   VEHICLE_OPTIONS,
   formatQuoteDate,
   formatQuoteTime,
+  formatRepPrice,
   labelFor,
+  recommendedRepCount,
   type QuoteStatus,
 } from "@/lib/quotes";
 
@@ -27,10 +30,14 @@ type QuoteRow = {
   endTime: string | null;
   pickup: string;
   dropoff: string;
+  stops: string[];
   passengerCount: number;
+  vehicleCount: number;
   vehiclePreference: (typeof VEHICLE_OPTIONS)[number]["value"];
   luggage: (typeof LUGGAGE_OPTIONS)[number]["value"];
   coordinatorNeeded: boolean;
+  representativeCount: number;
+  repPriceCents: number | null;
   contactName: string;
   company: string | null;
   email: string;
@@ -41,7 +48,7 @@ type QuoteRow = {
   createdAt: string;
 };
 
-export function QuoteRequestsBoard() {
+export function QuoteRequestsBoard({ canEditPrice = false }: { canEditPrice?: boolean }) {
   const [rows, setRows] = useState<QuoteRow[]>([]);
   const [filter, setFilter] = useState<QuoteStatus | "ALL">("ALL");
   const [error, setError] = useState<string | null>(null);
@@ -120,6 +127,8 @@ export function QuoteRequestsBoard() {
         </Button>
       </div>
 
+      {canEditPrice ? <RepPriceSetting /> : null}
+
       <div className="flex gap-2 overflow-x-auto pb-1">
         <FilterChip label="All" count={rows.length} active={filter === "ALL"} onClick={() => setFilter("ALL")} />
         {STATUS_OPTIONS.map((option) => (
@@ -166,14 +175,24 @@ export function QuoteRequestsBoard() {
                 <div>
                   <dt className="text-muted-foreground">Route</dt>
                   <dd>
-                    {row.pickup} → {row.dropoff}
+                    <ol className="space-y-1">
+                      <li>1. {row.pickup}</li>
+                      {row.stops.map((stop, index) => (
+                        <li key={`${row.id}-stop-${index}`}>{index + 2}. {stop}</li>
+                      ))}
+                      <li>{row.stops.length + 2}. {row.dropoff}</li>
+                    </ol>
                   </dd>
                 </div>
                 <div>
                   <dt className="text-muted-foreground">Group</dt>
                   <dd>
-                    {row.passengerCount.toLocaleString()} passengers · {labelFor(VEHICLE_OPTIONS, row.vehiclePreference)} · luggage {labelFor(LUGGAGE_OPTIONS, row.luggage).toLowerCase()} · coordinator {row.coordinatorNeeded ? "yes" : "no"}
+                    {row.passengerCount.toLocaleString()} passengers · {row.vehicleCount} vehicle{row.vehicleCount === 1 ? "" : "s"} · {labelFor(VEHICLE_OPTIONS, row.vehiclePreference)} · luggage {labelFor(LUGGAGE_OPTIONS, row.luggage).toLowerCase()}
                   </dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">Venture Reps</dt>
+                  <dd>{repSummary(row)}</dd>
                 </div>
                 <div>
                   <dt className="text-muted-foreground">Contact</dt>
@@ -225,6 +244,77 @@ export function QuoteRequestsBoard() {
         })}
       </div>
     </div>
+  );
+}
+
+function repSummary(row: QuoteRow) {
+  if (!row.coordinatorNeeded) return "Not requested";
+  const recommended = recommendedRepCount(row.vehicleCount);
+  const count = `${row.representativeCount} Venture Rep${row.representativeCount === 1 ? "" : "s"}`;
+  const compared = row.representativeCount === recommended ? count : `${count} (recommended ${recommended})`;
+  return `${compared} · ${formatRepPrice(row.repPriceCents)}`;
+}
+
+function RepPriceSetting() {
+  const [price, setPrice] = useState("");
+  const [label, setLabel] = useState("quoted per representative");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const response = await fetch("/api/quotes/settings");
+      const json = (await response.json()) as { priceDollars?: string; label?: string };
+      if (cancelled || !response.ok) return;
+      setPrice(json.priceDollars ?? "");
+      setLabel(json.label ?? "quoted per representative");
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  async function save() {
+    setSaving(true);
+    try {
+      const response = await fetch("/api/quotes/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ price }),
+      });
+      const json = (await response.json()) as { error?: string; priceDollars?: string; label?: string };
+      if (!response.ok) throw new Error(json.error ?? "Could not save the price");
+      setPrice(json.priceDollars ?? "");
+      setLabel(json.label ?? "quoted per representative");
+      toast.success("Rep price saved");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not save the price");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <form
+      className="rounded-2xl border border-white/10 bg-card p-4"
+      onSubmit={(event) => {
+        event.preventDefault();
+        void save();
+      }}
+    >
+      <label htmlFor="rep-price" className="text-sm font-medium">
+        Price per Venture Rep
+      </label>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Leave blank to show &ldquo;quoted per representative&rdquo; on the public form. Currently: {label}.
+      </p>
+      <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+        <Input id="rep-price" inputMode="decimal" value={price} onChange={(event) => setPrice(event.target.value)} placeholder="125.00" />
+        <Button type="submit" disabled={saving}>
+          {saving ? "Saving…" : "Save price"}
+        </Button>
+      </div>
+    </form>
   );
 }
 

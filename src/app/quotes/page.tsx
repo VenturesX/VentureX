@@ -21,7 +21,7 @@ export default async function QuotesPage() {
 
   return (
     <PortalShell role={session.role} name={session.name} eventName={event?.name} nav={nav}>
-      <QuoteRequestsBoard />
+      <QuoteRequestsBoard canEditPrice={session.role === "ADMIN"} />
     </PortalShell>
   );
 }

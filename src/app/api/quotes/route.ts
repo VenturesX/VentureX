@@ -5,9 +5,12 @@ import { db } from "@/lib/db";
 import { recordAudit, recordStatus } from "@/lib/ops/audit";
 import {
   MANIFEST_MIME,
+  REP_PRICE_KEY,
+  centsFromSetting,
   manifestError,
   manifestExtension,
   parseQuoteFields,
+  parseStops,
   type QuoteInput,
 } from "@/lib/quotes";
 
@@ -22,10 +25,14 @@ const listSelect = {
   endTime: true,
   pickup: true,
   dropoff: true,
+  stops: true,
   passengerCount: true,
+  vehicleCount: true,
   vehiclePreference: true,
   luggage: true,
   coordinatorNeeded: true,
+  representativeCount: true,
+  repPriceCents: true,
   contactName: true,
   company: true,
   email: true,
@@ -43,7 +50,9 @@ export async function GET() {
       orderBy: { createdAt: "desc" },
       select: listSelect,
     });
-    return NextResponse.json({ rows });
+    return NextResponse.json({
+      rows: rows.map((row) => ({ ...row, stops: parseStops(row.stops) })),
+    });
   } catch (error) {
     return jsonError(error);
   }
@@ -88,6 +97,11 @@ export async function POST(request: Request) {
   }
 }
 
+async function currentRepPriceCents() {
+  const setting = await db.appSetting.findUnique({ where: { key: REP_PRICE_KEY } });
+  return centsFromSetting(setting?.value);
+}
+
 async function createQuote(
   data: QuoteInput,
   manifest: { name: string; mime: string; bytes: Uint8Array } | null,
@@ -107,10 +121,14 @@ async function createQuote(
           endTime: data.endTime ?? null,
           pickup: data.pickup,
           dropoff: data.dropoff,
+          stops: JSON.stringify(data.stops),
           passengerCount: data.passengerCount,
+          vehicleCount: data.vehicleCount,
           vehiclePreference: data.vehiclePreference,
           luggage: data.luggage,
           coordinatorNeeded: data.coordinatorNeeded,
+          representativeCount: data.representativeCount,
+          repPriceCents: data.coordinatorNeeded ? await currentRepPriceCents() : null,
           contactName: data.contactName,
           company: data.company ?? null,
           email: data.email,

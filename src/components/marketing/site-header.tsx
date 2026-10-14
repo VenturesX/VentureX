@@ -97,7 +97,7 @@ export function SiteFooter() {
           <Wordmark compact />
         </Link>
         <p className="max-w-xl text-sm leading-relaxed text-white/70">
-          Venture Directors LLC is an Orlando group transportation broker. We plan the move and staff the curb. We do not own the vehicles.
+          Seamless Transportation by Venture Directors LLC, an Orlando group transportation broker. We plan the move. Venture Reps guide on site when you want them. We do not own the vehicles.
         </p>
         <p className="max-w-xl text-sm leading-relaxed text-white/70">
           All transportation is provided by appropriately licensed operators; we manage planning, scheduling, and day-of coordination.

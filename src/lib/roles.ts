@@ -54,6 +54,8 @@ export function canMutate(role: Role, action: string) {
     case "quotes.read":
     case "quotes.update":
       return admin || role === "DISPATCHER";
+    case "quotes.settings":
+      return admin;
     default:
       return admin;
   }

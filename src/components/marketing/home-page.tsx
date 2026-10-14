@@ -11,12 +11,12 @@ const SERVICES = [
   {
     icon: Route,
     title: "Dine-arounds and event moves",
-    body: "Hotel to dinner, a venue, or an attraction. One-way or round trip, with an on-site coordinator when you want someone on the ground.",
+    body: "Hotel to dinner, a venue, or an attraction. One-way or round trip, with a Venture Rep on site when you want someone to guide the group.",
   },
   {
     icon: Users,
-    title: "On-site meet and greet",
-    body: "Our staff at the curb with signs and iPads. They find the party and get them onto the right vehicle.",
+    title: "On-site Venture Reps",
+    body: "A customer-service bonus: a real person on site to guide and assist. The live tools can carry the move if you don't need a rep there.",
   },
 ];
 
@@ -31,7 +31,7 @@ const STEPS = [
   },
   {
     title: "We coordinate",
-    body: "A licensed operator drives. We handle the schedule, the staff, and the day-of plan.",
+    body: "A licensed operator drives. We handle the schedule and the day-of plan. Venture Reps join when you want them.",
   },
   {
     title: "Follow it live",
@@ -42,8 +42,8 @@ const STEPS = [
 const REASONS = [
   {
     icon: Users,
-    title: "Real staff at the curb",
-    body: "The people who meet your guests work for us. Signs, iPads, and a plan for the curb.",
+    title: "Venture Reps, when you want them",
+    body: "A real person on site to guide and assist. The live tools can carry the schedule and guest updates, and a Venture Rep is there when you ask.",
   },
   {
     icon: Link2,
@@ -71,7 +71,7 @@ export function MarketingHome() {
             Handled.
           </h1>
           <p className="mt-5 max-w-md text-[15px] leading-relaxed text-white/75">
-            Orlando group moves for meetings, events, and tours. We plan it, vetted operators drive, and our staff meet your guests at the curb.
+            Seamless Transportation for Orlando meetings, events, and tours. Vetted operators drive. Add a Venture Rep when you want a real person on site to guide and assist.
           </p>
           <Link
             href="/quote"
@@ -86,7 +86,7 @@ export function MarketingHome() {
 
       <section id="services" className="mx-auto max-w-6xl scroll-mt-20 px-5 py-14">
         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#1E90FF]">Services</p>
-        <h2 className="mt-2 text-3xl font-semibold tracking-tight">What we run</h2>
+        <h2 className="mt-2 text-3xl font-semibold tracking-tight">Seamless Transportation</h2>
         <div className="mt-6 grid gap-3 md:grid-cols-3">
           {SERVICES.map((service) => (
             <article key={service.title} className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
@@ -132,7 +132,7 @@ export function MarketingHome() {
         <div className="mx-auto max-w-6xl rounded-3xl border border-[#1E90FF]/40 bg-[#1E90FF]/10 px-6 py-10">
           <h2 className="text-3xl font-semibold tracking-tight">Send the group. We&apos;ll send the quote.</h2>
           <p className="mt-3 max-w-xl text-sm leading-relaxed text-white/75">
-            Dates, pickup, drop-off, and headcount are enough to start. A coordinator prices it and follows up.
+            Dates, stops, vehicles, and headcount are enough to start. We price it and follow up.
           </p>
           <Link
             href="/quote"

@@ -24,7 +24,7 @@ export default async function QuoteReceivedPage({
         </div>
       ) : null}
       <p className="mt-6 text-base leading-relaxed text-white/75">
-        Your request is in the Venture Directors queue. A coordinator will review it and follow up at the email and phone you sent. Nothing is reserved until you accept a quote.
+        Your request is in the Venture Directors queue. We&apos;ll review it and follow up at the email and phone you sent. Nothing is reserved until you accept a quote.
       </p>
       <div className="mt-8 flex flex-col items-start gap-4">
         <Link href="/" className="inline-flex h-12 items-center rounded-lg bg-[#1E90FF] px-5 text-base font-semibold text-white">

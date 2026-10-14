@@ -12,6 +12,7 @@ function isPublic(pathname: string, method: string) {
   // Exact match so /quotes (the staff list) stays behind login.
   if (pathname === "/quote" || pathname.startsWith("/quote/")) return true;
   if (pathname === "/api/quotes" && method === "POST") return true;
+  if (pathname === "/api/places" && method === "GET") return true;
   return PUBLIC.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }
 

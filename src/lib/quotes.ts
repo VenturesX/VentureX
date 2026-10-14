@@ -60,6 +60,9 @@ export const STATUS_OPTIONS: { value: QuoteStatus; label: string }[] = [
 ];
 
 export const MANIFEST_MAX_BYTES = 8 * 1024 * 1024;
+export const MAX_STOPS = 8;
+export const REP_PRICE_KEY = "repPriceCents";
+const LOCATION_MAX = 240;
 
 const MANIFEST_TYPES: Record<string, string[]> = {
   csv: ["text/csv", "application/csv", "text/plain", "application/vnd.ms-excel", "application/octet-stream", ""],
@@ -87,10 +90,13 @@ export type QuoteInput = {
   endTime?: string;
   pickup: string;
   dropoff: string;
+  stops: string[];
   passengerCount: number;
+  vehicleCount: number;
   vehiclePreference: QuoteVehiclePreference;
   luggage: QuoteLuggage;
   coordinatorNeeded: boolean;
+  representativeCount: number;
   contactName: string;
   company?: string;
   email: string;
@@ -108,10 +114,13 @@ const quoteSchema = z
     endTime: z.string().optional(),
     pickup: z.string(),
     dropoff: z.string(),
+    stops: z.array(z.string()),
     passengerCount: z.string(),
+    vehicleCount: z.string(),
     vehiclePreference: z.string(),
     luggage: z.string(),
     coordinatorNeeded: z.string(),
+    representativeCount: z.string(),
     contactName: z.string(),
     company: z.string().optional(),
     email: z.string(),
@@ -147,20 +156,38 @@ const quoteSchema = z
     }
     if (data.pickup.length < 2) {
       ctx.addIssue({ code: "custom", path: ["pickup"], message: "Enter a pickup location" });
-    } else if (data.pickup.length > 180) {
+    } else if (data.pickup.length > LOCATION_MAX) {
       ctx.addIssue({ code: "custom", path: ["pickup"], message: "Pickup is too long" });
     }
     if (data.dropoff.length < 2) {
       ctx.addIssue({ code: "custom", path: ["dropoff"], message: "Enter a drop-off location" });
-    } else if (data.dropoff.length > 180) {
+    } else if (data.dropoff.length > LOCATION_MAX) {
       ctx.addIssue({ code: "custom", path: ["dropoff"], message: "Drop-off is too long" });
     }
+    if (data.stops.length > MAX_STOPS) {
+      ctx.addIssue({ code: "custom", path: ["stops"], message: `Add up to ${MAX_STOPS} stops` });
+    }
+    data.stops.forEach((stop, index) => {
+      if (stop.length < 2) {
+        ctx.addIssue({ code: "custom", path: ["stops"], message: `Enter stop ${index + 1}, or remove it` });
+      } else if (stop.length > LOCATION_MAX) {
+        ctx.addIssue({ code: "custom", path: ["stops"], message: `Stop ${index + 1} is too long` });
+      }
+    });
     if (!/^\d+$/.test(data.passengerCount)) {
       ctx.addIssue({ code: "custom", path: ["passengerCount"], message: "Enter a whole number of passengers" });
     } else {
       const count = Number(data.passengerCount);
       if (count < 1 || count > 50000) {
         ctx.addIssue({ code: "custom", path: ["passengerCount"], message: "Enter a passenger count from 1 to 50,000" });
+      }
+    }
+    if (!/^\d+$/.test(data.vehicleCount)) {
+      ctx.addIssue({ code: "custom", path: ["vehicleCount"], message: "Enter the number of vehicles" });
+    } else {
+      const vehicles = Number(data.vehicleCount);
+      if (vehicles < 1 || vehicles > 200) {
+        ctx.addIssue({ code: "custom", path: ["vehicleCount"], message: "Enter a vehicle count from 1 to 200" });
       }
     }
     if (!oneOf(data.vehiclePreference, QUOTE_VEHICLES)) {
@@ -170,7 +197,21 @@ const quoteSchema = z
       ctx.addIssue({ code: "custom", path: ["luggage"], message: "Choose a luggage level" });
     }
     if (data.coordinatorNeeded !== "yes" && data.coordinatorNeeded !== "no") {
-      ctx.addIssue({ code: "custom", path: ["coordinatorNeeded"], message: "Say whether you need an on-site coordinator" });
+      ctx.addIssue({ code: "custom", path: ["coordinatorNeeded"], message: "Say whether you need an on-site Venture Rep" });
+    } else if (data.coordinatorNeeded === "yes" && /^\d+$/.test(data.vehicleCount)) {
+      const vehicles = Number(data.vehicleCount);
+      if (vehicles >= 1 && vehicles <= 200) {
+        const recommended = recommendedRepCount(vehicles);
+        if (!/^\d+$/.test(data.representativeCount) || Number(data.representativeCount) < recommended) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["representativeCount"],
+            message: `Choose at least ${recommended} Venture Rep${recommended === 1 ? "" : "s"}`,
+          });
+        } else if (Number(data.representativeCount) > 200) {
+          ctx.addIssue({ code: "custom", path: ["representativeCount"], message: "Enter 200 Venture Reps or fewer" });
+        }
+      }
     }
     if (data.contactName.length < 2) {
       ctx.addIssue({ code: "custom", path: ["contactName"], message: "Enter your name" });
@@ -203,10 +244,13 @@ const quoteSchema = z
     endTime: data.endTime,
     pickup: data.pickup,
     dropoff: data.dropoff,
+    stops: data.stops,
     passengerCount: Number(data.passengerCount),
+    vehicleCount: Number(data.vehicleCount),
     vehiclePreference: data.vehiclePreference as QuoteVehiclePreference,
     luggage: data.luggage as QuoteLuggage,
     coordinatorNeeded: data.coordinatorNeeded === "yes",
+    representativeCount: data.coordinatorNeeded === "yes" ? Number(data.representativeCount) : 0,
     contactName: data.contactName,
     company: data.company,
     email: data.email.toLowerCase(),
@@ -229,10 +273,13 @@ export function parseQuoteFields(form: FormData): { ok: true; data: QuoteInput }
     endTime: endTime || undefined,
     pickup: field(form, "pickup"),
     dropoff: field(form, "dropoff"),
+    stops: form.getAll("stops").map((value) => String(value).trim()),
     passengerCount: field(form, "passengerCount"),
+    vehicleCount: field(form, "vehicleCount"),
     vehiclePreference: field(form, "vehiclePreference"),
     luggage: field(form, "luggage"),
     coordinatorNeeded: field(form, "coordinatorNeeded"),
+    representativeCount: field(form, "representativeCount"),
     contactName: field(form, "contactName"),
     company: company || undefined,
     email: field(form, "email"),
@@ -287,6 +334,51 @@ export function formatQuoteTime(value?: string | null) {
     minute: "2-digit",
     timeZone: "UTC",
   });
+}
+
+export function recommendedRepCount(vehicleCount: number) {
+  return Math.ceil(vehicleCount / 3);
+}
+
+export function parseStops(value: string | null | undefined) {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((item): item is string => typeof item === "string" && item.trim().length > 0);
+  } catch {
+    return [];
+  }
+}
+
+export function centsFromSetting(value: string | null | undefined) {
+  if (!value || !/^\d+$/.test(value)) return null;
+  const cents = Number(value);
+  return cents > 0 ? cents : null;
+}
+
+export function dollarsFromCents(cents: number | null) {
+  if (cents == null) return "";
+  return (cents / 100).toFixed(2);
+}
+
+export function formatRepPrice(cents: number | null) {
+  if (cents == null) return "quoted per representative";
+  const amount = (cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
+  return `${amount} per representative`;
+}
+
+export function parseRepPriceInput(raw: string): { ok: true; cents: number | null } | { ok: false; error: string } {
+  const trimmed = raw.trim().replace(/^\$/, "").replace(/,/g, "");
+  if (!trimmed) return { ok: true, cents: null };
+  if (!/^\d+(\.\d{1,2})?$/.test(trimmed)) {
+    return { ok: false, error: "Enter a price like 125 or 125.00, or leave it blank." };
+  }
+  const cents = Math.round(Number(trimmed) * 100);
+  if (cents <= 0 || cents > 1_000_000) {
+    return { ok: false, error: "Enter a price up to $10,000, or leave it blank." };
+  }
+  return { ok: true, cents };
 }
 
 export function orlandoToday() {

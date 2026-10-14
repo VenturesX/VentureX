@@ -452,10 +452,14 @@ model QuoteRequest {
   endTime            String?
   pickup             String
   dropoff            String
+  stops              String                 @default("[]")
   passengerCount     Int
+  vehicleCount       Int                    @default(1)
   vehiclePreference  QuoteVehiclePreference
   luggage            QuoteLuggage
   coordinatorNeeded  Boolean
+  representativeCount Int                   @default(0)
+  repPriceCents      Int?
   contactName        String
   company            String?
   email              String
@@ -471,4 +475,10 @@ model QuoteRequest {
   @@index([status])
   @@index([createdAt])
   @@index([email])
+}
+
+model AppSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
 }
