@@ -1,4 +1,5 @@
 import { PortalShell } from "@/components/portal-shell";
+import { CallbackList } from "@/components/portals/callback-list";
 import { QuoteRequestsBoard } from "@/components/portals/quote-requests";
 import { requirePortal } from "@/lib/session-server";
 
@@ -8,20 +9,23 @@ export default async function QuotesPage() {
     session.role === "ADMIN"
       ? [
           { href: "/admin", label: "Admin" },
-          { href: "/quotes", label: "Quote Requests" },
-          { href: "/meet-greet", label: "M&G" },
+          { href: "/quotes", label: "Quotes" },
+          { href: "/inbox", label: "Guest questions" },
+          { href: "/meet-greet", label: "Arrivals" },
           { href: "/dispatch", label: "Dispatch" },
-          { href: "/driver", label: "Driver" },
-          { href: "/client", label: "Client" },
         ]
       : [
-          { href: "/dispatch", label: "Live board" },
-          { href: "/quotes", label: "Quote Requests" },
+          { href: "/dispatch", label: "Dispatch" },
+          { href: "/quotes", label: "Quotes" },
+          { href: "/inbox", label: "Guest questions" },
         ];
 
   return (
     <PortalShell role={session.role} name={session.name} eventName={event?.name} nav={nav}>
-      <QuoteRequestsBoard canEditPrice={session.role === "ADMIN"} />
+      <div className="space-y-8">
+        <CallbackList />
+        <QuoteRequestsBoard canEditPrice={session.role === "ADMIN"} />
+      </div>
     </PortalShell>
   );
 }

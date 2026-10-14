@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, Link2, ListChecks, Plane, Route, Users } from "lucide-react";
 import { CurbSign } from "@/components/marketing/curb-sign";
+import { ExpertHelp } from "@/components/marketing/expert-help";
 
 const SERVICES = [
   {
@@ -23,7 +24,7 @@ const SERVICES = [
 const STEPS = [
   {
     title: "Request",
-    body: "Send the service, dates, pickup, drop-off, and passenger count.",
+    body: "Tell us the kind of move and about how many guests. If you're not sure, a Venture Expert will help.",
   },
   {
     title: "Quote",
@@ -126,6 +127,10 @@ export function MarketingHome() {
             </li>
           ))}
         </ul>
+      </section>
+
+      <section id="expert" className="mx-auto max-w-6xl scroll-mt-20 px-5 py-4 pb-14">
+        <ExpertHelp />
       </section>
 
       <section className="px-5 pb-16">

@@ -8,10 +8,11 @@ export const metadata: Metadata = {
 export default async function QuoteReceivedPage({
   searchParams,
 }: {
-  searchParams: Promise<{ ref?: string }>;
+  searchParams: Promise<{ ref?: string; expert?: string }>;
 }) {
-  const { ref } = await searchParams;
+  const { ref, expert } = await searchParams;
   const reference = ref && /^VX-\d{4,8}$/.test(ref) ? ref : null;
+  const needsExpert = expert === "1";
 
   return (
     <div className="mx-auto max-w-lg px-5 py-16">
@@ -24,7 +25,9 @@ export default async function QuoteReceivedPage({
         </div>
       ) : null}
       <p className="mt-6 text-base leading-relaxed text-white/75">
-        Your request is in the Venture Directors queue. We&apos;ll review it and follow up at the email and phone you sent. Nothing is reserved until you accept a quote.
+        {needsExpert
+          ? "A Venture Expert will reach out and walk through the move with you. Send whatever you know — blanks are welcome. Nothing is reserved until you accept a quote."
+          : "Your request is in the Venture Directors queue. We'll review the suggestion and follow up. Nothing is reserved until you accept a quote."}
       </p>
       <div className="mt-8 flex flex-col items-start gap-4">
         <Link href="/" className="inline-flex h-12 items-center rounded-lg bg-[#1E90FF] px-5 text-base font-semibold text-white">

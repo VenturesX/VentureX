@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 import { jsonError, requireApi } from "@/lib/api";
 import { db } from "@/lib/db";
 import { recordAudit, recordStatus } from "@/lib/ops/audit";
+import { planQuote } from "@/lib/drive-time";
+import { loadGuidance } from "@/lib/ops-settings";
 import {
   MANIFEST_MIME,
   REP_PRICE_KEY,
@@ -33,6 +35,11 @@ const listSelect = {
   coordinatorNeeded: true,
   representativeCount: true,
   repPriceCents: true,
+  needsExpertCall: true,
+  waitMinutes: true,
+  driveMinutes: true,
+  recommendation: true,
+  unsureSteps: true,
   contactName: true,
   company: true,
   email: true,
@@ -51,7 +58,7 @@ export async function GET() {
       select: listSelect,
     });
     return NextResponse.json({
-      rows: rows.map((row) => ({ ...row, stops: parseStops(row.stops) })),
+      rows: rows.map((row) => ({ ...row, stops: parseStops(row.stops), unsureSteps: parseStops(row.unsureSteps) })),
     });
   } catch (error) {
     return jsonError(error);
@@ -90,8 +97,42 @@ export async function POST(request: Request) {
       };
     }
 
-    const row = await createQuote(parsed.data, manifest);
-    return NextResponse.json({ ok: true, id: row.id, reference: row.reference });
+    const guidance = await loadGuidance();
+    const plan = await planQuote(
+      {
+        serviceType: parsed.data.serviceType,
+        passengerCount: parsed.data.passengerCount,
+        pickup: parsed.data.pickup,
+        dropoff: parsed.data.dropoff,
+        stops: parsed.data.stops,
+        waitMinutes: parsed.data.waitMinutes,
+        driveMinutes: parsed.data.driveMinutes,
+        vehiclePreference: parsed.data.vehiclePreference,
+        email: parsed.data.email,
+        phone: parsed.data.phone,
+        startDate: parsed.data.startDate,
+        unsureSteps: parsed.data.unsureSteps,
+      },
+      guidance.fleet,
+      guidance.timing,
+      guidance.driveTable,
+    );
+    const repCount = plan.repCount > 0 ? Math.max(plan.repCount, parsed.data.representativeCount) : 0;
+    const row = await createQuote(
+      {
+        ...parsed.data,
+        vehicleCount: plan.vehicleCount,
+        representativeCount: repCount,
+        coordinatorNeeded: repCount > 0,
+      },
+      manifest,
+      {
+        needsExpertCall: plan.needsExpert || parsed.data.unsureSteps.length > 0,
+        recommendation: plan.recommendation,
+        repCount,
+      },
+    );
+    return NextResponse.json({ ok: true, id: row.id, reference: row.reference, needsExpertCall: plan.needsExpert || parsed.data.unsureSteps.length > 0 });
   } catch (error) {
     return jsonError(error);
   }
@@ -105,6 +146,7 @@ async function currentRepPriceCents() {
 async function createQuote(
   data: QuoteInput,
   manifest: { name: string; mime: string; bytes: Uint8Array } | null,
+  extra: { needsExpertCall: boolean; recommendation: string; repCount: number },
 ) {
   for (let attempt = 0; attempt < 6; attempt++) {
     const count = await db.quoteRequest.count();
@@ -127,8 +169,13 @@ async function createQuote(
           vehiclePreference: data.vehiclePreference,
           luggage: data.luggage,
           coordinatorNeeded: data.coordinatorNeeded,
-          representativeCount: data.representativeCount,
-          repPriceCents: data.coordinatorNeeded ? await currentRepPriceCents() : null,
+          representativeCount: extra.repCount,
+          repPriceCents: extra.repCount > 0 ? await currentRepPriceCents() : null,
+          needsExpertCall: extra.needsExpertCall,
+          waitMinutes: data.waitMinutes ?? null,
+          driveMinutes: data.driveMinutes ?? null,
+          recommendation: extra.recommendation,
+          unsureSteps: JSON.stringify(data.unsureSteps),
           contactName: data.contactName,
           company: data.company ?? null,
           email: data.email,

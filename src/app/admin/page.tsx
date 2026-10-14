@@ -1,5 +1,6 @@
 import { PortalShell } from "@/components/portal-shell";
 import { AdminBoard } from "@/components/portals/admin-board";
+import { FieldSettings } from "@/components/portals/field-settings";
 import { requirePortal } from "@/lib/session-server";
 
 export default async function AdminPage() {
@@ -12,13 +13,15 @@ export default async function AdminPage() {
       eventName={event.name}
       nav={[
         { href: "/admin", label: "Admin" },
-        { href: "/quotes", label: "Quote Requests" },
-        { href: "/meet-greet", label: "M&G" },
+        { href: "/quotes", label: "Quotes" },
+        { href: "/inbox", label: "Guest questions" },
+        { href: "/meet-greet", label: "Arrivals" },
         { href: "/dispatch", label: "Dispatch" },
         { href: "/driver", label: "Driver" },
         { href: "/client", label: "Client" },
       ]}
     >
+      <FieldSettings eventId={event.id} />
       <AdminBoard eventId={event.id} />
     </PortalShell>
   );

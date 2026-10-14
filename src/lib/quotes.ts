@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const QUOTE_PROFILES = ["PLANNER", "DESTINATION_PARTNER", "GROUP"] as const;
-export const QUOTE_SERVICE_TYPES = ["AIRPORT_TRANSFER", "DINE_AROUND", "SHUTTLE_LOOP", "CHARTER", "OTHER"] as const;
+export const QUOTE_SERVICE_TYPES = ["AIRPORT_TRANSFER", "DINE_AROUND", "SHUTTLE_LOOP", "POINT_TO_POINT", "CHARTER", "OTHER", "UNSURE"] as const;
 export const QUOTE_VEHICLES = ["COACH", "MINIBUS", "SPRINTER", "SUV", "NO_PREFERENCE"] as const;
 export const QUOTE_LUGGAGE = ["NONE", "CARRY_ON", "FULL"] as const;
 export const QUOTE_STATUSES = ["NEW", "QUOTED", "WON", "LOST"] as const;
@@ -31,17 +31,19 @@ export const PROFILE_OPTIONS: { value: QuoteProfile; label: string; hint: string
 ];
 
 export const SERVICE_OPTIONS: { value: QuoteServiceType; label: string }[] = [
-  { value: "AIRPORT_TRANSFER", label: "Airport transfer" },
-  { value: "DINE_AROUND", label: "Dine-around or event move" },
-  { value: "SHUTTLE_LOOP", label: "Shuttle loop (on request)" },
+  { value: "AIRPORT_TRANSFER", label: "Airport transfers" },
+  { value: "SHUTTLE_LOOP", label: "Shuttle loop" },
+  { value: "POINT_TO_POINT", label: "Point-to-point" },
+  { value: "DINE_AROUND", label: "Dine-around" },
   { value: "CHARTER", label: "Charter" },
   { value: "OTHER", label: "Other" },
+  { value: "UNSURE", label: "Not sure yet" },
 ];
 
 export const VEHICLE_OPTIONS: { value: QuoteVehiclePreference; label: string }[] = [
   { value: "NO_PREFERENCE", label: "No preference" },
   { value: "COACH", label: "Motorcoach" },
-  { value: "MINIBUS", label: "Minibus" },
+  { value: "MINIBUS", label: "Minicoach" },
   { value: "SPRINTER", label: "Sprinter or executive van" },
   { value: "SUV", label: "SUV" },
 ];
@@ -102,6 +104,9 @@ export type QuoteInput = {
   email: string;
   phone: string;
   notes?: string;
+  waitMinutes?: number;
+  driveMinutes?: number;
+  unsureSteps: string[];
 };
 
 const quoteSchema = z
@@ -126,20 +131,25 @@ const quoteSchema = z
     email: z.string(),
     phone: z.string(),
     notes: z.string().optional(),
+    waitMinutes: z.string().optional(),
+    driveMinutes: z.string().optional(),
+    unsureSteps: z.string().optional(),
   })
   .superRefine((data, ctx) => {
-    if (!oneOf(data.profile, QUOTE_PROFILES)) {
+    if (data.profile && !oneOf(data.profile, QUOTE_PROFILES)) {
       ctx.addIssue({ code: "custom", path: ["profile"], message: "Choose who this request is for" });
     }
-    if (!oneOf(data.serviceType, QUOTE_SERVICE_TYPES)) {
+    if (data.serviceType && !oneOf(data.serviceType, QUOTE_SERVICE_TYPES)) {
       ctx.addIssue({ code: "custom", path: ["serviceType"], message: "Choose a service" });
     }
-    if (!isIsoDate(data.startDate)) {
-      ctx.addIssue({ code: "custom", path: ["startDate"], message: "Enter a start date" });
-    } else if (data.startDate < orlandoToday()) {
-      ctx.addIssue({ code: "custom", path: ["startDate"], message: "Start date must be today or later" });
-    } else if (data.startDate > addYears(orlandoToday(), 3)) {
-      ctx.addIssue({ code: "custom", path: ["startDate"], message: "Start date must be within the next 3 years" });
+    if (data.startDate) {
+      if (!isIsoDate(data.startDate)) {
+        ctx.addIssue({ code: "custom", path: ["startDate"], message: "Enter a start date" });
+      } else if (data.startDate < orlandoToday()) {
+        ctx.addIssue({ code: "custom", path: ["startDate"], message: "Start date must be today or later" });
+      } else if (data.startDate > addYears(orlandoToday(), 3)) {
+        ctx.addIssue({ code: "custom", path: ["startDate"], message: "Start date must be within the next 3 years" });
+      }
     }
     if (data.endDate) {
       if (!isIsoDate(data.endDate)) {
@@ -154,15 +164,11 @@ const quoteSchema = z
     if (data.endTime && !isTime(data.endTime)) {
       ctx.addIssue({ code: "custom", path: ["endTime"], message: "Enter a valid end time" });
     }
-    if (data.pickup.length < 2) {
-      ctx.addIssue({ code: "custom", path: ["pickup"], message: "Enter a pickup location" });
-    } else if (data.pickup.length > LOCATION_MAX) {
-      ctx.addIssue({ code: "custom", path: ["pickup"], message: "Pickup is too long" });
+    if (data.pickup && (data.pickup.length < 2 || data.pickup.length > LOCATION_MAX)) {
+      ctx.addIssue({ code: "custom", path: ["pickup"], message: data.pickup.length < 2 ? "Enter a pickup location" : "Pickup is too long" });
     }
-    if (data.dropoff.length < 2) {
-      ctx.addIssue({ code: "custom", path: ["dropoff"], message: "Enter a drop-off location" });
-    } else if (data.dropoff.length > LOCATION_MAX) {
-      ctx.addIssue({ code: "custom", path: ["dropoff"], message: "Drop-off is too long" });
+    if (data.dropoff && (data.dropoff.length < 2 || data.dropoff.length > LOCATION_MAX)) {
+      ctx.addIssue({ code: "custom", path: ["dropoff"], message: data.dropoff.length < 2 ? "Enter a drop-off location" : "Drop-off is too long" });
     }
     if (data.stops.length > MAX_STOPS) {
       ctx.addIssue({ code: "custom", path: ["stops"], message: `Add up to ${MAX_STOPS} stops` });
@@ -174,88 +180,72 @@ const quoteSchema = z
         ctx.addIssue({ code: "custom", path: ["stops"], message: `Stop ${index + 1} is too long` });
       }
     });
-    if (!/^\d+$/.test(data.passengerCount)) {
-      ctx.addIssue({ code: "custom", path: ["passengerCount"], message: "Enter a whole number of passengers" });
-    } else {
-      const count = Number(data.passengerCount);
-      if (count < 1 || count > 50000) {
+    if (data.passengerCount) {
+      if (!/^\d+$/.test(data.passengerCount) || Number(data.passengerCount) < 1 || Number(data.passengerCount) > 50000) {
         ctx.addIssue({ code: "custom", path: ["passengerCount"], message: "Enter a passenger count from 1 to 50,000" });
       }
     }
-    if (!/^\d+$/.test(data.vehicleCount)) {
-      ctx.addIssue({ code: "custom", path: ["vehicleCount"], message: "Enter the number of vehicles" });
-    } else {
-      const vehicles = Number(data.vehicleCount);
-      if (vehicles < 1 || vehicles > 200) {
-        ctx.addIssue({ code: "custom", path: ["vehicleCount"], message: "Enter a vehicle count from 1 to 200" });
-      }
+    if (data.vehicleCount && (!/^\d+$/.test(data.vehicleCount) || Number(data.vehicleCount) > 200)) {
+      ctx.addIssue({ code: "custom", path: ["vehicleCount"], message: "Enter a vehicle count from 0 to 200" });
     }
-    if (!oneOf(data.vehiclePreference, QUOTE_VEHICLES)) {
+    if (data.vehiclePreference && !oneOf(data.vehiclePreference, QUOTE_VEHICLES)) {
       ctx.addIssue({ code: "custom", path: ["vehiclePreference"], message: "Choose a vehicle preference" });
     }
-    if (!oneOf(data.luggage, QUOTE_LUGGAGE)) {
+    if (data.luggage && !oneOf(data.luggage, QUOTE_LUGGAGE)) {
       ctx.addIssue({ code: "custom", path: ["luggage"], message: "Choose a luggage level" });
     }
-    if (data.coordinatorNeeded !== "yes" && data.coordinatorNeeded !== "no") {
-      ctx.addIssue({ code: "custom", path: ["coordinatorNeeded"], message: "Say whether you need an on-site Venture Rep" });
-    } else if (data.coordinatorNeeded === "yes" && /^\d+$/.test(data.vehicleCount)) {
-      const vehicles = Number(data.vehicleCount);
-      if (vehicles >= 1 && vehicles <= 200) {
-        const recommended = recommendedRepCount(vehicles);
-        if (!/^\d+$/.test(data.representativeCount) || Number(data.representativeCount) < recommended) {
-          ctx.addIssue({
-            code: "custom",
-            path: ["representativeCount"],
-            message: `Choose at least ${recommended} Venture Rep${recommended === 1 ? "" : "s"}`,
-          });
-        } else if (Number(data.representativeCount) > 200) {
-          ctx.addIssue({ code: "custom", path: ["representativeCount"], message: "Enter 200 Venture Reps or fewer" });
-        }
-      }
+    if (data.representativeCount && (!/^\d+$/.test(data.representativeCount) || Number(data.representativeCount) > 200)) {
+      ctx.addIssue({ code: "custom", path: ["representativeCount"], message: "Enter 200 Venture Reps or fewer" });
     }
-    if (data.contactName.length < 2) {
-      ctx.addIssue({ code: "custom", path: ["contactName"], message: "Enter your name" });
-    } else if (data.contactName.length > 120) {
+    if (data.contactName && data.contactName.length > 120) {
       ctx.addIssue({ code: "custom", path: ["contactName"], message: "Name is too long" });
     }
-    const companyRequired = data.profile === "PLANNER" || data.profile === "DESTINATION_PARTNER";
-    if (companyRequired && !data.company) {
-      ctx.addIssue({ code: "custom", path: ["company"], message: "Company is required for this profile" });
-    } else if (data.company && data.company.length > 160) {
+    if (data.company && data.company.length > 160) {
       ctx.addIssue({ code: "custom", path: ["company"], message: "Company name is too long" });
     }
-    if (!z.email().safeParse(data.email).success) {
+    if (data.email && !z.email().safeParse(data.email).success) {
       ctx.addIssue({ code: "custom", path: ["email"], message: "Enter a valid email address" });
     }
-    const digits = data.phone.replace(/\D/g, "");
-    if (digits.length < 7 || digits.length > 15 || data.phone.length > 40) {
-      ctx.addIssue({ code: "custom", path: ["phone"], message: "Enter a phone number we can call or text" });
+    if (data.phone) {
+      const digits = data.phone.replace(/\D/g, "");
+      if (digits.length < 7 || digits.length > 15 || data.phone.length > 40) {
+        ctx.addIssue({ code: "custom", path: ["phone"], message: "Enter a phone number we can call or text" });
+      }
+    }
+    if (data.waitMinutes && !["15", "20", "30"].includes(data.waitMinutes)) {
+      ctx.addIssue({ code: "custom", path: ["waitMinutes"], message: "Choose a 15, 20, or 30 minute wait" });
+    }
+    if (data.driveMinutes && (!/^\d+$/.test(data.driveMinutes) || Number(data.driveMinutes) < 1 || Number(data.driveMinutes) > 300)) {
+      ctx.addIssue({ code: "custom", path: ["driveMinutes"], message: "Enter drive minutes from 1 to 300" });
     }
     if (data.notes && data.notes.length > 4000) {
       ctx.addIssue({ code: "custom", path: ["notes"], message: "Notes must be 4,000 characters or fewer" });
     }
   })
   .transform((data) => ({
-    profile: data.profile as QuoteProfile,
-    serviceType: data.serviceType as QuoteServiceType,
+    profile: (oneOf(data.profile, QUOTE_PROFILES) ? data.profile : "GROUP") as QuoteProfile,
+    serviceType: (oneOf(data.serviceType, QUOTE_SERVICE_TYPES) ? data.serviceType : "UNSURE") as QuoteServiceType,
     startDate: data.startDate,
     endDate: data.endDate,
     startTime: data.startTime,
     endTime: data.endTime,
     pickup: data.pickup,
     dropoff: data.dropoff,
-    stops: data.stops,
-    passengerCount: Number(data.passengerCount),
-    vehicleCount: Number(data.vehicleCount),
-    vehiclePreference: data.vehiclePreference as QuoteVehiclePreference,
-    luggage: data.luggage as QuoteLuggage,
+    stops: data.stops.filter((stop) => stop.length >= 2),
+    passengerCount: /^\d+$/.test(data.passengerCount) ? Number(data.passengerCount) : 0,
+    vehicleCount: /^\d+$/.test(data.vehicleCount) ? Number(data.vehicleCount) : 0,
+    vehiclePreference: (oneOf(data.vehiclePreference, QUOTE_VEHICLES) ? data.vehiclePreference : "NO_PREFERENCE") as QuoteVehiclePreference,
+    luggage: (oneOf(data.luggage, QUOTE_LUGGAGE) ? data.luggage : "NONE") as QuoteLuggage,
     coordinatorNeeded: data.coordinatorNeeded === "yes",
-    representativeCount: data.coordinatorNeeded === "yes" ? Number(data.representativeCount) : 0,
+    representativeCount: /^\d+$/.test(data.representativeCount) ? Number(data.representativeCount) : 0,
     contactName: data.contactName,
     company: data.company,
-    email: data.email.toLowerCase(),
+    email: data.email ? data.email.toLowerCase() : "",
     phone: data.phone,
     notes: data.notes,
+    waitMinutes: data.waitMinutes ? Number(data.waitMinutes) : undefined,
+    driveMinutes: data.driveMinutes ? Number(data.driveMinutes) : undefined,
+    unsureSteps: parseUnsureSteps(data.unsureSteps),
   }));
 
 export function parseQuoteFields(form: FormData): { ok: true; data: QuoteInput } | { ok: false; fieldErrors: Record<string, string> } {
@@ -285,6 +275,9 @@ export function parseQuoteFields(form: FormData): { ok: true; data: QuoteInput }
     email: field(form, "email"),
     phone: field(form, "phone"),
     notes: notes || undefined,
+    waitMinutes: field(form, "waitMinutes") || undefined,
+    driveMinutes: field(form, "driveMinutes") || undefined,
+    unsureSteps: field(form, "unsureSteps") || undefined,
   });
   if (!parsed.success) {
     return { ok: false, fieldErrors: firstFieldErrors(parsed.error) };
@@ -392,6 +385,17 @@ export function orlandoToday() {
 
 function field(form: FormData, key: string) {
   return String(form.get(key) ?? "").trim();
+}
+
+function parseUnsureSteps(value: string | undefined) {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((item): item is string => typeof item === "string").slice(0, 12);
+  } catch {
+    return [];
+  }
 }
 
 function oneOf<T extends string>(value: string, options: readonly T[]): value is T {

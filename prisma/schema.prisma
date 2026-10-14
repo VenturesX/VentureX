@@ -133,8 +133,12 @@ model Event {
   guests        Guest[]
   vehicles      Vehicle[]
   exceptions    Exception[]
-  alertConfig   AlertConfig?
-  timingPresets TimingPreset[]
+  directLinePhone   String?
+  guestPhoneEnabled Boolean   @default(false)
+  alertConfig       AlertConfig?
+  timingPresets     TimingPreset[]
+  faqs              EventFaq[]
+  guestRequests     GuestRequest[]
 }
 
 model Location {
@@ -416,8 +420,10 @@ enum QuoteServiceType {
   AIRPORT_TRANSFER
   DINE_AROUND
   SHUTTLE_LOOP
+  POINT_TO_POINT
   CHARTER
   OTHER
+  UNSURE
 }
 
 enum QuoteVehiclePreference {
@@ -460,6 +466,11 @@ model QuoteRequest {
   coordinatorNeeded  Boolean
   representativeCount Int                   @default(0)
   repPriceCents      Int?
+  needsExpertCall    Boolean                @default(false)
+  waitMinutes        Int?
+  driveMinutes       Int?
+  recommendation     String?
+  unsureSteps        String                 @default("[]")
   contactName        String
   company            String?
   email              String
@@ -481,4 +492,51 @@ model AppSetting {
   key       String   @id
   value     String
   updatedAt DateTime @updatedAt
+}
+
+model CallbackRequest {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String
+  bestTime  String
+  status    String   @default("NEW")
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([status])
+}
+
+model EventFaq {
+  id        String   @id @default(cuid())
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  category  String
+  question  String
+  answer    String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([eventId])
+}
+
+model GuestRequest {
+  id             String   @id @default(cuid())
+  eventId        String
+  event          Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  category       String
+  message        String
+  name           String?
+  phone          String?
+  deviceKey      String
+  ip             String?
+  fingerprint    String
+  duplicateCount Int      @default(1)
+  status         String   @default("OPEN")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([eventId, status])
+  @@index([deviceKey, createdAt])
+  @@index([fingerprint])
 }

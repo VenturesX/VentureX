@@ -10,7 +10,11 @@ export default async function MeetGreetPage() {
       role={session.role}
       name={session.name}
       eventName={event.name}
-      nav={[{ href: "/meet-greet", label: "Arrivals hall" }]}
+      nav={[
+        { href: "/meet-greet", label: "Arrivals" },
+        { href: "/inbox", label: "Guest questions" },
+      ]}
+      tone="field"
     >
       <MeetGreetBoard eventId={event.id} />
     </PortalShell>

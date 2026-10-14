@@ -38,6 +38,11 @@ type QuoteRow = {
   coordinatorNeeded: boolean;
   representativeCount: number;
   repPriceCents: number | null;
+  needsExpertCall: boolean;
+  waitMinutes: number | null;
+  driveMinutes: number | null;
+  recommendation: string | null;
+  unsureSteps: string[];
   contactName: string;
   company: string | null;
   email: string;
@@ -162,7 +167,14 @@ export function QuoteRequestsBoard({ canEditPrice = false }: { canEditPrice?: bo
                   <h2 className="mt-1 text-lg font-semibold">{labelFor(SERVICE_OPTIONS, row.serviceType)}</h2>
                   <p className="text-sm text-muted-foreground">{labelFor(PROFILE_OPTIONS, row.profile)}</p>
                 </div>
-                <div className="text-right text-xs text-muted-foreground">{formatDateTime(row.createdAt)}</div>
+                <div className="flex flex-col items-end gap-1">
+                  {row.needsExpertCall ? (
+                    <span className="rounded-full bg-primary px-2 py-1 text-[11px] font-medium text-primary-foreground">
+                      Needs expert call
+                    </span>
+                  ) : null}
+                  <div className="text-right text-xs text-muted-foreground">{formatDateTime(row.createdAt)}</div>
+                </div>
               </div>
               <dl className="mt-3 grid gap-2 text-sm">
                 <div>
@@ -187,13 +199,26 @@ export function QuoteRequestsBoard({ canEditPrice = false }: { canEditPrice?: bo
                 <div>
                   <dt className="text-muted-foreground">Group</dt>
                   <dd>
-                    {row.passengerCount.toLocaleString()} passengers · {row.vehicleCount} vehicle{row.vehicleCount === 1 ? "" : "s"} · {labelFor(VEHICLE_OPTIONS, row.vehiclePreference)} · luggage {labelFor(LUGGAGE_OPTIONS, row.luggage).toLowerCase()}
+                    {row.passengerCount > 0 ? `${row.passengerCount.toLocaleString()} passengers` : "Passenger count not given"}
+                    {" · "}
+                    {row.vehicleCount > 0
+                      ? `${row.vehicleCount} vehicle${row.vehicleCount === 1 ? "" : "s"}`
+                      : "vehicles not sized yet"}
+                    {" · "}
+                    {labelFor(VEHICLE_OPTIONS, row.vehiclePreference)} · luggage {labelFor(LUGGAGE_OPTIONS, row.luggage).toLowerCase()}
+                    {row.waitMinutes ? ` · ${row.waitMinutes} min wait` : ""}
                   </dd>
                 </div>
                 <div>
                   <dt className="text-muted-foreground">Venture Reps</dt>
                   <dd>{repSummary(row)}</dd>
                 </div>
+                {row.recommendation ? (
+                  <div>
+                    <dt className="text-muted-foreground">Suggestion</dt>
+                    <dd className="whitespace-pre-wrap">{row.recommendation}</dd>
+                  </div>
+                ) : null}
                 <div>
                   <dt className="text-muted-foreground">Contact</dt>
                   <dd>

@@ -23,6 +23,7 @@ export const PORTAL_ROLES: Record<string, Role[]> = {
   "/meet-greet": ["ADMIN", "MEET_GREET"],
   "/driver": ["ADMIN", "DRIVER"],
   "/client": ["ADMIN", "CLIENT"],
+  "/inbox": ["ADMIN", "DISPATCHER", "MEET_GREET"],
 };
 
 export function canAccessPath(role: Role, pathname: string) {
@@ -56,6 +57,8 @@ export function canMutate(role: Role, action: string) {
       return admin || role === "DISPATCHER";
     case "quotes.settings":
       return admin;
+    case "ops.inbox":
+      return admin || role === "DISPATCHER" || role === "MEET_GREET";
     default:
       return admin;
   }

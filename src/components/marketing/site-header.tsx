@@ -9,7 +9,8 @@ import { VentureMark, Wordmark } from "@/components/marketing/logo";
 const LINKS = [
   { href: "/#services", label: "Services" },
   { href: "/#how", label: "How it works" },
-  { href: "/#why", label: "Why us" },
+  { href: "/#expert", label: "Talk to an expert" },
+  { href: "/traveling", label: "Traveling now" },
 ];
 
 export function SiteHeader({ staffHref, staffLabel }: { staffHref: string; staffLabel: string }) {
@@ -105,6 +106,9 @@ export function SiteFooter() {
         <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
           <Link href="/quote" className="font-semibold text-[#1E90FF]">
             Get a Quote
+          </Link>
+          <Link href="/traveling" className="text-white/80">
+            Traveling now
           </Link>
           <Link href="/login" className="text-white/80">
             Staff login

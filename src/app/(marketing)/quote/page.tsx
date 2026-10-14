@@ -17,7 +17,7 @@ export default async function QuotePage() {
       <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#1E90FF]">Get a quote</p>
       <h1 className="mt-2 text-4xl font-semibold tracking-tight">Tell us the move.</h1>
       <p className="mt-3 text-sm leading-relaxed text-white/70">
-        Seamless Transportation for the group. Share the stops, the vehicles, and whether you want a Venture Rep on site. Nothing is booked until you accept a quote.
+        A few quick questions. Skip anything you don&apos;t know. If you send it with blanks, a Venture Expert will reach out. Nothing is booked until you accept a quote.
       </p>
       <div className="mt-8">
         <QuoteForm repPriceLabel={repPriceLabel} />

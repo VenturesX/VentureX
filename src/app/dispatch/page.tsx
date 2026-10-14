@@ -11,9 +11,11 @@ export default async function DispatchPage() {
       name={session.name}
       eventName={event.name}
       nav={[
-        { href: "/dispatch", label: "Live board" },
-        { href: "/quotes", label: "Quote Requests" },
+        { href: "/dispatch", label: "Dispatch" },
+        { href: "/quotes", label: "Quotes" },
+        { href: "/inbox", label: "Guest questions" },
       ]}
+      tone="field"
     >
       <DispatchBoard eventId={event.id} />
     </PortalShell>
