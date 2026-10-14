@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Search, Users } from "lucide-react";
+import { Search } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,18 +58,14 @@ export function MeetGreetBoard({ eventId }: { eventId: string }) {
   return (
     <div className="space-y-5">
       <div>
-        <p className="text-xs uppercase tracking-[0.18em] text-primary">Meet & greet · Terminal C</p>
-        <h1 className="text-2xl font-semibold mt-1">Find the guest. Check the party. Feed the queue.</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Staff-assisted check-in is the beta path. Search name, confirmation, party, or flight.
-        </p>
+        <p className="text-xs uppercase tracking-[0.18em] text-primary">Arrivals</p>
+        <h1 className="text-2xl font-semibold mt-1">Find the guest</h1>
+        <p className="text-sm text-muted-foreground mt-1">Search a name, then check the party in.</p>
       </div>
 
-      <div className="grid sm:grid-cols-4 gap-3">
-        <Stat label="In curb queue" value={String(data.queue.count)} />
+      <div className="grid grid-cols-2 gap-3">
+        <Stat label="In queue" value={String(data.queue.count)} />
         <Stat label="Longest wait" value={formatWait(data.queue.longestWait)} warn={data.queue.longestWait >= data.queue.waitTargetMinutes} />
-        <Stat label="VIP in queue" value={String(data.queue.vipCount)} />
-        <Stat label="Wait target" value={`${data.queue.waitTargetMinutes}m`} />
       </div>
 
       <div className="relative">
@@ -78,7 +74,7 @@ export function MeetGreetBoard({ eventId }: { eventId: string }) {
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Whitaker, WHT-04, AA 1823, IAAPA-WHT-04…"
-          className="h-12 pl-10 text-base"
+          className="h-14 pl-10 text-base"
         />
       </div>
 
@@ -87,7 +83,21 @@ export function MeetGreetBoard({ eventId }: { eventId: string }) {
         Apply to full party / batch
       </label>
 
-      <div className="grid lg:grid-cols-[1fr_20rem] gap-4">
+      {party.length > 0 ? (
+        <section className="rounded-2xl border border-[#1E90FF]/40 bg-[#1E90FF]/10 p-4">
+          <h2 className="text-sm font-semibold">This party</h2>
+          <ul className="mt-2 space-y-2">
+            {party.map((guest) => (
+              <li key={guest.id} className="flex items-center justify-between gap-2 text-sm">
+                <span>{fullName(guest.firstName, guest.lastName)}</span>
+                <GuestStatusBadge status={guest.status} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      <div>
         <div className="space-y-3">
           {matches.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-white/15 p-8 text-center text-muted-foreground">
@@ -112,20 +122,20 @@ export function MeetGreetBoard({ eventId }: { eventId: string }) {
                 {guest.assistanceNotes ? (
                   <p className="text-sm text-orange-200 bg-orange-950/50 rounded-lg px-3 py-2">{guest.assistanceNotes}</p>
                 ) : null}
-                <div className="flex flex-wrap gap-2">
-                  <Button size="lg" variant="secondary" disabled={busy !== null} onClick={() => void act(guest.id, "found")}>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button className="h-14 text-base" variant="secondary" disabled={busy !== null} onClick={() => void act(guest.id, "found")}>
                     Found
                   </Button>
-                  <Button size="lg" disabled={busy !== null} onClick={() => void act(guest.id, "check_in")}>
+                  <Button className="h-14 text-base" disabled={busy !== null} onClick={() => void act(guest.id, "check_in")}>
                     Check in
                   </Button>
-                  <Button size="lg" variant="default" disabled={busy !== null} onClick={() => void act(guest.id, "queue")}>
+                  <Button className="col-span-2 h-14 text-base" disabled={busy !== null} onClick={() => void act(guest.id, "queue")}>
                     Place in queue
                   </Button>
-                  <Button size="sm" variant="outline" disabled={busy !== null} onClick={() => void act(guest.id, "assistance")}>
+                  <Button className="h-12" variant="outline" disabled={busy !== null} onClick={() => void act(guest.id, "assistance")}>
                     Needs assist
                   </Button>
-                  <Button size="sm" variant="ghost" disabled={busy !== null} onClick={() => void act(guest.id, "no_show")}>
+                  <Button className="h-12" variant="ghost" disabled={busy !== null} onClick={() => void act(guest.id, "no_show")}>
                     No show
                   </Button>
                 </div>
@@ -136,27 +146,6 @@ export function MeetGreetBoard({ eventId }: { eventId: string }) {
             ))
           )}
         </div>
-        <aside className="rounded-2xl border border-white/10 bg-card p-4 h-fit space-y-3">
-          <div className="flex items-center gap-2 text-sm font-medium">
-            <Users className="size-4 text-primary" />
-            Party on the floor
-          </div>
-          {party.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Search a guest to see their batch.</p>
-          ) : (
-            <ul className="space-y-2">
-              {party.map((g) => (
-                <li key={g.id} className="flex items-center justify-between gap-2 text-sm">
-                  <span>{fullName(g.firstName, g.lastName)}</span>
-                  <GuestStatusBadge status={g.status} />
-                </li>
-              ))}
-            </ul>
-          )}
-          <p className="text-xs text-muted-foreground">
-            Queue zone is the circular curb geofence. Dispatch sees counts the moment you place a party.
-          </p>
-        </aside>
       </div>
     </div>
   );

@@ -8,6 +8,7 @@
     "build": "node scripts/prisma-adapt.mjs && prisma generate && prisma db push && node scripts/maybe-seed.mjs && next build",
     "start": "next start -p 43127",
     "lint": "eslint",
+    "test": "tsx --env-file=.env --test src/lib/guest-access.test.ts src/lib/guest-counts.test.ts",
     "db:setup": "prisma generate && prisma db push && tsx prisma/seed.ts",
     "db:seed": "tsx prisma/seed.ts",
     "db:push": "prisma db push"
@@ -28,6 +29,7 @@
     "next-themes": "^0.4.6",
     "papaparse": "^5.7.0",
     "prisma": "6.16.1",
+    "qrcode": "^1.5.4",
     "radix-ui": "^1.6.7",
     "react": "19.2.8",
     "react-dom": "19.2.8",
@@ -42,6 +44,7 @@
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20",
     "@types/papaparse": "^5.5.2",
+    "@types/qrcode": "^1.5.6",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",

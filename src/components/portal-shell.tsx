@@ -17,6 +17,7 @@ export function PortalShell({
   nav,
   children,
   compact,
+  tone,
 }: {
   role: Role;
   name: string;
@@ -24,6 +25,7 @@ export function PortalShell({
   nav: NavItem[];
   children: React.ReactNode;
   compact?: boolean;
+  tone?: "field";
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -35,7 +37,7 @@ export function PortalShell({
   }
 
   return (
-    <div className="min-h-dvh flex flex-col">
+    <div className={cn("min-h-dvh flex flex-col", tone === "field" && "staff-field")}>
       <header className="sticky top-0 z-30 border-b border-white/10 bg-[#0b1220]/90 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3">
           <Link href="/" className="flex items-center gap-2 min-w-0">
@@ -85,7 +87,7 @@ export function PortalShell({
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "shrink-0 rounded-full px-3 py-1 text-xs",
+                  tone === "field" ? "shrink-0 rounded-full px-3 py-2 text-sm" : "shrink-0 rounded-full px-3 py-1 text-xs",
                   pathname === item.href ? "bg-primary text-white" : "bg-secondary text-muted-foreground",
                 )}
               >
