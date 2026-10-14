@@ -405,3 +405,70 @@ model MockOutboundMessage {
   status    String   @default("MOCK_SENT")
   createdAt DateTime @default(now())
 }
+
+enum QuoteProfile {
+  PLANNER
+  DESTINATION_PARTNER
+  GROUP
+}
+
+enum QuoteServiceType {
+  AIRPORT_TRANSFER
+  DINE_AROUND
+  SHUTTLE_LOOP
+  CHARTER
+  OTHER
+}
+
+enum QuoteVehiclePreference {
+  COACH
+  MINIBUS
+  SPRINTER
+  SUV
+  NO_PREFERENCE
+}
+
+enum QuoteLuggage {
+  NONE
+  CARRY_ON
+  FULL
+}
+
+enum QuoteStatus {
+  NEW
+  QUOTED
+  WON
+  LOST
+}
+
+model QuoteRequest {
+  id                 String                 @id @default(cuid())
+  reference          String                 @unique
+  profile            QuoteProfile
+  serviceType        QuoteServiceType
+  startDate          String
+  endDate            String?
+  startTime          String?
+  endTime            String?
+  pickup             String
+  dropoff            String
+  passengerCount     Int
+  vehiclePreference  QuoteVehiclePreference
+  luggage            QuoteLuggage
+  coordinatorNeeded  Boolean
+  contactName        String
+  company            String?
+  email              String
+  phone              String
+  notes              String?
+  manifestFileName   String?
+  manifestMimeType   String?
+  manifestBytes      Bytes?
+  status             QuoteStatus            @default(NEW)
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([email])
+}

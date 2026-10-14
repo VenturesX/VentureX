@@ -12,6 +12,7 @@ export default async function AdminPage() {
       eventName={event.name}
       nav={[
         { href: "/admin", label: "Admin" },
+        { href: "/quotes", label: "Quote Requests" },
         { href: "/meet-greet", label: "M&G" },
         { href: "/dispatch", label: "Dispatch" },
         { href: "/driver", label: "Driver" },
