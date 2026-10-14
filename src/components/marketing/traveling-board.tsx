@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { QuickAnswers } from "@/components/marketing/quick-answers";
 
 const CATEGORIES = [
   ["PICKUP", "Pickup spot"],
@@ -82,6 +83,9 @@ export function TravelingBoard() {
           Event line {phone}
         </a>
       ) : null}
+      <div className="mt-6">
+        <QuickAnswers handoff="link" />
+      </div>
       <label className="mt-6 block text-sm font-medium" htmlFor="faq-search">Search</label>
       <input id="faq-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Pickup, schedule, lost item…" className="mt-1.5 h-12 w-full rounded-xl border border-white/15 bg-black px-3 text-base outline-none focus:border-[#1E90FF]" />
       <div className="mt-4 space-y-3">

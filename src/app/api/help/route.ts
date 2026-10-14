@@ -9,5 +9,7 @@ export async function GET() {
     hours: guidance.officeHours,
     hoursLabel: guidance.hoursLabel,
     lineOpen: guidance.lineOpen,
+    quickAnswers: guidance.quickAnswers,
+    coachUsable: guidance.coachUsable,
   });
 }

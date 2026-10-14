@@ -8,6 +8,8 @@ export const SETTINGS_KEYS = {
   fleet: "fleetDefaults",
   driveTable: "driveTable",
   loopTiming: "loopTiming",
+  rateCard: "rateCard",
+  quickAnswers: "quickAnswers",
 } as const;
 
 export type FleetId = "COACH" | "MINIBUS" | "SPRINTER" | "SUV";
@@ -114,12 +116,15 @@ export type QuotePlan = {
   detail: string;
   recommendation: string;
   vehicleCount: number;
+  vehicleId: FleetId;
   vehicleLabel: string;
   usableSeats: number | null;
   repCount: number;
   cycleMinutes: number | null;
   driveSource: "manual" | "table" | "maps" | "missing" | "none";
   needsExpert: boolean;
+  priceCents: number | null;
+  priceLabel: string;
 };
 
 type DriveLeg = { drive: number; source: "manual" | "table" | "maps" };
@@ -366,12 +371,15 @@ function finishPlan(
     detail: detail + repLine,
     recommendation,
     vehicleCount,
+    vehicleId: vehicle.id,
     vehicleLabel: vehicle.label,
     usableSeats: vehicle.usable,
     repCount,
     cycleMinutes,
     driveSource,
     needsExpert,
+    priceCents: null,
+    priceLabel: "Price sent shortly.",
   };
 }
 
@@ -391,12 +399,15 @@ function planShell(
     detail: text,
     recommendation: text,
     vehicleCount,
+    vehicleId: vehicle.id,
     vehicleLabel: vehicle.label,
     usableSeats: vehicle.usable,
     repCount,
     cycleMinutes,
     driveSource,
     needsExpert,
+    priceCents: null,
+    priceLabel: "Price sent shortly.",
   };
 }
 
@@ -454,4 +465,244 @@ function clampInt(value: unknown, min: number, max: number, fallback: number) {
   const number = typeof value === "number" ? value : Number(value);
   if (!Number.isFinite(number)) return fallback;
   return Math.min(max, Math.max(min, Math.round(number)));
+}
+
+export type RateCardRow = {
+  id: FleetId;
+  hourlyCents: number | null;
+  minimumHours: number | null;
+  transferCents: number | null;
+  repCents: number | null;
+};
+
+export type QuickAnswer = {
+  id: string;
+  chip: string;
+  keywords: string[];
+  answer: string;
+  kind: "faq" | "buses";
+};
+
+export const DEFAULT_QUICK_ANSWERS: QuickAnswer[] = [
+  {
+    id: "buses",
+    kind: "buses",
+    chip: "How many buses for 200 guests?",
+    keywords: ["bus", "buses", "coach", "coaches", "vehicle", "vehicles", "how many"],
+    answer: "We size motorcoaches from usable seats.",
+  },
+  {
+    id: "wait",
+    kind: "faq",
+    chip: "How long will guests wait?",
+    keywords: ["wait", "headway", "how long", "minutes"],
+    answer: "Shuttle loops are planned around a 15, 20, or 30 minute wait. A shorter wait needs more vehicles on the loop.",
+  },
+  {
+    id: "luggage",
+    kind: "faq",
+    chip: "What about luggage?",
+    keywords: ["luggage", "bags", "bag", "suitcase", "suitcases"],
+    answer: "Coach and minibus moves can take standard luggage. Tell us if the group has more than a carry-on each and we will leave seats open.",
+  },
+  {
+    id: "access",
+    kind: "faq",
+    chip: "Accessibility",
+    keywords: ["wheelchair", "accessible", "accessibility", "ada", "mobility"],
+    answer: "Tell us what the group needs and we will plan boarding time and the right vehicle with the operator.",
+  },
+  {
+    id: "quoting",
+    kind: "faq",
+    chip: "How does quoting work?",
+    keywords: ["quote", "price", "cost", "how does", "estimate"],
+    answer: "Enter the move and a vehicle plan shows as you go. When rates are on file, an estimate shows too. Venture Directors confirms the final price. Nothing is reserved until you accept it.",
+  },
+];
+
+const PRICE_SHORTLY = "Price sent shortly.";
+
+export function emptyRateCard(): RateCardRow[] {
+  return DEFAULT_FLEET.map((row) => ({
+    id: row.id,
+    hourlyCents: null,
+    minimumHours: null,
+    transferCents: null,
+    repCents: null,
+  }));
+}
+
+export function parseRateCard(stored: string | null | undefined): RateCardRow[] {
+  const base = emptyRateCard();
+  if (!stored?.trim()) return base;
+  try {
+    const parsed = JSON.parse(stored) as RateCardRow[];
+    if (!Array.isArray(parsed)) return base;
+    return base.map((fallback) => {
+      const row = parsed.find((item) => item.id === fallback.id);
+      if (!row) return fallback;
+      return {
+        id: fallback.id,
+        hourlyCents: centsOrNull(row.hourlyCents),
+        minimumHours: hoursOrNull(row.minimumHours),
+        transferCents: centsOrNull(row.transferCents),
+        repCents: centsOrNull(row.repCents),
+      };
+    });
+  } catch {
+    return base;
+  }
+}
+
+export function dollarsToCents(value: string): number | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (!/^\d+(\.\d{1,2})?$/.test(trimmed)) return null;
+  const cents = Math.round(Number(trimmed) * 100);
+  if (!Number.isFinite(cents) || cents <= 0 || cents > 10_000_000) return null;
+  return cents;
+}
+
+export function centsToDollars(cents: number | null): string {
+  if (cents == null) return "";
+  return (cents / 100).toFixed(2);
+}
+
+export type PriceInput = {
+  serviceType: string;
+  vehicleId: FleetId;
+  vehicleCount: number;
+  repCount: number;
+  startDate?: string;
+  endDate?: string;
+  startTime?: string;
+  endTime?: string;
+};
+
+export function applyPrice(plan: QuotePlan, input: PriceInput, rates: RateCardRow[]): QuotePlan {
+  const reps = Math.max(plan.repCount, input.repCount);
+  const estimate = estimateTotal({ ...input, vehicleId: plan.vehicleId, vehicleCount: plan.vehicleCount, repCount: reps }, rates);
+  const recommendation = [plan.headline, plan.math, plan.detail, estimate.label].filter(Boolean).join(" ");
+  return { ...plan, priceCents: estimate.cents, priceLabel: estimate.label, recommendation };
+}
+
+export function estimateTotal(input: PriceInput, rates: RateCardRow[]): { cents: number | null; label: string } {
+  if (!input.vehicleCount) return { cents: null, label: PRICE_SHORTLY };
+  const row = rates.find((item) => item.id === input.vehicleId);
+  if (!row) return { cents: null, label: PRICE_SHORTLY };
+  const timed = input.serviceType === "SHUTTLE_LOOP" || input.serviceType === "DINE_AROUND";
+  const transfer = input.serviceType === "AIRPORT_TRANSFER" || input.serviceType === "POINT_TO_POINT";
+  let vehicleCents: number | null = null;
+  if (timed) {
+    if (row.hourlyCents == null) return { cents: null, label: PRICE_SHORTLY };
+    const span = spanHours(input);
+    const hours = span != null && row.minimumHours != null ? Math.max(span, row.minimumHours) : span ?? row.minimumHours;
+    if (hours == null) return { cents: null, label: PRICE_SHORTLY };
+    vehicleCents = Math.round(row.hourlyCents * hours * input.vehicleCount);
+  } else if (transfer) {
+    if (row.transferCents == null) return { cents: null, label: PRICE_SHORTLY };
+    vehicleCents = row.transferCents * input.vehicleCount;
+  } else {
+    return { cents: null, label: PRICE_SHORTLY };
+  }
+  if (input.repCount > 0 && row.repCents == null) return { cents: null, label: PRICE_SHORTLY };
+  const total = vehicleCents + (input.repCount > 0 ? row.repCents! * input.repCount : 0);
+  return { cents: total, label: `Estimated total ${formatDollars(total)}, final confirmed by Venture Directors` };
+}
+
+export function formatDollars(cents: number) {
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(cents / 100);
+}
+
+export function parseQuickAnswers(stored: string | null | undefined): QuickAnswer[] {
+  const defaults = DEFAULT_QUICK_ANSWERS.map((row) => ({ ...row, keywords: [...row.keywords] }));
+  if (!stored?.trim()) return defaults;
+  try {
+    const parsed = JSON.parse(stored) as QuickAnswer[];
+    if (!Array.isArray(parsed) || parsed.length === 0) return defaults;
+    const rows = parsed
+      .slice(0, 12)
+      .map((row, index) => {
+        const chip = String(row.chip ?? "").trim().slice(0, 80);
+        const answer = String(row.answer ?? "").trim().slice(0, 600);
+        const fallback = defaults.find((item) => item.id === row.id);
+        const keywords = Array.isArray(row.keywords)
+          ? row.keywords.map((word) => String(word).toLowerCase()).filter(Boolean).slice(0, 12)
+          : fallback?.keywords ?? chip.toLowerCase().split(/\s+/).filter((word) => word.length > 3);
+        return {
+          id: String(row.id || fallback?.id || `answer-${index}`),
+          chip,
+          answer,
+          kind: row.kind === "buses" || fallback?.kind === "buses" ? "buses" as const : "faq" as const,
+          keywords,
+        };
+      })
+      .filter((row) => row.chip && row.answer);
+    return rows.length ? rows : defaults;
+  } catch {
+    return defaults;
+  }
+}
+
+export function answerQuickQuestion(question: string, answers: QuickAnswer[], usableSeats: number) {
+  const asked = question.trim();
+  if (!asked) return null;
+  const usable = Math.max(1, usableSeats || 50);
+  const direct = answers.find((row) => row.chip.toLowerCase() === asked.toLowerCase());
+  const guestMatch = asked.match(/(\d{1,5})/);
+  const buses = answers.find((row) => row.kind === "buses");
+  const wantsCount = direct?.kind === "buses" || Boolean(buses && guestMatch && /bus|coach|vehicle|sprinter|suv/.test(asked.toLowerCase()));
+  if (wantsCount && buses) {
+    const guests = Number((direct?.kind === "buses" ? direct.chip.match(/(\d{1,5})/)?.[1] : guestMatch?.[1]) ?? guestMatch?.[1] ?? 0);
+    if (!guests) return { text: buses.answer };
+    const count = Math.max(1, Math.ceil(guests / usable));
+    const noun = count === 1 ? "motorcoach" : "motorcoaches";
+    return {
+      text: `${buses.answer} For ${guests} guests we suggest ${count} ${noun}, assuming ${usable} usable seats per motorcoach. This is a recommendation, not a confirmed plan.`,
+    };
+  }
+  const match = direct ?? bestQuickMatch(asked, answers.filter((row) => row.kind !== "buses"));
+  if (!match) return { text: "I don't have that one yet. Get a quote and the plan will show on the form." };
+  return { text: match.answer };
+}
+
+function bestQuickMatch(question: string, answers: QuickAnswer[]) {
+  const hay = question.toLowerCase();
+  let best: QuickAnswer | null = null;
+  let bestScore = 0;
+  for (const row of answers) {
+    const score = row.keywords.reduce((sum, word) => (hay.includes(word) ? sum + word.length : sum), 0);
+    if (score > bestScore) {
+      best = row;
+      bestScore = score;
+    }
+  }
+  return bestScore > 0 ? best : null;
+}
+
+function centsOrNull(value: unknown) {
+  const number = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(number) || number <= 0) return null;
+  return Math.round(number);
+}
+
+function hoursOrNull(value: unknown) {
+  const number = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(number) || number <= 0 || number > 24) return null;
+  return Math.round(number * 10) / 10;
+}
+
+function spanHours(input: PriceInput) {
+  if (!input.startTime || !input.endTime || !isHm(input.startTime) || !isHm(input.endTime)) return null;
+  let minutes = toMinutes(input.endTime) - toMinutes(input.startTime);
+  if (input.startDate && input.endDate && /^\d{4}-\d{2}-\d{2}$/.test(input.startDate) && /^\d{4}-\d{2}-\d{2}$/.test(input.endDate) && input.endDate > input.startDate) {
+    const start = Date.parse(`${input.startDate}T00:00:00Z`);
+    const end = Date.parse(`${input.endDate}T00:00:00Z`);
+    minutes += Math.round((end - start) / 60000);
+  } else if (minutes < 0) {
+    minutes += 24 * 60;
+  }
+  if (minutes <= 0) return null;
+  return minutes / 60;
 }

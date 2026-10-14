@@ -4,9 +4,17 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import type { DrivePair, FleetVehicle, OfficeHours, TimingSettings } from "@/lib/guidance";
+import { centsToDollars, type DrivePair, type FleetVehicle, type OfficeHours, type QuickAnswer, type RateCardRow, type TimingSettings } from "@/lib/guidance";
 
 type Faq = { id: string; category: string; question: string; answer: string };
+type RateDraft = { id: string; label: string; hourly: string; minimum: string; transfer: string; rep: string };
+
+const RATE_LABELS: Record<string, string> = {
+  COACH: "Motorcoach",
+  MINIBUS: "Minicoach",
+  SPRINTER: "Sprinter",
+  SUV: "SUV",
+};
 
 const DAYS: Array<[number, string]> = [
   [1, "Mon"],
@@ -31,6 +39,8 @@ export function FieldSettings({ eventId }: { eventId: string }) {
   const [timing, setTiming] = useState<TimingSettings | null>(null);
   const [table, setTable] = useState<DrivePair[]>([]);
   const [faqs, setFaqs] = useState<Faq[]>([]);
+  const [rates, setRates] = useState<RateDraft[]>([]);
+  const [quickAnswers, setQuickAnswers] = useState<QuickAnswer[]>([]);
   const [faqCategory, setFaqCategory] = useState("PICKUP");
   const [faqQuestion, setFaqQuestion] = useState("");
   const [faqAnswer, setFaqAnswer] = useState("");
@@ -52,6 +62,15 @@ export function FieldSettings({ eventId }: { eventId: string }) {
     setTiming(json.timing ?? null);
     setTable(json.driveTable ?? []);
     setFaqs(json.faqs ?? []);
+    setRates(((json.rates ?? []) as RateCardRow[]).map((row) => ({
+      id: row.id,
+      label: RATE_LABELS[row.id] ?? row.id,
+      hourly: centsToDollars(row.hourlyCents),
+      minimum: row.minimumHours == null ? "" : String(row.minimumHours),
+      transfer: centsToDollars(row.transferCents),
+      rep: centsToDollars(row.repCents),
+    })));
+    setQuickAnswers(json.quickAnswers ?? []);
   }
 
   useEffect(() => {
@@ -90,6 +109,41 @@ export function FieldSettings({ eventId }: { eventId: string }) {
         <h2 className="text-xl font-semibold">Lines, vehicles, and loop timing</h2>
       </div>
       <section className="space-y-3 rounded-2xl border border-white/10 bg-card p-4">
+        <h3 className="font-semibold">Rate card</h3>
+        <p className="text-xs text-muted-foreground">Leave a box blank until you have a rate. Empty rates show &ldquo;Price sent shortly&rdquo; on the quote. Transfers use the flat rate. Shuttle loops and dine-arounds use the hourly rate, at least the minimum hours.</p>
+        {rates.map((row) => (
+          <div key={row.id} className="space-y-2 rounded-xl bg-secondary/50 p-3">
+            <p className="text-sm font-medium">{row.label}</p>
+            <div className="grid grid-cols-2 gap-2">
+              <label className="text-xs text-muted-foreground">Hourly
+                <Input className="mt-1" inputMode="decimal" value={row.hourly} placeholder="Blank" onChange={(event) => updateRate(row.id, "hourly", event.target.value)} />
+              </label>
+              <label className="text-xs text-muted-foreground">Minimum hours
+                <Input className="mt-1" inputMode="decimal" value={row.minimum} placeholder="Blank" onChange={(event) => updateRate(row.id, "minimum", event.target.value)} />
+              </label>
+              <label className="text-xs text-muted-foreground">Transfer flat
+                <Input className="mt-1" inputMode="decimal" value={row.transfer} placeholder="Blank" onChange={(event) => updateRate(row.id, "transfer", event.target.value)} />
+              </label>
+              <label className="text-xs text-muted-foreground">Per rep
+                <Input className="mt-1" inputMode="decimal" value={row.rep} placeholder="Blank" onChange={(event) => updateRate(row.id, "rep", event.target.value)} />
+              </label>
+            </div>
+          </div>
+        ))}
+        <Button className="h-11" onClick={() => void save({ rateCard: rates.map((row) => ({ id: row.id, hourly: row.hourly, minimum: row.minimum, transfer: row.transfer, rep: row.rep })) }, "Rate card saved")}>Save rate card</Button>
+      </section>
+      <section className="space-y-3 rounded-2xl border border-white/10 bg-card p-4">
+        <h3 className="font-semibold">Quick answers</h3>
+        <p className="text-xs text-muted-foreground">Shown on the quote page and the guest page. The bus-count chip still uses usable seats. No dollar amounts belong here.</p>
+        {quickAnswers.map((row) => (
+          <div key={row.id} className="space-y-2">
+            <Input aria-label="Chip" value={row.chip} onChange={(event) => updateQuick(row.id, "chip", event.target.value)} />
+            <Input aria-label="Answer" value={row.answer} onChange={(event) => updateQuick(row.id, "answer", event.target.value)} />
+          </div>
+        ))}
+        <Button className="h-11" onClick={() => void save({ quickAnswers }, "Quick answers saved")}>Save quick answers</Button>
+      </section>
+      <section className="space-y-3 rounded-2xl border border-white/10 bg-card p-4">
         <h3 className="font-semibold">Venture Expert line</h3>
         <Input value={expertPhone} onChange={(event) => setExpertPhone(event.target.value)} placeholder="(407) 476-8727" />
         <Button className="h-11" onClick={() => void save({ expertPhone }, "Expert line saved")}>Save expert line</Button>
@@ -107,7 +161,7 @@ export function FieldSettings({ eventId }: { eventId: string }) {
       </section>
       <section className="space-y-3 rounded-2xl border border-white/10 bg-card p-4">
         <h3 className="font-semibold">Live call hours</h3>
-        <p className="text-xs text-muted-foreground">Eastern time. Clear the hours to show the call button and callback together all day.</p>
+        <p className="text-xs text-muted-foreground">Eastern time. The quote page keeps a quiet call line. During these hours the number is a link. Outside them it stays visible and request a call is the action.</p>
         <div className="grid grid-cols-2 gap-2">
           <Input type="time" value={start} onChange={(event) => setStart(event.target.value)} />
           <Input type="time" value={end} onChange={(event) => setEnd(event.target.value)} />
@@ -181,6 +235,14 @@ export function FieldSettings({ eventId }: { eventId: string }) {
       </section>
     </div>
   );
+
+  function updateRate(id: string, key: "hourly" | "minimum" | "transfer" | "rep", value: string) {
+    setRates((current) => current.map((row) => (row.id === id ? { ...row, [key]: value } : row)));
+  }
+
+  function updateQuick(id: string, key: "chip" | "answer", value: string) {
+    setQuickAnswers((current) => current.map((row) => (row.id === id ? { ...row, [key]: value } : row)));
+  }
 
   function updateFleet(id: string, key: "seats" | "usable", value: string) {
     setFleet((current) => current.map((row) => (row.id === id ? { ...row, [key]: Number(value) || 0, isDefault: false } : row)));

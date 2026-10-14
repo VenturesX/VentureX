@@ -3,11 +3,15 @@ import { jsonError, requireApi } from "@/lib/api";
 import { db } from "@/lib/db";
 import {
   SETTINGS_KEYS,
+  dollarsToCents,
   parseDriveTable,
   parseFleet,
+  parseQuickAnswers,
+  parseRateCard,
   parseTiming,
   resolveHours,
   resolvePhone,
+  type FleetId,
 } from "@/lib/guidance";
 import { loadGuidance } from "@/lib/ops-settings";
 
@@ -72,6 +76,15 @@ export async function PUT(request: Request) {
     if ("timing" in body) {
       await saveSetting(SETTINGS_KEYS.loopTiming, JSON.stringify(parseTiming(JSON.stringify(body.timing))));
     }
+    if ("rateCard" in body) {
+      const rows = Array.isArray(body.rateCard) ? body.rateCard : [];
+      const card = parseRateCard(JSON.stringify(rows.map((row) => normalizeRate(row))));
+      await saveSetting(SETTINGS_KEYS.rateCard, JSON.stringify(card));
+    }
+    if ("quickAnswers" in body) {
+      const answers = parseQuickAnswers(JSON.stringify(body.quickAnswers));
+      await saveSetting(SETTINGS_KEYS.quickAnswers, JSON.stringify(answers));
+    }
     if ("eventDirectLine" in body || "guestPhoneEnabled" in body) {
       const event = await activeEvent();
       if (event) {
@@ -93,6 +106,17 @@ export async function PUT(request: Request) {
   } catch (error) {
     return jsonError(error);
   }
+}
+
+function normalizeRate(row: unknown) {
+  const item = row as { id?: FleetId; hourlyCents?: unknown; minimumHours?: unknown; transferCents?: unknown; repCents?: unknown; hourly?: unknown; minimum?: unknown; transfer?: unknown; rep?: unknown };
+  return {
+    id: item.id,
+    hourlyCents: typeof item.hourly === "string" ? dollarsToCents(item.hourly) : item.hourlyCents,
+    minimumHours: typeof item.minimum === "string" ? (item.minimum.trim() ? Number(item.minimum) : null) : item.minimumHours,
+    transferCents: typeof item.transfer === "string" ? dollarsToCents(item.transfer) : item.transferCents,
+    repCents: typeof item.rep === "string" ? dollarsToCents(item.rep) : item.repCents,
+  };
 }
 
 async function saveSetting(key: string, value: string) {

@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, Link2, ListChecks, Plane, Route, Users } from "lucide-react";
 import { CurbSign } from "@/components/marketing/curb-sign";
-import { ExpertHelp } from "@/components/marketing/expert-help";
 
 const SERVICES = [
   {
@@ -23,12 +22,12 @@ const SERVICES = [
 
 const STEPS = [
   {
-    title: "Request",
-    body: "Tell us the kind of move and about how many guests. If you're not sure, a Venture Expert will help.",
+    title: "Plan",
+    body: "Tap the move, the guests, and the stops. A few clicks and the plan is on the page.",
   },
   {
-    title: "Quote",
-    body: "We price the job by hand and send the quote back to you.",
+    title: "Stay tuned",
+    body: "Send it. We confirm the price. Nothing is reserved until you accept the quote.",
   },
   {
     title: "We coordinate",
@@ -72,7 +71,7 @@ export function MarketingHome() {
             Handled.
           </h1>
           <p className="mt-5 max-w-md text-[15px] leading-relaxed text-white/75">
-            Seamless Transportation for Orlando meetings, events, and tours. Vetted operators drive. Add a Venture Rep when you want a real person on site to guide and assist.
+            Seamless Transportation for Orlando meetings, events, and tours. A few taps, a plan on the page, then you stay tuned. Vetted operators drive.
           </p>
           <Link
             href="/quote"
@@ -129,15 +128,11 @@ export function MarketingHome() {
         </ul>
       </section>
 
-      <section id="expert" className="mx-auto max-w-6xl scroll-mt-20 px-5 py-4 pb-14">
-        <ExpertHelp />
-      </section>
-
       <section className="px-5 pb-16">
         <div className="mx-auto max-w-6xl rounded-3xl border border-[#1E90FF]/40 bg-[#1E90FF]/10 px-6 py-10">
-          <h2 className="text-3xl font-semibold tracking-tight">Send the group. We&apos;ll send the quote.</h2>
+          <h2 className="text-3xl font-semibold tracking-tight">Click, click, go. Stay tuned.</h2>
           <p className="mt-3 max-w-xl text-sm leading-relaxed text-white/75">
-            Dates, stops, vehicles, and headcount are enough to start. We price it and follow up.
+            The plan appears as you enter the move. We confirm the price before anything is reserved.
           </p>
           <Link
             href="/quote"

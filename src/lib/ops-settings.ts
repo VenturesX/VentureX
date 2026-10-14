@@ -3,6 +3,8 @@ import {
   SETTINGS_KEYS,
   parseDriveTable,
   parseFleet,
+  parseQuickAnswers,
+  parseRateCard,
   parseTiming,
   resolveHours,
   resolvePhone,
@@ -12,6 +14,8 @@ import {
   type DrivePair,
   type FleetVehicle,
   type OfficeHours,
+  type QuickAnswer,
+  type RateCardRow,
   type TimingSettings,
 } from "@/lib/guidance";
 
@@ -26,6 +30,9 @@ export type LoadedGuidance = {
   lineOpen: boolean | null;
   defaultDirectLine: string;
   defaultDirectTel: string;
+  rates: RateCardRow[];
+  quickAnswers: QuickAnswer[];
+  coachUsable: number;
 };
 
 export async function loadGuidance(): Promise<LoadedGuidance> {
@@ -36,8 +43,9 @@ export async function loadGuidance(): Promise<LoadedGuidance> {
   const expertPhone = resolvePhone(value(SETTINGS_KEYS.expertPhone));
   const officeHours = resolveHours(value(SETTINGS_KEYS.officeHours));
   const defaultDirectLine = resolvePhone(value(SETTINGS_KEYS.defaultDirectLine));
+  const fleet = parseFleet(value(SETTINGS_KEYS.fleet));
   return {
-    fleet: parseFleet(value(SETTINGS_KEYS.fleet)),
+    fleet,
     driveTable: parseDriveTable(value(SETTINGS_KEYS.driveTable)),
     timing: parseTiming(value(SETTINGS_KEYS.loopTiming)),
     expertPhone,
@@ -47,6 +55,9 @@ export async function loadGuidance(): Promise<LoadedGuidance> {
     lineOpen: isLiveLineOpen(officeHours),
     defaultDirectLine,
     defaultDirectTel: defaultDirectLine ? phoneToTel(defaultDirectLine) : "",
+    rates: parseRateCard(value(SETTINGS_KEYS.rateCard)),
+    quickAnswers: parseQuickAnswers(value(SETTINGS_KEYS.quickAnswers)),
+    coachUsable: fleet.find((row) => row.id === "COACH")?.usable ?? 50,
   };
 }
 

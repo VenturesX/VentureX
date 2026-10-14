@@ -5,11 +5,11 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Menu, X } from "lucide-react";
 import { VentureMark, Wordmark } from "@/components/marketing/logo";
+import { FooterPhone } from "@/components/marketing/talk-line";
 
 const LINKS = [
   { href: "/#services", label: "Services" },
   { href: "/#how", label: "How it works" },
-  { href: "/#expert", label: "Talk to an expert" },
   { href: "/traveling", label: "Traveling now" },
 ];
 
@@ -113,6 +113,7 @@ export function SiteFooter() {
           <Link href="/login" className="text-white/80">
             Staff login
           </Link>
+          <FooterPhone />
         </div>
         <p className="text-xs text-white/45">© {new Date().getFullYear()} Venture Directors LLC · Orlando</p>
       </div>

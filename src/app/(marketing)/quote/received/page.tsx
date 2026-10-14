@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { TalkLine } from "@/components/marketing/talk-line";
 
 export const metadata: Metadata = {
   title: "Request received — Venture Directors",
@@ -26,9 +27,12 @@ export default async function QuoteReceivedPage({
       ) : null}
       <p className="mt-6 text-base leading-relaxed text-white/75">
         {needsExpert
-          ? "A Venture Expert will reach out and walk through the move with you. Send whatever you know — blanks are welcome. Nothing is reserved until you accept a quote."
-          : "Your request is in the Venture Directors queue. We'll review the suggestion and follow up. Nothing is reserved until you accept a quote."}
+          ? "Stay tuned. We will follow up on anything still open. Nothing is reserved until you accept a quote."
+          : "Stay tuned. We will confirm the plan and the price. Nothing is reserved until you accept a quote."}
       </p>
+      <div className="mt-8">
+        <TalkLine />
+      </div>
       <div className="mt-8 flex flex-col items-start gap-4">
         <Link href="/" className="inline-flex h-12 items-center rounded-lg bg-[#1E90FF] px-5 text-base font-semibold text-white">
           Back to home

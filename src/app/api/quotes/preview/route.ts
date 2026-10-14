@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { planQuote } from "@/lib/drive-time";
+import { applyPrice, type FleetId } from "@/lib/guidance";
 import { loadGuidance } from "@/lib/ops-settings";
 
 export async function POST(request: Request) {
@@ -30,5 +31,19 @@ export async function POST(request: Request) {
     guidance.timing,
     guidance.driveTable,
   );
-  return NextResponse.json(plan);
+  const priced = applyPrice(
+    plan,
+    {
+      serviceType: String(body.serviceType ?? ""),
+      vehicleId: plan.vehicleId as FleetId,
+      vehicleCount: plan.vehicleCount,
+      repCount: Number(body.representativeCount) || plan.repCount,
+      startDate: String(body.startDate ?? ""),
+      endDate: String(body.endDate ?? ""),
+      startTime: String(body.startTime ?? ""),
+      endTime: String(body.endTime ?? ""),
+    },
+    guidance.rates,
+  );
+  return NextResponse.json(priced);
 }

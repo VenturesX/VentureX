@@ -4,6 +4,7 @@ import { jsonError, requireApi } from "@/lib/api";
 import { db } from "@/lib/db";
 import { recordAudit, recordStatus } from "@/lib/ops/audit";
 import { planQuote } from "@/lib/drive-time";
+import { applyPrice } from "@/lib/guidance";
 import { loadGuidance } from "@/lib/ops-settings";
 import {
   MANIFEST_MIME,
@@ -118,6 +119,21 @@ export async function POST(request: Request) {
       guidance.driveTable,
     );
     const repCount = plan.repCount > 0 ? Math.max(plan.repCount, parsed.data.representativeCount) : 0;
+    const priced = applyPrice(
+      plan,
+      {
+        serviceType: parsed.data.serviceType,
+        vehicleId: plan.vehicleId,
+        vehicleCount: plan.vehicleCount,
+        repCount,
+        startDate: parsed.data.startDate,
+        endDate: parsed.data.endDate,
+        startTime: parsed.data.startTime,
+        endTime: parsed.data.endTime,
+      },
+      guidance.rates,
+    );
+    const rateRep = guidance.rates.find((row) => row.id === plan.vehicleId)?.repCents ?? null;
     const row = await createQuote(
       {
         ...parsed.data,
@@ -128,8 +144,9 @@ export async function POST(request: Request) {
       manifest,
       {
         needsExpertCall: plan.needsExpert || parsed.data.unsureSteps.length > 0,
-        recommendation: plan.recommendation,
+        recommendation: priced.recommendation,
         repCount,
+        repPriceCents: repCount > 0 ? rateRep ?? (await currentRepPriceCents()) : null,
       },
     );
     return NextResponse.json({ ok: true, id: row.id, reference: row.reference, needsExpertCall: plan.needsExpert || parsed.data.unsureSteps.length > 0 });
@@ -146,7 +163,7 @@ async function currentRepPriceCents() {
 async function createQuote(
   data: QuoteInput,
   manifest: { name: string; mime: string; bytes: Uint8Array } | null,
-  extra: { needsExpertCall: boolean; recommendation: string; repCount: number },
+  extra: { needsExpertCall: boolean; recommendation: string; repCount: number; repPriceCents: number | null },
 ) {
   for (let attempt = 0; attempt < 6; attempt++) {
     const count = await db.quoteRequest.count();
@@ -170,7 +187,7 @@ async function createQuote(
           luggage: data.luggage,
           coordinatorNeeded: data.coordinatorNeeded,
           representativeCount: extra.repCount,
-          repPriceCents: extra.repCount > 0 ? await currentRepPriceCents() : null,
+          repPriceCents: extra.repPriceCents,
           needsExpertCall: extra.needsExpertCall,
           waitMinutes: data.waitMinutes ?? null,
           driveMinutes: data.driveMinutes ?? null,
