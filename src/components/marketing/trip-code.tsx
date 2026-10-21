@@ -53,7 +53,7 @@ export function TripCodeForm() {
           className="h-14 w-full rounded-xl border border-white/15 bg-black px-3 text-center text-2xl font-semibold tracking-[0.28em] outline-none focus:border-[#1E90FF]"
         />
         {error ? <p id="code-error" role="alert" className="text-sm text-rose-200">{error}</p> : null}
-        <button type="submit" disabled={pending} className="h-12 w-full rounded-lg bg-[#1E90FF] text-base font-semibold text-white disabled:opacity-60">
+        <button type="submit" disabled={pending} className="h-12 w-full rounded-full bg-gradient-to-r from-[#1E90FF] to-[#8B5CF6] text-base font-semibold text-white disabled:opacity-60">
           {pending ? "Checking…" : "Open trip"}
         </button>
       </form>

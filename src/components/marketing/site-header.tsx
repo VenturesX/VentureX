@@ -4,14 +4,17 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Menu, X } from "lucide-react";
+import { BusinessPhone } from "@/components/marketing/business-phone";
 import { VentureMark, Wordmark } from "@/components/marketing/logo";
-import { FooterPhone } from "@/components/marketing/talk-line";
 
 const LINKS = [
   { href: "/#services", label: "Services" },
   { href: "/#how", label: "How it works" },
   { href: "/traveling", label: "Traveling now" },
 ];
+
+const quoteButtonClass =
+  "inline-flex shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-[#1E90FF] to-[#8B5CF6] px-4 text-sm font-semibold text-white shadow-[0_8px_24px_rgba(30,144,255,0.28)]";
 
 export function SiteHeader({ staffHref, staffLabel }: { staffHref: string; staffLabel: string }) {
   const pathname = usePathname();
@@ -34,52 +37,53 @@ export function SiteHeader({ staffHref, staffLabel }: { staffHref: string; staff
 
   return (
     <header className="sticky top-0 z-40 border-b border-white/10 bg-black/85 backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4">
+      <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4 lg:h-[4.5rem] lg:gap-6">
         <Link href="/" className="flex min-w-0 items-center gap-2.5" aria-label="Venture Directors home">
           <VentureMark className="size-9 shrink-0" />
           <Wordmark compact />
         </Link>
-        <nav className="ml-auto hidden items-center gap-6 md:flex" aria-label="Primary">
+        <nav className="ml-2 hidden items-center gap-6 lg:flex" aria-label="Primary">
           {LINKS.map((link) => (
-            <Link key={link.href} href={link.href} className="text-sm text-white/75 hover:text-white">
+            <Link key={link.href} href={link.href} className="text-sm text-white/80 hover:text-white">
               {link.label}
             </Link>
           ))}
-          <Link href="/quote" className="text-sm font-semibold text-[#1E90FF]">
+        </nav>
+        <div className="ml-auto hidden items-center gap-5 lg:flex">
+          <BusinessPhone className="text-sm" />
+          <Link href="/quote" className={`${quoteButtonClass} h-10`}>
             Get a Quote
           </Link>
-          <Link href={staffHref} className="text-sm text-white/75 hover:text-white">
-            {staffLabel}
-          </Link>
-        </nav>
-        <div className="ml-auto flex items-center gap-1 md:hidden">
-          <Link href={staffHref} className="px-2 py-2 text-sm text-white/80">
-            {staffLabel}
-          </Link>
-          <button
-            type="button"
-            className="grid size-11 place-items-center rounded-lg text-white"
-            aria-expanded={open}
-            aria-controls="marketing-menu"
-            aria-label={open ? "Close menu" : "Open menu"}
-            onClick={() => setOpenPath(open ? null : pathname)}
-          >
-            {open ? <X className="size-6" /> : <Menu className="size-6" />}
-          </button>
         </div>
+        <button
+          type="button"
+          className="ml-auto grid size-11 place-items-center rounded-lg text-white lg:hidden"
+          aria-expanded={open}
+          aria-controls="marketing-menu"
+          aria-label={open ? "Close menu" : "Open menu"}
+          onClick={() => setOpenPath(open ? null : pathname)}
+        >
+          {open ? <X className="size-6" /> : <Menu className="size-6" />}
+        </button>
+      </div>
+      <div className="space-y-2 border-t border-white/10 px-3 py-2 lg:hidden">
+        <BusinessPhone className="flex h-11 w-full items-center justify-center text-[13px] sm:text-sm" />
+        <Link href="/quote" className={`${quoteButtonClass} h-11 w-full`}>
+          Get a Quote
+        </Link>
       </div>
       {open ? (
-        <div id="marketing-menu" className="border-t border-white/10 bg-black px-4 py-3 md:hidden">
+        <div id="marketing-menu" className="border-t border-white/10 bg-black px-4 py-3 lg:hidden">
           <nav className="grid" aria-label="Mobile">
             {LINKS.map((link) => (
               <Link key={link.href} href={link.href} className="border-b border-white/10 py-3 text-lg" onClick={() => setOpenPath(null)}>
                 {link.label}
               </Link>
             ))}
-            <Link href="/quote" className="border-b border-white/10 py-3 text-lg font-semibold text-[#1E90FF]" onClick={() => setOpenPath(null)}>
+            <Link href="/quote" className="border-b border-white/10 py-3 text-lg font-semibold text-white" onClick={() => setOpenPath(null)}>
               Get a Quote
             </Link>
-            <Link href={staffHref} className="py-3 text-lg" onClick={() => setOpenPath(null)}>
+            <Link href={staffHref} className="py-3 text-lg text-white/80" onClick={() => setOpenPath(null)}>
               {staffLabel}
             </Link>
           </nav>
@@ -97,6 +101,7 @@ export function SiteFooter() {
           <VentureMark className="size-8" />
           <Wordmark compact />
         </Link>
+        <BusinessPhone className="min-h-11 w-fit text-base" />
         <p className="max-w-xl text-sm leading-relaxed text-white/70">
           Seamless Transportation by Venture Directors LLC, an Orlando group transportation broker. We plan the move. Venture Reps guide on site when you want them. We do not own the vehicles.
         </p>
@@ -113,7 +118,6 @@ export function SiteFooter() {
           <Link href="/login" className="text-white/80">
             Staff login
           </Link>
-          <FooterPhone />
         </div>
         <p className="text-xs text-white/45">© {new Date().getFullYear()} Venture Directors LLC · Orlando</p>
       </div>

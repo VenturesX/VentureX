@@ -145,10 +145,10 @@ export function FieldSettings({ eventId }: { eventId: string }) {
       </section>
       <section className="space-y-3 rounded-2xl border border-white/10 bg-card p-4">
         <h3 className="font-semibold">Venture Expert line</h3>
-        <Input value={expertPhone} onChange={(event) => setExpertPhone(event.target.value)} placeholder="(407) 476-8727" />
+        <Input value={expertPhone} onChange={(event) => setExpertPhone(event.target.value)} placeholder="(407) 655-9795" />
         <Button className="h-11" onClick={() => void save({ expertPhone }, "Expert line saved")}>Save expert line</Button>
         <h3 className="pt-2 font-semibold">Default client direct line</h3>
-        <Input value={directLine} onChange={(event) => setDirectLine(event.target.value)} placeholder="(407) 476-8727" />
+        <Input value={directLine} onChange={(event) => setDirectLine(event.target.value)} placeholder="(407) 655-9795" />
         <Button className="h-11" onClick={() => void save({ defaultDirectLine: directLine }, "Direct line saved")}>Save direct line</Button>
         <h3 className="pt-2 font-semibold">This event&apos;s direct line</h3>
         <p className="text-xs text-muted-foreground">Leave blank to use the default. The client portal always shows this number, day or night.</p>

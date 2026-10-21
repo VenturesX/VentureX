@@ -149,8 +149,8 @@
   color: #ffffff;
   background-color: #000000;
   background-image:
-    radial-gradient(640px 420px at 20% -8%, rgba(30, 144, 255, 0.24), transparent 62%),
-    radial-gradient(520px 360px at 100% 0%, rgba(30, 144, 255, 0.14), transparent 58%);
+    radial-gradient(640px 420px at 18% -10%, rgba(30, 144, 255, 0.16), transparent 62%),
+    radial-gradient(520px 360px at 100% 0%, rgba(139, 92, 246, 0.14), transparent 58%);
   background-attachment: fixed;
   min-height: 100dvh;
 }

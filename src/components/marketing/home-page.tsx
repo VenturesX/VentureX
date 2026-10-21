@@ -1,6 +1,6 @@
+import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Link2, ListChecks, Plane, Route, Users } from "lucide-react";
-import { CurbSign } from "@/components/marketing/curb-sign";
 
 const SERVICES = [
   {
@@ -60,28 +60,35 @@ const REASONS = [
 export function MarketingHome() {
   return (
     <>
-      <section className="mx-auto grid max-w-6xl items-center gap-10 overflow-x-clip px-5 pb-6 pt-8 md:grid-cols-2 md:py-16">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#1E90FF]">Orlando group transportation</p>
-          <h1 className="mt-4 text-[2.65rem] font-semibold leading-[1.02] tracking-[-0.03em] sm:text-6xl">
-            Group
-            <br />
-            Transportation,
-            <br />
-            Handled.
-          </h1>
-          <p className="mt-5 max-w-md text-[15px] leading-relaxed text-white/75">
-            Seamless Transportation for Orlando meetings, events, and tours. A few taps, a plan on the page, then you stay tuned. Vetted operators drive.
-          </p>
-          <Link
-            href="/quote"
-            className="mt-7 inline-flex h-12 items-center gap-2 rounded-lg bg-[#1E90FF] px-5 text-base font-semibold text-white shadow-[0_10px_30px_rgba(30,144,255,0.35)]"
-          >
-            Get a Quote
-            <ArrowRight className="size-4" />
-          </Link>
+      <section className="relative isolate min-h-[560px] overflow-hidden sm:min-h-[640px]">
+        <Image
+          src="/marketing/orlando-night.webp"
+          alt=""
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover object-[center_62%]"
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-black from-[8%] via-black/80 via-[42%] to-black/20" aria-hidden="true" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/45" aria-hidden="true" />
+        <div className="relative mx-auto flex min-h-[560px] max-w-6xl items-center px-5 py-16 sm:min-h-[640px] sm:py-24">
+          <div className="max-w-xl">
+            <h1 className="text-[2rem] font-semibold leading-[1.05] tracking-[-0.03em] sm:text-5xl md:text-6xl lg:text-7xl">
+              <span className="block text-white">Group Transportation,</span>
+              <span className="mt-1 block bg-gradient-to-r from-[#1E90FF] to-[#8B5CF6] bg-clip-text text-transparent">Handled.</span>
+            </h1>
+            <p className="mt-5 max-w-md text-[15px] leading-relaxed text-white/80">
+              Seamless transportation for meetings, events, and tours. A few taps, a plan on the page, then you stay tuned.
+            </p>
+            <Link
+              href="/quote"
+              className="mt-7 inline-flex h-12 items-center gap-2 rounded-full bg-gradient-to-r from-[#1E90FF] to-[#8B5CF6] px-5 text-base font-semibold text-white shadow-[0_10px_30px_rgba(30,144,255,0.35)]"
+            >
+              Get a Quote
+              <ArrowRight className="size-4" />
+            </Link>
+          </div>
         </div>
-        <CurbSign />
       </section>
 
       <section id="services" className="mx-auto max-w-6xl scroll-mt-20 px-5 py-14">
@@ -136,7 +143,7 @@ export function MarketingHome() {
           </p>
           <Link
             href="/quote"
-            className="mt-6 inline-flex h-12 items-center gap-2 rounded-lg bg-[#1E90FF] px-5 text-base font-semibold text-white"
+            className="mt-6 inline-flex h-12 items-center gap-2 rounded-full bg-gradient-to-r from-[#1E90FF] to-[#8B5CF6] px-5 text-base font-semibold text-white"
           >
             Get a Quote
             <ArrowRight className="size-4" />

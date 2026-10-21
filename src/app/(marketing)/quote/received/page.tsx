@@ -34,7 +34,7 @@ export default async function QuoteReceivedPage({
         <TalkLine />
       </div>
       <div className="mt-8 flex flex-col items-start gap-4">
-        <Link href="/" className="inline-flex h-12 items-center rounded-lg bg-[#1E90FF] px-5 text-base font-semibold text-white">
+        <Link href="/" className="inline-flex h-12 items-center rounded-full bg-gradient-to-r from-[#1E90FF] to-[#8B5CF6] px-5 text-base font-semibold text-white">
           Back to home
         </Link>
         <Link href="/quote" className="text-sm text-white/70">

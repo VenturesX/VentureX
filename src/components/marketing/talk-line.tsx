@@ -1,13 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { BusinessPhone } from "@/components/marketing/business-phone";
 import { isLiveLineOpen, type OfficeHours } from "@/lib/guidance";
 
 const TIMES = ["Morning", "Afternoon", "Evening", "Anytime"];
 
 export function TalkLine() {
-  const [phone, setPhone] = useState("");
-  const [tel, setTel] = useState("");
   const [hours, setHours] = useState<OfficeHours | null>(null);
   const [hoursLabel, setHoursLabel] = useState("");
   const [open, setOpen] = useState(false);
@@ -20,10 +19,8 @@ export function TalkLine() {
     let cancelled = false;
     void fetch("/api/help")
       .then((response) => response.json())
-      .then((json: { phone?: string; tel?: string; hours?: OfficeHours | null; hoursLabel?: string }) => {
+      .then((json: { hours?: OfficeHours | null; hoursLabel?: string }) => {
         if (cancelled) return;
-        setPhone(json.phone ?? "");
-        setTel(json.tel ?? "");
         setHours(json.hours ?? null);
         setHoursLabel(json.hoursLabel ?? "");
       })
@@ -65,21 +62,16 @@ export function TalkLine() {
   }
 
   return (
-    <div className="text-sm leading-relaxed text-white/55">
-      <p>
-        Prefer to talk?{" "}
-        {phone ? (
-          <a className="underline decoration-white/30" href={`tel:${tel}`}>
-            Call {phone}
-          </a>
-        ) : null}
-        {phone ? " or " : null}
-        <button type="button" className="underline decoration-white/30" onClick={() => setOpen((current) => !current)}>
-          request a call
+    <div id="contact" className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4 text-sm leading-relaxed">
+      <BusinessPhone className="min-h-11 text-base" />
+      {afterHours && hoursLabel ? <p className="mt-2 text-xs text-white/50">Live line {hoursLabel}.</p> : null}
+      <p className="mt-2 text-white/60">
+        Prefer a callback?{" "}
+        <button type="button" className="font-medium text-white underline decoration-white/30" onClick={() => setOpen((current) => !current)}>
+          Request a call
         </button>
         .
       </p>
-      {afterHours && hoursLabel ? <p className="mt-1 text-xs text-white/40">Live line {hoursLabel}.</p> : null}
       {open ? (
         done ? (
           <p className="mt-3 text-white/80">Thanks. A Venture Expert will call you.</p>
@@ -107,33 +99,6 @@ export function TalkLine() {
         )
       ) : null}
     </div>
-  );
-}
-
-export function FooterPhone() {
-  const [phone, setPhone] = useState("");
-  const [tel, setTel] = useState("");
-
-  useEffect(() => {
-    let cancelled = false;
-    void fetch("/api/help")
-      .then((response) => response.json())
-      .then((json: { phone?: string; tel?: string }) => {
-        if (cancelled) return;
-        setPhone(json.phone ?? "");
-        setTel(json.tel ?? "");
-      })
-      .catch(() => undefined);
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  if (!phone || !tel) return null;
-  return (
-    <a href={`tel:${tel}`} className="text-xs text-white/40 hover:text-white/70">
-      {phone}
-    </a>
   );
 }
 

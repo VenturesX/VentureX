@@ -1,8 +1,15 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { Montserrat } from "next/font/google";
 import { getSession } from "@/lib/auth";
 import { ROLE_HOME } from "@/lib/roles";
 import { SiteFooter, SiteHeader } from "@/components/marketing/site-header";
+
+const montserrat = Montserrat({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Venture Directors — Group Transportation, Handled.",
@@ -16,7 +23,7 @@ export default async function MarketingLayout({ children }: { children: ReactNod
   const staffLabel = session ? "Open ops" : "Staff login";
 
   return (
-    <div className="marketing">
+    <div className={`marketing ${montserrat.className}`}>
       <a href="#content" className="sr-only focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-50 focus:rounded-lg focus:bg-[#1E90FF] focus:px-3 focus:py-2">
         Skip to content
       </a>

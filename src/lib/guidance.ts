@@ -1,5 +1,6 @@
-export const DEFAULT_EXPERT_PHONE = "(407) 476-8727";
-export const DEFAULT_EXPERT_TEL = "+14074768727";
+export const DEFAULT_EXPERT_PHONE = "(407) 655-9795";
+export const DEFAULT_EXPERT_TEL = "+14076559795";
+export const ONSITE_MANAGER_LABEL = "On-Site Manager";
 
 export const SETTINGS_KEYS = {
   expertPhone: "expertPhone",
