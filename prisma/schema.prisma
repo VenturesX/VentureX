@@ -133,8 +133,17 @@ model Event {
   guests        Guest[]
   vehicles      Vehicle[]
   exceptions    Exception[]
-  alertConfig   AlertConfig?
-  timingPresets TimingPreset[]
+  directLinePhone     String?
+  guestPhoneEnabled   Boolean   @default(false)
+  guestToken          String?   @unique
+  guestCode           String?   @unique
+  guestAccess         String    @default("TOKEN")
+  guestPin            String?
+  guestTokenExpiresAt DateTime?
+  alertConfig       AlertConfig?
+  timingPresets     TimingPreset[]
+  faqs              EventFaq[]
+  guestRequests     GuestRequest[]
 }
 
 model Location {
@@ -255,11 +264,14 @@ model Movement {
   destinationId String
   destination   Location       @relation("MoveDest", fields: [destinationId], references: [id])
   notes         String?
+  guestToken    String?        @unique
+  guestCode     String?        @unique
   deletedAt     DateTime?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   guests        Guest[]
   assignments   Assignment[]
+  guestRequests GuestRequest[]
 }
 
 model Guest {
@@ -476,4 +488,145 @@ model ClipboardRun {
   logged     Boolean      @default(false)
 
   @@index([dayId])
+}
+
+enum QuoteProfile {
+  PLANNER
+  DESTINATION_PARTNER
+  GROUP
+}
+
+enum QuoteServiceType {
+  AIRPORT_TRANSFER
+  DINE_AROUND
+  SHUTTLE_LOOP
+  POINT_TO_POINT
+  CHARTER
+  OTHER
+  UNSURE
+}
+
+enum QuoteVehiclePreference {
+  COACH
+  MINIBUS
+  SPRINTER
+  SUV
+  NO_PREFERENCE
+}
+
+enum QuoteLuggage {
+  NONE
+  CARRY_ON
+  FULL
+}
+
+enum QuoteStatus {
+  NEW
+  QUOTED
+  WON
+  LOST
+}
+
+model QuoteRequest {
+  id                 String                 @id @default(cuid())
+  reference          String                 @unique
+  profile            QuoteProfile
+  serviceType        QuoteServiceType
+  startDate          String
+  endDate            String?
+  startTime          String?
+  endTime            String?
+  pickup             String
+  dropoff            String
+  stops              String                 @default("[]")
+  passengerCount     Int
+  vehicleCount       Int                    @default(1)
+  vehiclePreference  QuoteVehiclePreference
+  luggage            QuoteLuggage
+  coordinatorNeeded  Boolean
+  representativeCount Int                   @default(0)
+  repPriceCents      Int?
+  needsExpertCall    Boolean                @default(false)
+  waitMinutes        Int?
+  driveMinutes       Int?
+  recommendation     String?
+  unsureSteps        String                 @default("[]")
+  contactName        String
+  company            String?
+  email              String
+  phone              String
+  notes              String?
+  manifestFileName   String?
+  manifestMimeType   String?
+  manifestBytes      Bytes?
+  status             QuoteStatus            @default(NEW)
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([email])
+}
+
+model AppSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+model CallbackRequest {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String
+  bestTime  String
+  status    String   @default("NEW")
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([status])
+}
+
+model EventFaq {
+  id        String   @id @default(cuid())
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  category  String
+  question  String
+  answer    String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([eventId])
+}
+
+model GuestAccessAttempt {
+  id        String   @id @default(cuid())
+  ip        String
+  createdAt DateTime @default(now())
+
+  @@index([ip, createdAt])
+}
+
+model GuestRequest {
+  id             String    @id @default(cuid())
+  eventId        String
+  event          Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  movementId     String?
+  movement       Movement? @relation(fields: [movementId], references: [id], onDelete: SetNull)
+  category       String
+  message        String
+  name           String?
+  phone          String?
+  deviceKey      String
+  ip             String?
+  fingerprint    String
+  duplicateCount Int      @default(1)
+  status         String   @default("OPEN")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([eventId, status])
+  @@index([deviceKey, createdAt])
+  @@index([fingerprint])
 }

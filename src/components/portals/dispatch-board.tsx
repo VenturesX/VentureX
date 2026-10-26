@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { GuestStatusBadge, MovementStatusBadge, PriorityBadge, VehicleStatusBadge } from "@/components/status-badge";
+import { MovementStatusBadge, PriorityBadge, VehicleStatusBadge } from "@/components/status-badge";
 import { postJson, useLive } from "@/hooks/use-live";
 import { formatDateTime, formatWait, fullName, minutesBetween } from "@/lib/utils";
 import type { LiveSnapshot } from "@/components/portals/types";
@@ -89,7 +89,7 @@ export function DispatchBoard({ eventId }: { eventId: string }) {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="text-xs uppercase tracking-[0.18em] text-primary">Dispatch</p>
-          <h1 className="text-2xl font-semibold mt-1">Curb queue and metal</h1>
+          <h1 className="text-2xl font-semibold mt-1">Queue and vehicles</h1>
           {movement ? (
             <p className="text-sm text-muted-foreground mt-1 flex flex-wrap items-center gap-2">
               {movement.name}
@@ -127,11 +127,9 @@ export function DispatchBoard({ eventId }: { eventId: string }) {
         </Link>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Card label="In queue" value={data.queue.count} sub={`${data.queue.pax} pax`} />
+      <div className="grid grid-cols-2 gap-3">
+        <Card label="In queue" value={data.queue.count} sub={`${data.queue.pax} guests`} />
         <Card label="Longest wait" value={formatWait(data.queue.longestWait)} warn={data.queue.longestWait >= data.queue.waitTargetMinutes} />
-        <Card label="Avg wait" value={formatWait(data.queue.avgWait)} />
-        <Card label="VIP waiting" value={data.queue.vipCount} />
       </div>
 
       <div className="grid xl:grid-cols-[1.15fr_0.95fr_0.85fr] gap-4">
@@ -145,8 +143,8 @@ export function DispatchBoard({ eventId }: { eventId: string }) {
           ) : (
             <ul className="space-y-2">
               {data.queued.map((g) => (
-                <li key={g.id} className="flex items-start gap-3 rounded-xl bg-secondary/60 p-3">
-                  <Checkbox checked={selected.includes(g.id)} onCheckedChange={() => toggle(g.id)} className="mt-1" />
+                <li key={g.id} className="flex min-h-16 items-start gap-3 rounded-xl bg-secondary/60 p-3">
+                  <Checkbox checked={selected.includes(g.id)} onCheckedChange={() => toggle(g.id)} className="mt-1 size-5" />
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-medium">{fullName(g.firstName, g.lastName)}</span>
@@ -163,7 +161,7 @@ export function DispatchBoard({ eventId }: { eventId: string }) {
           <div className="space-y-2 pt-2">
             <label className="text-xs text-muted-foreground">Available vehicle</label>
             <select
-              className="w-full h-10 rounded-lg bg-background border border-white/10 px-3 text-sm"
+              className="h-14 w-full rounded-lg border border-white/10 bg-background px-3 text-base"
               value={vehicleId}
               onChange={(e) => setVehicleId(e.target.value)}
             >
@@ -174,7 +172,7 @@ export function DispatchBoard({ eventId }: { eventId: string }) {
                 </option>
               ))}
             </select>
-            <Button className="w-full" disabled={busy || selected.length === 0} onClick={() => void assign()}>
+            <Button className="h-14 w-full text-base" disabled={busy || selected.length === 0} onClick={() => void assign()}>
               Assign to {selectedVehicle?.fleetNumber ?? "vehicle"}
             </Button>
           </div>
@@ -212,8 +210,9 @@ export function DispatchBoard({ eventId }: { eventId: string }) {
           </div>
         </section>
 
-        <section className="rounded-2xl border border-white/10 bg-card p-4 space-y-3">
-          <h2 className="font-semibold">Exceptions</h2>
+        <details className="rounded-2xl border border-white/10 bg-card p-4">
+          <summary className="cursor-pointer text-base font-semibold">Exceptions and corrections</summary>
+          <div className="mt-3 space-y-3">
           {data.exceptions.length === 0 ? (
             <p className="text-sm text-muted-foreground">No open exceptions.</p>
           ) : (
@@ -252,12 +251,13 @@ export function DispatchBoard({ eventId }: { eventId: string }) {
               Pull selected guest off queue
             </Button>
           </div>
-        </section>
+          </div>
+        </details>
       </div>
 
-      <section className="rounded-2xl border border-white/10 bg-card p-4">
-        <h2 className="font-semibold mb-3">Audit trail</h2>
-        <div className="max-h-64 overflow-auto text-sm space-y-2">
+      <details className="rounded-2xl border border-white/10 bg-card p-4">
+        <summary className="cursor-pointer text-base font-semibold">Recent activity</summary>
+        <div className="mt-3 max-h-64 overflow-auto text-sm space-y-2">
           {data.audit.length === 0 ? (
             <p className="text-muted-foreground">No audit events yet.</p>
           ) : (
@@ -275,7 +275,7 @@ export function DispatchBoard({ eventId }: { eventId: string }) {
             ))
           )}
         </div>
-      </section>
+      </details>
     </div>
   );
 }

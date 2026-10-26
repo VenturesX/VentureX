@@ -1,5 +1,7 @@
 import { PortalShell } from "@/components/portal-shell";
 import { AdminBoard } from "@/components/portals/admin-board";
+import { FieldSettings } from "@/components/portals/field-settings";
+import { GuestAccessPanel } from "@/components/portals/guest-access-panel";
 import { requirePortal } from "@/lib/session-server";
 
 export default async function AdminPage() {
@@ -12,7 +14,9 @@ export default async function AdminPage() {
       eventName={event.name}
       nav={[
         { href: "/admin", label: "Admin" },
-        { href: "/meet-greet", label: "M&G" },
+        { href: "/quotes", label: "Quotes" },
+        { href: "/inbox", label: "Guest questions" },
+        { href: "/meet-greet", label: "Arrivals" },
         { href: "/dispatch", label: "Dispatch" },
         { href: "/shuttle", label: "Shuttle map" },
         { href: "/clipboard", label: "Clipboard" },
@@ -20,6 +24,8 @@ export default async function AdminPage() {
         { href: "/client", label: "Client" },
       ]}
     >
+      <GuestAccessPanel />
+      <FieldSettings eventId={event.id} />
       <AdminBoard eventId={event.id} />
     </PortalShell>
   );

@@ -1,5 +1,6 @@
 import { PortalShell } from "@/components/portal-shell";
 import { DispatchBoard } from "@/components/portals/dispatch-board";
+import { GuestAccessPanel } from "@/components/portals/guest-access-panel";
 import { requirePortal } from "@/lib/session-server";
 
 export default async function DispatchPage() {
@@ -12,10 +13,14 @@ export default async function DispatchPage() {
       eventName={event.name}
       nav={[
         { href: "/dispatch", label: "Airport board" },
+        { href: "/quotes", label: "Quotes" },
+        { href: "/inbox", label: "Guest questions" },
         { href: "/shuttle", label: "Shuttle map" },
         { href: "/clipboard", label: "Clipboard" },
       ]}
+      tone="field"
     >
+      <GuestAccessPanel />
       <DispatchBoard eventId={event.id} />
     </PortalShell>
   );

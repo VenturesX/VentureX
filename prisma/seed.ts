@@ -6,11 +6,21 @@ import {
 } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { seedClipboard } from "../src/lib/clipboard/persist";
+import { DEFAULT_EXPERT_PHONE, OWNER_OFFICE_HOURS, SETTINGS_KEYS } from "../src/lib/guidance";
+import { defaultGuestExpiry, makeGuestCode, makeGuestToken } from "../src/lib/guest-codes";
 
 const db = new PrismaClient();
 const PASSWORD = "VentureOps!26";
 
 async function main() {
+  const existingAdmin = await db.user.findUnique({ where: { email: "admin@venture.direct" } });
+  if (existingAdmin) {
+    console.log("Demo accounts already exist. Leaving quote, guest, and airport records in place.");
+    await ensureClipboard();
+    await ensureDefaults();
+    return;
+  }
+
   await db.shuttleDesk.deleteMany();
   await db.clipboardRun.deleteMany();
   await db.clipboardRoster.deleteMany();
@@ -32,6 +42,9 @@ async function main() {
   await db.vehicle.deleteMany();
   await db.user.deleteMany();
   await db.location.deleteMany();
+  await db.guestAccessAttempt.deleteMany();
+  await db.guestRequest.deleteMany();
+  await db.eventFaq.deleteMany();
   await db.event.deleteMany();
   await db.operator.deleteMany();
   await db.client.deleteMany();
@@ -77,6 +90,39 @@ async function main() {
         ],
       },
     },
+  });
+
+  await db.eventFaq.createMany({
+    data: [
+      {
+        eventId: event.id,
+        category: "PICKUP",
+        question: "Where do we meet?",
+        answer: "Meet at Terminal C arrivals. Look for the Venture Directors sign.",
+        sortOrder: 1,
+      },
+      {
+        eventId: event.id,
+        category: "SCHEDULE",
+        question: "What time is my pickup?",
+        answer: "Use the time on your planner's itinerary. If that time changes, send a question and the team will confirm it.",
+        sortOrder: 2,
+      },
+      {
+        eventId: event.id,
+        category: "LOST",
+        question: "I left something on the vehicle.",
+        answer: "Tell us what you left and which ride, if you know it. The team will check with the operator.",
+        sortOrder: 3,
+      },
+      {
+        eventId: event.id,
+        category: "ACCESSIBILITY",
+        question: "I need a wheelchair or extra time to board.",
+        answer: "Tell us what you need before pickup when you can. On the day, the on-site team will make room and time to board safely.",
+        sortOrder: 4,
+      },
+    ],
   });
 
   const mco = await db.location.create({
@@ -166,6 +212,18 @@ async function main() {
       notes: "Primary vertical slice: meet-and-greet → queue → assign → driver sequence.",
     },
   });
+
+  const guestCode = makeGuestCode();
+  await db.event.update({
+    where: { id: event.id },
+    data: {
+      guestToken: makeGuestToken(),
+      guestCode,
+      guestAccess: "TOKEN",
+      guestTokenExpiresAt: defaultGuestExpiry(endsAt, movement.scheduledAt),
+    },
+  });
+  console.log(`Guest trip code: ${guestCode}`);
 
   const operator = await db.operator.create({
     data: {
@@ -418,12 +476,43 @@ async function main() {
     },
   });
 
-  await seedClipboard(db);
+  await ensureClipboard();
+  await ensureDefaults();
 
   console.log("Seeded Venture Directors");
   console.log(`Event ${event.code} (${event.id})`);
   console.log("Accounts: admin / dispatch / greeter / driver1 / client @venture.direct");
   console.log(`Password: ${PASSWORD}`);
+}
+
+async function ensureClipboard() {
+  try {
+    const count = await db.clipboardProgram.count();
+    if (count > 0) {
+      console.log("Clipboard already seeded");
+      return;
+    }
+    await seedClipboard(db);
+    console.log("Seeded curb clipboard");
+  } catch (error) {
+    console.warn("Clipboard seed skipped:", error instanceof Error ? error.message : error);
+  }
+}
+
+async function ensureDefaults() {
+  try {
+    await ensureSetting(SETTINGS_KEYS.expertPhone, DEFAULT_EXPERT_PHONE);
+    await ensureSetting(SETTINGS_KEYS.defaultDirectLine, DEFAULT_EXPERT_PHONE);
+    await ensureSetting(SETTINGS_KEYS.officeHours, JSON.stringify(OWNER_OFFICE_HOURS));
+  } catch (error) {
+    console.warn("Settings seed skipped:", error instanceof Error ? error.message : error);
+  }
+}
+
+async function ensureSetting(key: string, value: string) {
+  const existing = await db.appSetting.findUnique({ where: { key } });
+  if (existing) return;
+  await db.appSetting.create({ data: { key, value } });
 }
 
 main()

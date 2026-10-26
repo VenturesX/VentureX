@@ -12,9 +12,11 @@ export default async function MeetGreetPage() {
       eventName={event.name}
       nav={[
         { href: "/meet-greet", label: "Arrivals hall" },
+        { href: "/inbox", label: "Guest questions" },
         { href: "/shuttle", label: "Shuttle map" },
         { href: "/clipboard", label: "Clipboard" },
       ]}
+      tone="field"
     >
       <MeetGreetBoard eventId={event.id} />
     </PortalShell>

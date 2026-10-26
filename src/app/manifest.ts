@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "Event and group transportation operations for DMC and conference movements.",
     start_url: "/",
     display: "standalone",
-    background_color: "#070b14",
-    theme_color: "#070b14",
+    background_color: "#000000",
+    theme_color: "#000000",
     icons: [
       { src: "/icons/icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
       { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
