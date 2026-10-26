@@ -5,7 +5,7 @@ import { useLive } from "@/hooks/use-live";
 import { formatDateTime, formatWait, fullName, minutesBetween } from "@/lib/utils";
 import type { LiveSnapshot } from "@/components/portals/types";
 
-export function ClientBoard({ eventId }: { eventId: string }) {
+export function ClientBoard({ eventId, directLine }: { eventId: string; directLine: string }) {
   const { data, error, loading } = useLive<LiveSnapshot>(`/api/ops/live?eventId=${eventId}`, eventId);
 
   if (loading && !data) return <p className="text-muted-foreground">Loading movement…</p>;
@@ -23,8 +23,17 @@ export function ClientBoard({ eventId }: { eventId: string }) {
     { key: "COMPLETED", label: "Completed" },
   ];
 
+  const tel = directLine.replace(/\D/g, "");
+  const href = tel.length === 10 ? `tel:+1${tel}` : tel ? `tel:+${tel}` : "";
+
   return (
     <div className="space-y-5">
+      <a href={href || undefined} className="block rounded-3xl border border-[#1E90FF] bg-[#1E90FF] px-5 py-5 text-white">
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/80">While you travel</p>
+        <h2 className="mt-1 text-2xl font-semibold leading-tight">Issue while traveling? Call your direct line</h2>
+        <p className="mt-2 text-sm leading-relaxed text-white/90">Whatever comes up while you travel with us, we&apos;re there to solve it.</p>
+        {directLine ? <p className="mt-4 text-2xl font-semibold">{directLine}</p> : <p className="mt-4 text-sm">Your direct line will appear here once it&apos;s added for this event.</p>}
+      </a>
       <div>
         <p className="text-xs uppercase tracking-[0.18em] text-primary">Client · {data.event.client.name}</p>
         <h1 className="text-2xl font-semibold mt-1">{data.event.name}</h1>

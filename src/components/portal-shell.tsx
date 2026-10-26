@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Compass, LogOut, Radio } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ROLE_LABEL } from "@/lib/roles";
+import { ROLE_HOME, ROLE_LABEL } from "@/lib/roles";
 import type { Role } from "@prisma/client";
 import { cn } from "@/lib/utils";
 
@@ -17,6 +17,7 @@ export function PortalShell({
   nav,
   children,
   compact,
+  tone,
 }: {
   role: Role;
   name: string;
@@ -24,6 +25,7 @@ export function PortalShell({
   nav: NavItem[];
   children: React.ReactNode;
   compact?: boolean;
+  tone?: "field";
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -35,7 +37,7 @@ export function PortalShell({
   }
 
   return (
-    <div className="min-h-dvh flex flex-col">
+    <div className={cn("min-h-dvh flex flex-col", tone === "field" && "staff-field")}>
       <header className="sticky top-0 z-30 border-b border-white/10 bg-[#0b1220]/90 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3">
           <Link href="/" className="flex items-center gap-2 min-w-0">
@@ -78,14 +80,29 @@ export function PortalShell({
             </Button>
           </div>
         </div>
+        <div className="mx-auto grid max-w-7xl grid-cols-2 gap-1 px-3 pb-2">
+          <Link
+            href="/shuttle"
+            className="rounded-lg bg-secondary px-2 py-2 text-center text-[11px] font-semibold leading-tight text-muted-foreground"
+          >
+            Shuttle & bus tracking
+          </Link>
+          <Link
+            href={ROLE_HOME[role]}
+            className="rounded-lg bg-primary px-2 py-2 text-center text-[11px] font-semibold leading-tight text-white"
+          >
+            Airport / port meet & greet
+          </Link>
+        </div>
         {!compact && (
-          <nav className="md:hidden flex gap-1 overflow-x-auto px-3 pb-2">
+          <nav className="md:hidden grid grid-cols-2 gap-1 px-3 pb-2">
             {nav.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "shrink-0 rounded-full px-3 py-1 text-xs",
+                  "rounded-lg px-2 text-center",
+                  tone === "field" ? "py-2 text-sm" : "py-1.5 text-xs",
                   pathname === item.href ? "bg-primary text-white" : "bg-secondary text-muted-foreground",
                 )}
               >

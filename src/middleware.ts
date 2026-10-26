@@ -4,17 +4,35 @@ import { jwtVerify } from "jose";
 import { PORTAL_ROLES } from "@/lib/roles";
 import type { Role } from "@prisma/client";
 
-const PUBLIC = ["/login", "/manifest.webmanifest", "/sw.js", "/icons", "/offline"];
+const PUBLIC = ["/login", "/manifest.webmanifest", "/sw.js", "/icons", "/offline", "/api/auth/me"];
+const FIELD = ["/clipboard", "/shuttle", "/api/clipboard", "/api/shuttle"];
 
-function isPublic(pathname: string) {
+function isPublic(pathname: string, method: string) {
   if (pathname.startsWith("/api/auth/login")) return true;
   if (pathname.startsWith("/_next")) return true;
+  // Exact match so /quotes (the staff list) stays behind login.
+  if (pathname === "/quote" || pathname.startsWith("/quote/")) return true;
+  if (pathname === "/api/quotes" && method === "POST") return true;
+  if (pathname === "/api/quotes/preview" && method === "POST") return true;
+  if (pathname === "/api/places" && method === "GET") return true;
+  if (pathname === "/traveling" || pathname.startsWith("/traveling/")) return true;
+  if (pathname === "/t" || pathname.startsWith("/t/")) return true;
+  if (pathname === "/api/help" && method === "GET") return true;
+  if (pathname === "/api/callbacks" && method === "POST") return true;
+  if (pathname === "/api/guest/board" && method === "GET") return true;
+  if (pathname === "/api/guest/code" && method === "POST") return true;
+  if (pathname === "/api/guest/unlock" && method === "POST") return true;
+  if (pathname === "/api/guest/requests" && method === "POST") return true;
   return PUBLIC.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+}
+
+function isField(pathname: string) {
+  return FIELD.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
 }
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  if (isPublic(pathname) || pathname === "/") {
+  if (isPublic(pathname, request.method) || isField(pathname) || pathname === "/") {
     return NextResponse.next();
   }
 

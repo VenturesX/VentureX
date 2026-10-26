@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 
 const DEMOS = [
   { role: "Admin", email: "admin@venture.direct", note: "CRUD, overrides, manifest" },
-  { role: "Dispatch", email: "dispatch@venture.direct", note: "Queue, assign, exceptions" },
+  { role: "Dispatch", email: "dispatch@venture.direct", note: "Queue, assign, curb clipboard" },
   { role: "Meet & Greet", email: "greeter@venture.direct", note: "Find, check in, queue" },
   { role: "Driver", email: "driver1@venture.direct", note: "Marcus Hale · V-101" },
   { role: "Client", email: "client@venture.direct", note: "Horizon DMC read-only" },
@@ -29,7 +29,11 @@ export default function LoginPage() {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: nextEmail, password }),
+        body: JSON.stringify({
+          email: nextEmail,
+          password,
+          next: new URLSearchParams(window.location.search).get("next") ?? "",
+        }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Sign in failed");
