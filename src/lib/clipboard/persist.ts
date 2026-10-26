@@ -1,7 +1,7 @@
 import type { PrismaClient } from "@prisma/client";
 import { db } from "../db";
 import { asHeadway } from "./logic";
-import { buildSeedPrograms } from "./seed-data";
+import { buildSeedPrograms, withMonday } from "./seed-data";
 import type { ClipboardDay, ClipboardProgram, DispatchRun, HeadwayMinutes, RosterRow } from "./types";
 
 type ClipClient = PrismaClient;
@@ -228,5 +228,14 @@ export async function seedClipboard(client: ClipClient = db) {
 export async function loadClipboard() {
   const count = await db.clipboardProgram.count();
   if (count === 0) await seedClipboard(db);
-  return readClipboard(db);
+  const programs = await readClipboard(db);
+  const merged = withMonday(programs);
+  if (merged.changed) {
+    try {
+      await replaceClipboard(db, merged.programs);
+    } catch {
+      /* The Monday sheet is still returned for this phone. */
+    }
+  }
+  return merged.programs;
 }

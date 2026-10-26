@@ -154,7 +154,43 @@ export function buildSeedPrograms(): ClipboardProgram[] {
             run("clip-iacp-d3-n15", "10:45 AM", "241\\3.1", "Edwin", 3, "R3-01 ✓"),
           ],
         }),
+        day({
+          id: "clip-iacp-d4",
+          label: "Day 4 - Mon 10/26",
+          notes:
+            "Mon Oct 26, 2026 (Morning 6:30–11:30 AM EDT · Chief's Night 6:00 PM–12:00 AM EDT at Universal's Islands of Adventure). Curb: Donna Molina at Residence Inn · Aaron Molina at Element · Marissa Molina at SpringHill. Link pucks R3-01–R3-06 and floaters Stealth-01–03 on the live map.",
+          splitMode: false,
+          stopAName: "Hilton",
+          stopBName: "Element",
+          headwayMinutes: 20,
+          nextDispatch: "7:00 AM",
+          roster: [
+            roster("clip-iacp-d4-r1", "3-1", "Open", "", "--", "R3-01"),
+            roster("clip-iacp-d4-r2", "3-2", "Open", "", "--", "R3-02"),
+            roster("clip-iacp-d4-r3", "3-3", "Open", "", "--", "R3-03"),
+            roster("clip-iacp-d4-r4", "3-4", "Open", "", "--", "R3-04"),
+            roster("clip-iacp-d4-r5", "3-5", "Open", "", "--", "R3-05"),
+            roster("clip-iacp-d4-r6", "3-6", "Open", "", "--", "R3-06"),
+          ],
+          runs: [],
+        }),
       ],
     },
   ];
+}
+
+export function withMonday(programs: ClipboardProgram[]) {
+  const monday = buildSeedPrograms()[0]?.days.find((item) => item.id === "clip-iacp-d4");
+  if (!monday) return { programs, changed: false };
+  let changed = false;
+  const next = programs.map((program) => {
+    if (!/IACP 2026/i.test(program.name)) return program;
+    if (program.days.some((item) => item.id === monday.id || item.label.includes("10/26"))) return program;
+    changed = true;
+    return { ...program, days: [...program.days, structuredClone(monday)] };
+  });
+  if (!next.some((program) => /IACP 2026/i.test(program.name))) {
+    return { programs: [...buildSeedPrograms(), ...next], changed: true };
+  }
+  return { programs: next, changed };
 }

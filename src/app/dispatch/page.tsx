@@ -11,7 +11,8 @@ export default async function DispatchPage() {
       name={session.name}
       eventName={event.name}
       nav={[
-        { href: "/dispatch", label: "Live board" },
+        { href: "/dispatch", label: "Airport board" },
+        { href: "/shuttle", label: "Shuttle map" },
         { href: "/clipboard", label: "Clipboard" },
       ]}
     >

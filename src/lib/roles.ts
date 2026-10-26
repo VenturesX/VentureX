@@ -19,7 +19,6 @@ export const ROLE_LABEL: Record<Role, string> = {
 export const PORTAL_ROLES: Record<string, Role[]> = {
   "/admin": ["ADMIN"],
   "/dispatch": ["ADMIN", "DISPATCHER"],
-  "/clipboard": ["ADMIN", "DISPATCHER", "MEET_GREET"],
   "/meet-greet": ["ADMIN", "MEET_GREET"],
   "/driver": ["ADMIN", "DRIVER"],
   "/client": ["ADMIN", "CLIENT"],

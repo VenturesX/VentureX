@@ -104,16 +104,28 @@ export function DispatchBoard({ eventId }: { eventId: string }) {
           </div>
         ) : null}
       </div>
-      <Link
-        href="/clipboard"
-        className="flex items-center justify-between gap-3 rounded-2xl border border-primary/40 bg-primary/10 px-4 py-3"
-      >
-        <span>
-          <span className="block text-[11px] uppercase tracking-[0.16em] text-primary">On the curb</span>
-          <span className="font-medium">Open the staff clipboard</span>
-        </span>
-        <span className="text-sm text-primary">Roster, count, log</span>
-      </Link>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Link
+          href="/clipboard"
+          className="flex items-center justify-between gap-3 rounded-2xl border border-primary/40 bg-primary/10 px-4 py-3"
+        >
+          <span>
+            <span className="block text-[11px] uppercase tracking-[0.16em] text-primary">Shuttle ops</span>
+            <span className="font-medium">Curb clipboard</span>
+          </span>
+          <span className="text-sm text-primary">Roster, count, log</span>
+        </Link>
+        <Link
+          href="/shuttle"
+          className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-card px-4 py-3"
+        >
+          <span>
+            <span className="block text-[11px] uppercase tracking-[0.16em] text-primary">Shuttle ops</span>
+            <span className="font-medium">Live route map</span>
+          </span>
+          <span className="text-sm text-primary">Pucks and ETAs</span>
+        </Link>
+      </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Card label="In queue" value={data.queue.count} sub={`${data.queue.pax} pax`} />

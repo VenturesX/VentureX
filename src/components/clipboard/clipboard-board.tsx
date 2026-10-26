@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { buildSeedPrograms } from "@/lib/clipboard/seed-data";
+import { buildSeedPrograms, withMonday } from "@/lib/clipboard/seed-data";
 import {
   activeRoster,
   addMinutes,
@@ -28,6 +28,8 @@ import {
   telHref,
 } from "@/lib/clipboard/logic";
 import type { ClipboardDay, ClipboardProgram, DispatchRun, HeadwayMinutes, RosterRow } from "@/lib/clipboard/types";
+import { publishCurbRun } from "@/lib/shuttle/client";
+import { CrewBar, CurbSelect, RelayStrip } from "@/components/shuttle/crew-bar";
 import { cn } from "@/lib/utils";
 
 const STORAGE_KEY = "vd.clipboard.v1";
@@ -41,8 +43,8 @@ type Panel =
   | { type: "run"; id: string | null };
 
 export function ClipboardBoard({
-  backHref = "/dispatch",
-  backLabel = "Dispatch",
+  backHref = "/shuttle",
+  backLabel = "Live map",
 }: {
   backHref?: string;
   backLabel?: string;
@@ -83,9 +85,9 @@ export function ClipboardBoard({
       try {
         const response = await fetch("/api/clipboard");
         if (!response.ok) throw new Error("clipboard unavailable");
-        const body = (await response.json()) as { programs: ClipboardProgram[] };
+        const body = (await response.json()) as { programs: ClipboardProgram[]; persisted?: boolean };
         if (cancelled) return;
-        adopt(body.programs, "saved");
+        adopt(withMonday(body.programs).programs, body.persisted === false ? "phone" : "saved");
       } catch {
         if (cancelled) return;
         adopt(readLocalPrograms(), "phone");
@@ -117,7 +119,8 @@ export function ClipboardBoard({
             body: JSON.stringify({ programs: snapshot }),
           });
           if (!response.ok) throw new Error("save failed");
-          if (latest.current === snapshot) setSync("saved");
+          const saved = (await response.json()) as { persisted?: boolean };
+          if (latest.current === snapshot) setSync(saved.persisted === false ? "phone" : "saved");
         })
         .catch(() => {
           if (latest.current === snapshot) setSync("phone");
@@ -263,7 +266,15 @@ export function ClipboardBoard({
           onSplit={(splitMode) => patchDay((current) => ({ ...current, splitMode }), true)}
           onLogged={(pendingLogged) => patchDay((current) => ({ ...current, pendingLogged }), true)}
           onNote={(pendingNote) => patchDay((current) => ({ ...current, pendingNote }), false)}
-          onDepart={() => patchDay((current) => logDeparture(current), true)}
+          onDepart={() =>
+            patchDay((current) => {
+              const next = logDeparture(current);
+              const run = next.runs[next.runs.length - 1];
+              const previous = current.runs[current.runs.length - 1];
+              if (run && run !== previous) void publishCurbRun(run);
+              return next;
+            }, true)
+          }
           onToggleRun={(id) =>
             patchDay(
               (current) => ({
@@ -450,6 +461,9 @@ function DaySheet({
           Edit day
         </button>
       </div>
+      <CrewBar />
+      <CurbSelect />
+      <RelayStrip />
 
       <section className="overflow-hidden rounded-2xl border border-white/10 bg-[#0c0e12]">
         <div className="flex flex-wrap items-center justify-between gap-2 px-2.5 py-2">
@@ -1127,12 +1141,12 @@ function remember(programId: string, dayId: string) {
 function readLocalPrograms() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return buildSeedPrograms();
+    if (!raw) return withMonday(buildSeedPrograms()).programs;
     const parsed = JSON.parse(raw) as ClipboardProgram[];
-    if (!Array.isArray(parsed) || parsed.length === 0) return buildSeedPrograms();
-    return parsed;
+    if (!Array.isArray(parsed) || parsed.length === 0) return withMonday(buildSeedPrograms()).programs;
+    return withMonday(parsed).programs;
   } catch {
-    return buildSeedPrograms();
+    return withMonday(buildSeedPrograms()).programs;
   }
 }
 

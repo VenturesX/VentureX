@@ -454,6 +454,12 @@ model ClipboardRoster {
   @@index([dayId])
 }
 
+model ShuttleDesk {
+  id        String   @id
+  payload   String
+  updatedAt DateTime @updatedAt
+}
+
 model ClipboardRun {
   id         String       @id @default(cuid())
   dayId      String

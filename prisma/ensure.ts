@@ -22,14 +22,20 @@ async function main() {
     }
 
     let clipboard = -1;
+    let shuttle = -1;
     try {
       clipboard = await db.clipboardProgram.count();
     } catch {
       clipboard = -1;
     }
-    if (clipboard < 0) {
+    try {
+      shuttle = await db.shuttleDesk.count();
+    } catch {
+      shuttle = -1;
+    }
+    if (clipboard < 0 || shuttle < 0) {
       await db.$disconnect();
-      console.log("Updating schema for the curb clipboard…");
+      console.log("Updating schema for shuttle tracking…");
       run("npx", ["prisma", "db", "push", "--skip-generate"]);
       db = new PrismaClient();
       clipboard = await db.clipboardProgram.count();

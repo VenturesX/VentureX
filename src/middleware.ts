@@ -4,7 +4,8 @@ import { jwtVerify } from "jose";
 import { PORTAL_ROLES } from "@/lib/roles";
 import type { Role } from "@prisma/client";
 
-const PUBLIC = ["/login", "/manifest.webmanifest", "/sw.js", "/icons", "/offline"];
+const PUBLIC = ["/login", "/manifest.webmanifest", "/sw.js", "/icons", "/offline", "/api/auth/me"];
+const FIELD = ["/clipboard", "/shuttle", "/api/clipboard", "/api/shuttle"];
 
 function isPublic(pathname: string) {
   if (pathname.startsWith("/api/auth/login")) return true;
@@ -12,9 +13,13 @@ function isPublic(pathname: string) {
   return PUBLIC.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }
 
+function isField(pathname: string) {
+  return FIELD.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  if (isPublic(pathname) || pathname === "/") {
+  if (isPublic(pathname) || isField(pathname) || pathname === "/") {
     return NextResponse.next();
   }
 

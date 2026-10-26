@@ -22,23 +22,33 @@ export default async function HomePage() {
           </div>
         </div>
         <div className="space-y-3">
-          <h1 className="text-3xl sm:text-4xl font-semibold">Choose a portal</h1>
+          <h1 className="text-3xl sm:text-4xl font-semibold">Choose an operation</h1>
           <p className="text-muted-foreground max-w-xl">
-            Role-based operations — not one overloaded screen. Run the airport
-            arrival slice from Meet & Greet → Dispatch → Driver, then watch it on Client.
+            Shuttle and bus tracking runs the convention hotel loop. Airport and port meet-and-greet runs the arrival hall.
           </p>
         </div>
-        <Link
-          href={session ? "/clipboard" : "/login?next=/clipboard"}
-          className="block rounded-2xl border border-white/10 bg-card p-5 hover:border-primary/50"
-        >
-          <div className="text-xs uppercase tracking-wider text-primary">Field sheet</div>
-          <div className="mt-2 text-lg font-medium">Clipboard</div>
-          <p className="mt-2 text-sm text-muted-foreground">
-            One screen for curb dispatch. Program and day tabs, driver roster, boarding clicker, and the running log.
-          </p>
-        </Link>
-        <div className="grid sm:grid-cols-2 gap-3">
+        <section className="space-y-3" aria-labelledby="shuttle-ops">
+          <h2 id="shuttle-ops" className="text-xs uppercase tracking-[0.18em] text-primary">Shuttle & bus tracking</h2>
+          <div className="grid sm:grid-cols-2 gap-3">
+            <Link href="/clipboard" className="block rounded-2xl border border-white/10 bg-card p-5 hover:border-primary/50">
+              <div className="text-xs uppercase tracking-wider text-primary">Curb</div>
+              <div className="mt-2 text-lg font-medium">Clipboard</div>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Program and day tabs, driver roster, boarding clicker, and the running log. Opens without a sign-in.
+              </p>
+            </Link>
+            <Link href="/shuttle" className="block rounded-2xl border border-white/10 bg-card p-5 hover:border-primary/50">
+              <div className="text-xs uppercase tracking-wider text-primary">Route 3</div>
+              <div className="mt-2 text-lg font-medium">Live route map</div>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Hotel loop, GPS pucks, EventFalcon pull, and curb-to-curb ETAs. Opens without a sign-in.
+              </p>
+            </Link>
+          </div>
+        </section>
+        <section className="space-y-3" aria-labelledby="airport-ops">
+          <h2 id="airport-ops" className="text-xs uppercase tracking-[0.18em] text-primary">Airport / port meet & greet</h2>
+          <div className="grid sm:grid-cols-2 gap-3">
           {(
             [
               ["/meet-greet", "MEET_GREET", "Find the guest, check the party in, place them in the curb queue."],
@@ -57,8 +67,9 @@ export default async function HomePage() {
               <div className="mt-2 text-lg font-medium">{href.replace("/", "") || "home"}</div>
               <p className="mt-2 text-sm text-muted-foreground">{copy}</p>
             </Link>
-          ))}
-        </div>
+            ))}
+          </div>
+        </section>
         {!session ? (
           <Button render={<Link href="/login" />}>Sign in</Button>
         ) : null}
