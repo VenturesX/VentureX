@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { SESSION_COOKIE, signSession, verifyPassword } from "@/lib/auth";
-import { ROLE_HOME } from "@/lib/roles";
+import { ROLE_HOME, canAccessPath } from "@/lib/roles";
 import { jsonError } from "@/lib/api";
 
 export async function POST(request: Request) {
@@ -20,6 +20,10 @@ export async function POST(request: Request) {
     if (!ok) {
       return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
     }
+    const requested = typeof body.next === "string" ? body.next : "";
+    const next = requested.startsWith("/") && !requested.startsWith("//") && canAccessPath(user.role, requested)
+      ? requested
+      : ROLE_HOME[user.role];
     const token = await signSession({
       id: user.id,
       email: user.email,
@@ -30,7 +34,7 @@ export async function POST(request: Request) {
     });
     const res = NextResponse.json({
       ok: true,
-      redirect: ROLE_HOME[user.role],
+      redirect: next,
       user: { id: user.id, name: user.name, role: user.role, email: user.email },
     });
     res.cookies.set(SESSION_COOKIE, token, {

@@ -19,6 +19,7 @@ export const ROLE_LABEL: Record<Role, string> = {
 export const PORTAL_ROLES: Record<string, Role[]> = {
   "/admin": ["ADMIN"],
   "/dispatch": ["ADMIN", "DISPATCHER"],
+  "/clipboard": ["ADMIN", "DISPATCHER", "MEET_GREET"],
   "/meet-greet": ["ADMIN", "MEET_GREET"],
   "/driver": ["ADMIN", "DRIVER"],
   "/client": ["ADMIN", "CLIENT"],
@@ -48,6 +49,8 @@ export function canMutate(role: Role, action: string) {
       return admin || role === "DISPATCHER";
     case "ops.driver_status":
       return admin || role === "DRIVER" || role === "DISPATCHER";
+    case "clipboard.write":
+      return admin || role === "DISPATCHER" || role === "MEET_GREET";
     case "ops.read":
       return true;
     default:

@@ -10,7 +10,10 @@ export default async function DispatchPage() {
       role={session.role}
       name={session.name}
       eventName={event.name}
-      nav={[{ href: "/dispatch", label: "Live board" }]}
+      nav={[
+        { href: "/dispatch", label: "Live board" },
+        { href: "/clipboard", label: "Clipboard" },
+      ]}
     >
       <DispatchBoard eventId={event.id} />
     </PortalShell>

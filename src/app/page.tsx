@@ -28,6 +28,16 @@ export default async function HomePage() {
             arrival slice from Meet & Greet → Dispatch → Driver, then watch it on Client.
           </p>
         </div>
+        <Link
+          href={session ? "/clipboard" : "/login?next=/clipboard"}
+          className="block rounded-2xl border border-white/10 bg-card p-5 hover:border-primary/50"
+        >
+          <div className="text-xs uppercase tracking-wider text-primary">Field sheet</div>
+          <div className="mt-2 text-lg font-medium">Clipboard</div>
+          <p className="mt-2 text-sm text-muted-foreground">
+            One screen for curb dispatch. Program and day tabs, driver roster, boarding clicker, and the running log.
+          </p>
+        </Link>
         <div className="grid sm:grid-cols-2 gap-3">
           {(
             [

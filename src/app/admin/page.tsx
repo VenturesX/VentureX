@@ -14,6 +14,7 @@ export default async function AdminPage() {
         { href: "/admin", label: "Admin" },
         { href: "/meet-greet", label: "M&G" },
         { href: "/dispatch", label: "Dispatch" },
+        { href: "/clipboard", label: "Clipboard" },
         { href: "/driver", label: "Driver" },
         { href: "/client", label: "Client" },
       ]}

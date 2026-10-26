@@ -405,3 +405,69 @@ model MockOutboundMessage {
   status    String   @default("MOCK_SENT")
   createdAt DateTime @default(now())
 }
+
+model ClipboardProgram {
+  id        String         @id @default(cuid())
+  name      String
+  sortOrder Int            @default(0)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  days      ClipboardDay[]
+}
+
+model ClipboardDay {
+  id             String            @id @default(cuid())
+  programId      String
+  program        ClipboardProgram  @relation(fields: [programId], references: [id], onDelete: Cascade)
+  label          String
+  notes          String            @default("")
+  sortOrder      Int               @default(0)
+  splitMode      Boolean           @default(false)
+  stopAName      String            @default("Hilton")
+  stopBName      String            @default("Element")
+  headwayMinutes Int               @default(15)
+  nextDispatch   String            @default("")
+  activeRosterId String?
+  clickerA       Int               @default(0)
+  clickerB       Int               @default(0)
+  pendingLogged  Boolean           @default(true)
+  pendingNote    String            @default("")
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  roster         ClipboardRoster[]
+  runs           ClipboardRun[]
+
+  @@index([programId])
+}
+
+model ClipboardRoster {
+  id         String       @id @default(cuid())
+  dayId      String
+  day        ClipboardDay @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  sortOrder  Int          @default(0)
+  busPuck    String
+  driverName String
+  phone      String       @default("")
+  breakText  String       @default("--")
+  siteCode   String       @default("")
+
+  @@index([dayId])
+}
+
+model ClipboardRun {
+  id         String       @id @default(cuid())
+  dayId      String
+  day        ClipboardDay @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  sortOrder  Int          @default(0)
+  timeLabel  String
+  busPuck    String
+  driverName String
+  pax        Int          @default(0)
+  stopAPax   Int?
+  stopBPax   Int?
+  siteCode   String       @default("")
+  siteNote   String       @default("")
+  logged     Boolean      @default(false)
+
+  @@index([dayId])
+}

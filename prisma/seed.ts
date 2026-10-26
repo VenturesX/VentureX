@@ -5,11 +5,16 @@ import {
   VehicleStatus,
 } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { seedClipboard } from "../src/lib/clipboard/persist";
 
 const db = new PrismaClient();
 const PASSWORD = "VentureOps!26";
 
 async function main() {
+  await db.clipboardRun.deleteMany();
+  await db.clipboardRoster.deleteMany();
+  await db.clipboardDay.deleteMany();
+  await db.clipboardProgram.deleteMany();
   await db.assignmentGuest.deleteMany();
   await db.assignment.deleteMany();
   await db.statusHistory.deleteMany();
@@ -411,6 +416,8 @@ async function main() {
       reason: "Initial Orlando arrival slice",
     },
   });
+
+  await seedClipboard(db);
 
   console.log("Seeded Venture Directors");
   console.log(`Event ${event.code} (${event.id})`);
