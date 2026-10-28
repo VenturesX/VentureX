@@ -5,7 +5,7 @@ import {
   VehicleStatus,
 } from "@prisma/client";
 import bcrypt from "bcryptjs";
-import { seedClipboard } from "../src/lib/clipboard/persist";
+import { loadClipboard, seedClipboard } from "../src/lib/clipboard/persist";
 import { DEFAULT_EXPERT_PHONE, OWNER_OFFICE_HOURS, SETTINGS_KEYS } from "../src/lib/guidance";
 import { defaultGuestExpiry, makeGuestCode, makeGuestToken } from "../src/lib/guest-codes";
 
@@ -489,7 +489,8 @@ async function ensureClipboard() {
   try {
     const count = await db.clipboardProgram.count();
     if (count > 0) {
-      console.log("Clipboard already seeded");
+      await loadClipboard();
+      console.log("Clipboard official days synced");
       return;
     }
     await seedClipboard(db);

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { jsonError } from "@/lib/api";
 import { isDatabaseUnavailable } from "@/lib/db-error";
 import { loadClipboard, parsePrograms, replaceClipboard } from "@/lib/clipboard/persist";
-import { buildSeedPrograms, withMonday } from "@/lib/clipboard/seed-data";
+import { buildSeedPrograms } from "@/lib/clipboard/seed-data";
 import { db } from "@/lib/db";
 
 export async function GET() {
@@ -11,7 +11,7 @@ export async function GET() {
     return NextResponse.json({ programs, persisted: true });
   } catch (error) {
     if (isDatabaseUnavailable(error)) {
-      return NextResponse.json({ programs: withMonday(buildSeedPrograms()).programs, persisted: false });
+      return NextResponse.json({ programs: buildSeedPrograms(), persisted: false });
     }
     return jsonError(error);
   }

@@ -1,4 +1,30 @@
-import type { ClipboardDay, DayTotals, DispatchRun, HeadwayMinutes, RosterRow } from "./types";
+import type { BreakStatus, ClipboardDay, DayTotals, DispatchRun, HeadwayMinutes, IngressStop, RosterRow } from "./types";
+
+export const BREAK_ORDER: BreakStatus[] = ["back", "on", "need", "fill-in"];
+
+export const BREAK_LABEL: Record<BreakStatus, string> = {
+  back: "Back from Break",
+  on: "Currently on Break",
+  need: "Still Need Break",
+  "fill-in": "Fill-in",
+};
+
+export function breakStatusOf(row: { breakStatus?: RosterRow["breakStatus"]; isFillIn?: boolean }): BreakStatus {
+  if (row.breakStatus === "back" || row.breakStatus === "on" || row.breakStatus === "need" || row.breakStatus === "fill-in") {
+    return row.breakStatus;
+  }
+  return row.isFillIn ? "fill-in" : "back";
+}
+
+export function displayBus(row: { busPuck: string; isFillIn?: boolean; breakStatus?: RosterRow["breakStatus"] }) {
+  const normalized = row.busPuck.trim().replace(/\\/g, "/");
+  if (row.isFillIn || breakStatusOf(row) === "fill-in") return normalized.split("/")[0]?.trim() || normalized;
+  return normalized;
+}
+
+export function busNumber(busPuck: string) {
+  return busPuck.trim().replace(/\\/g, "/").split("/")[0]?.trim() ?? "";
+}
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"] as const;
@@ -88,26 +114,129 @@ export function siteLabel(run: Pick<DispatchRun, "siteCode" | "siteNote" | "logg
   return "--";
 }
 
-export function rosterCopyText(rows: RosterRow[]) {
+export function rosterCopyText(rows: RosterRow[], withPhones = false) {
   return rows
     .map((row) => {
-      const phone = formatPhone(row.phone);
-      return phone ? `${row.busPuck} - ${row.driver} (${phone})` : `${row.busPuck} - ${row.driver}`;
+      const phone = withPhones ? formatPhone(row.phone) : "";
+      const bus = displayBus(row);
+      return phone ? `${bus} ${row.driver} (${phone})` : `${bus} ${row.driver}`;
     })
     .join("\n");
 }
 
-export function breaksCopyText(rows: RosterRow[]) {
-  return rows
-    .map((row) => `${row.busPuck} ${row.driver}: ${row.breakText.trim() || "--"}`)
-    .join("\n");
+export function breaksCopyText(rows: RosterRow[], withPhones = false) {
+  return BREAK_ORDER.map((status) => {
+    const members = rows.filter((row) => breakStatusOf(row) === status);
+    const lines = members.map((row) => {
+      const phone = withPhones ? formatPhone(row.phone) : "";
+      const window = row.breakText.trim() && row.breakText.trim() !== "--" ? ` ${row.breakText.trim()}` : "";
+      const who = phone ? `${displayBus(row)} ${row.driver} (${phone})` : `${displayBus(row)} ${row.driver}`;
+      return `${who}${window}`;
+    });
+    return [BREAK_LABEL[status], ...lines].join("\n");
+  }).join("\n\n");
+}
+
+export function chatTime(label: string) {
+  const trimmed = label.trim();
+  if (/^12:\d{2}\s*AM$/i.test(trimmed)) return trimmed.replace(/\s+/g, " ");
+  return trimmed.replace(/\s*AM$/i, "").trim();
+}
+
+export function departureCopyText(run: DispatchRun, day: Pick<ClipboardDay, "departureStop" | "roster">) {
+  const stop = run.stopName.trim() || day.departureStop.trim() || "Residence Inn";
+  const fillIn = day.roster.some((row) => row.driver === run.driver && busNumber(row.busPuck) === busNumber(run.busPuck) && (row.isFillIn || breakStatusOf(row) === "fill-in"));
+  const bus = displayBus({ busPuck: run.busPuck, isFillIn: fillIn || !/[\\/]/.test(run.busPuck), breakStatus: fillIn ? "fill-in" : "" });
+  const pax = run.paxUnknown ? "--" : run.advance ? `${run.pax} pax (to route)` : `${run.pax} pax`;
+  return `${stop}- ${bus} - ${pax} @ ${chatTime(run.timeLabel)}`;
+}
+
+export function autoAssignPucks(rows: RosterRow[]): RosterRow[] {
+  let slot = 1;
+  return rows.map((row) => {
+    if (row.isFillIn || breakStatusOf(row) === "fill-in") {
+      return { ...row, isFillIn: true, breakStatus: "fill-in", busPuck: busNumber(row.busPuck), siteCode: "" };
+    }
+    if (slot > 6) return row;
+    const bus = busNumber(row.busPuck);
+    if (!bus) return row;
+    const busPuck = `${bus}/3.${slot}`;
+    slot += 1;
+    return { ...row, busPuck, siteCode: siteCodeFromBusPuck(busPuck), isFillIn: false };
+  });
+}
+
+export function cycleBreak(row: RosterRow): RosterRow {
+  const current = breakStatusOf(row);
+  const next = BREAK_ORDER[(BREAK_ORDER.indexOf(current) + 1) % BREAK_ORDER.length];
+  if (next === "fill-in") {
+    return { ...row, breakStatus: next, isFillIn: true, busPuck: busNumber(row.busPuck), siteCode: "" };
+  }
+  return { ...row, breakStatus: next, isFillIn: false };
+}
+
+export function setCount(day: ClipboardDay, value: number): ClipboardDay {
+  return { ...day, clickerA: Math.max(0, Math.round(value)), clickerB: day.splitMode ? day.clickerB : 0 };
+}
+
+export function pendingRuns(day: ClipboardDay) {
+  return day.runs.filter((run) => run.synced === false);
+}
+
+export function falconBlocked(run: DispatchRun, day: ClipboardDay) {
+  const fillIn = day.roster.some((row) => row.driver === run.driver && busNumber(row.busPuck) === busNumber(run.busPuck) && row.isFillIn);
+  return run.paxUnknown || run.pax === 0 || fillIn || (!siteCodeFromBusPuck(run.busPuck) && day.mode !== "special");
+}
+
+export function markBatchSynced(day: ClipboardDay): ClipboardDay {
+  return { ...day, runs: day.runs.map((run) => (run.synced === false ? { ...run, synced: true } : run)) };
+}
+
+export function returnNumber(runs: DispatchRun[], index: number) {
+  const run = runs[index];
+  if (!run) return 1;
+  let count = 0;
+  for (let cursor = 0; cursor <= index; cursor += 1) {
+    if (runs[cursor].driver === run.driver && busNumber(runs[cursor].busPuck) === busNumber(run.busPuck)) count += 1;
+  }
+  return count;
+}
+
+export function driverTallies(day: ClipboardDay) {
+  const map = new Map<string, { bus: string; driver: string; runs: number; pax: number }>();
+  for (const run of day.runs) {
+    const key = `${busNumber(run.busPuck)}|${run.driver}`;
+    const current = map.get(key) ?? { bus: busNumber(run.busPuck), driver: run.driver, runs: 0, pax: 0 };
+    current.runs += 1;
+    if (!run.paxUnknown) current.pax += run.pax;
+    map.set(key, current);
+  }
+  return [...map.values()];
+}
+
+export function ingressMath(day: ClipboardDay) {
+  const staffed = day.ingress.filter((stop) => stop.staffed).reduce((sum, stop) => sum + stop.count, 0);
+  const manualOverage = day.ingress.filter((stop) => !stop.staffed).reduce((sum, stop) => sum + stop.count, 0);
+  const returned = day.runs.reduce((sum, run) => sum + (run.paxUnknown ? 0 : run.pax), 0);
+  const overage = day.overageEnabled ? Math.max(0, returned - staffed) : manualOverage;
+  const total = staffed + overage;
+  return { staffed, overage, total, returned, remaining: total - returned, runs: day.runs.length };
+}
+
+export function blankIngress(): IngressStop[] {
+  return [
+    { id: "ri", name: "Residence Inn", count: 0, staffed: true },
+    { id: "el", name: "Element", count: 0, staffed: true },
+    { id: "sh", name: "SpringHill Suites", count: 0, staffed: true },
+    { id: "hgv", name: "Hilton GV Trolley", count: 0, staffed: false },
+  ];
 }
 
 export function dayTotals(day: ClipboardDay): DayTotals {
   return day.runs.reduce<DayTotals>(
     (totals, run) => {
       totals.runs += 1;
-      totals.pax += run.pax;
+      totals.pax += run.paxUnknown ? 0 : run.pax;
       totals.stopA += run.stopAPax ?? 0;
       totals.stopB += run.stopBPax ?? 0;
       return totals;
@@ -127,9 +256,10 @@ export function summaryLine(day: ClipboardDay) {
 export function dispatchLogCopyText(day: ClipboardDay) {
   const lines = day.runs.map((run) => {
     const site = siteLabel(run);
+    const count = run.paxUnknown ? "--" : `${run.pax} pax`;
     const pax = day.splitMode
-      ? `${day.stopAName} ${run.stopAPax ?? 0}, ${day.stopBName} ${run.stopBPax ?? 0} | ${run.pax} pax`
-      : `${run.pax} pax`;
+      ? `${day.stopAName} ${run.stopAPax ?? 0}, ${day.stopBName} ${run.stopBPax ?? 0} | ${count}`
+      : count;
     const sitePart = site === "--" ? "" : ` | ${site}`;
     return `${run.timeLabel} | ${run.busPuck} | ${run.driver} | ${pax}${sitePart}`;
   });
@@ -174,17 +304,22 @@ export function logDeparture(day: ClipboardDay): ClipboardDay {
   if (!roster) return day;
   const siteCode = roster.siteCode || siteCodeFromBusPuck(roster.busPuck);
   const note = day.pendingNote.trim();
+  const noteClean = note === "--" ? "" : note;
   const run: DispatchRun = {
     id: newId(),
     timeLabel: day.nextDispatch.trim() || nowClock(),
-    busPuck: roster.busPuck,
+    busPuck: roster.isFillIn ? busNumber(roster.busPuck) : roster.busPuck.replace(/\\/g, "/"),
     driver: roster.driver,
     pax: boardingTotal(day),
     stopAPax: day.splitMode ? day.clickerA : null,
     stopBPax: day.splitMode ? day.clickerB : null,
-    siteCode,
-    siteNote: note === "--" ? "" : note,
-    logged: day.pendingLogged && Boolean(siteCode || note),
+    siteCode: roster.isFillIn ? "" : siteCode,
+    siteNote: noteClean,
+    logged: day.pendingLogged && Boolean(siteCode || noteClean),
+    synced: false,
+    paxUnknown: false,
+    advance: /to route/i.test(noteClean),
+    stopName: day.departureStop.trim() || "Residence Inn",
   };
   return {
     ...day,
@@ -201,7 +336,8 @@ export function repeatRoster(rows: RosterRow[]): RosterRow[] {
     ...row,
     id: newId(),
     breakText: "--",
-    siteCode: row.siteCode || siteCodeFromBusPuck(row.busPuck),
+    breakStatus: row.isFillIn ? "fill-in" : "need",
+    siteCode: row.isFillIn ? "" : row.siteCode || siteCodeFromBusPuck(row.busPuck),
   }));
 }
 
