@@ -1,5 +1,16 @@
 export type HeadwayMinutes = 15 | 20;
 
+export type BreakStatus = "back" | "on" | "need" | "fill-in";
+
+export type DayMode = "loop" | "special";
+
+export type IngressStop = {
+  id: string;
+  name: string;
+  count: number;
+  staffed: boolean;
+};
+
 export type RosterRow = {
   id: string;
   busPuck: string;
@@ -7,6 +18,8 @@ export type RosterRow = {
   phone: string;
   breakText: string;
   siteCode: string;
+  isFillIn: boolean;
+  breakStatus: BreakStatus | "";
 };
 
 export type DispatchRun = {
@@ -20,6 +33,11 @@ export type DispatchRun = {
   siteCode: string;
   siteNote: string;
   logged: boolean;
+  synced: boolean;
+  paxUnknown: boolean;
+  advance: boolean;
+  stopName: string;
+  excluded: boolean;
 };
 
 export type ClipboardDay = {
@@ -36,6 +54,11 @@ export type ClipboardDay = {
   clickerB: number;
   pendingLogged: boolean;
   pendingNote: string;
+  mode: DayMode;
+  seedRevision: string;
+  departureStop: string;
+  ingress: IngressStop[];
+  overageEnabled: boolean;
   roster: RosterRow[];
   runs: DispatchRun[];
 };

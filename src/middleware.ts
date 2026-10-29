@@ -5,7 +5,7 @@ import { PORTAL_ROLES } from "@/lib/roles";
 import type { Role } from "@prisma/client";
 
 const PUBLIC = ["/login", "/manifest.webmanifest", "/sw.js", "/icons", "/offline", "/api/auth/me"];
-const FIELD = ["/clipboard", "/shuttle", "/api/clipboard", "/api/shuttle"];
+const FIELD = ["/clipboard", "/shuttle", "/staff", "/guest", "/drive", "/owner", "/api/clipboard", "/api/shuttle"];
 
 function isPublic(pathname: string, method: string) {
   if (pathname.startsWith("/api/auth/login")) return true;

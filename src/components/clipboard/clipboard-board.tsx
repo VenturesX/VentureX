@@ -2,31 +2,46 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { buildSeedPrograms, withMonday } from "@/lib/clipboard/seed-data";
+import { buildSeedPrograms, syncOfficialDays } from "@/lib/clipboard/seed-data";
 import {
   activeRoster,
   addMinutes,
+  adjustLastRun,
+  autoAssignPucks,
+  blankIngress,
   boardingTotal,
+  breakStatusOf,
+  BREAK_LABEL,
   breaksCopyText,
+  cycleBreak,
   cycleRoster,
   dayTotals,
+  departureCopyText,
   describeDay,
+  displayBus,
   dispatchLogCopyText,
   formatPhone,
   logDeparture,
+  markBatchSynced,
   newId,
+  parseCheckInSheet,
+  parseVoiceCommand,
   nowClock,
   nudgeCount,
   repeatRoster,
   resetCount,
   rosterCopyText,
   selectRoster,
+  setCount,
+  skipDriver,
   siteCodeFromBusPuck,
+  swapBusNumber,
   siteLabel,
   suggestDayLabel,
   summaryLine,
   telHref,
 } from "@/lib/clipboard/logic";
+import { BatchPanel, EgressFooter, egressPax, egressRunLabel, IngressCard, PhoneToggle } from "@/components/clipboard/field-ops";
 import type { ClipboardDay, ClipboardProgram, DispatchRun, HeadwayMinutes, RosterRow } from "@/lib/clipboard/types";
 import { publishCurbRun } from "@/lib/shuttle/client";
 import { CrewBar, CurbSelect, RelayStrip } from "@/components/shuttle/crew-bar";
@@ -56,6 +71,7 @@ export function ClipboardBoard({
   const [copied, setCopied] = useState<string | null>(null);
   const [sync, setSync] = useState<"loading" | "saved" | "saving" | "phone">("loading");
   const [breakEditId, setBreakEditId] = useState<string | null>(null);
+  const [withPhones, setWithPhones] = useState(false);
   const latest = useRef<ClipboardProgram[] | null>(null);
   const selection = useRef({ programId: "", dayId: "" });
   const saveChain = useRef(Promise.resolve());
@@ -87,7 +103,7 @@ export function ClipboardBoard({
         if (!response.ok) throw new Error("clipboard unavailable");
         const body = (await response.json()) as { programs: ClipboardProgram[]; persisted?: boolean };
         if (cancelled) return;
-        adopt(withMonday(body.programs).programs, body.persisted === false ? "phone" : "saved");
+        adopt(syncOfficialDays(body.programs).programs, body.persisted === false ? "phone" : "saved");
       } catch {
         if (cancelled) return;
         adopt(readLocalPrograms(), "phone");
@@ -286,6 +302,67 @@ export function ClipboardBoard({
           }
           onAddRun={() => setPanel({ type: "run", id: null })}
           onEditRun={(id) => setPanel({ type: "run", id })}
+          withPhones={withPhones}
+          onPhones={setWithPhones}
+          onAutoAssign={() => patchDay((current) => ({ ...current, roster: autoAssignPucks(current.roster) }), true)}
+          onCycleBreak={(id) =>
+            patchDay((current) => ({ ...current, roster: current.roster.map((row) => (row.id === id ? cycleBreak(row) : row)) }), true)
+          }
+          onZero={() => patchDay((current) => setCount(current, 0), true)}
+          onToRoute={() => patchDay((current) => ({ ...setCount(current, 0), pendingNote: "to route" }), true)}
+          onSyncRun={(id) =>
+            patchDay((current) => ({ ...current, runs: current.runs.map((run) => (run.id === id ? { ...run, synced: !run.synced } : run)) }), true)
+          }
+          onSyncBatch={() => patchDay((current) => markBatchSynced(current), true)}
+          onMode={(mode) =>
+            patchDay((current) => ({
+              ...current,
+              mode,
+              ingress: mode === "special" && current.ingress.length === 0 ? blankIngress() : current.ingress,
+              overageEnabled: mode === "special" ? current.overageEnabled : current.overageEnabled,
+              departureStop: mode === "special" && !current.departureStop ? "Universal" : current.departureStop || "Residence Inn",
+            }), true)
+          }
+          onIngress={(id, count) =>
+            patchDay((current) => ({ ...current, ingress: current.ingress.map((stop) => (stop.id === id ? { ...stop, count } : stop)) }), true)
+          }
+          onOverage={(overageEnabled) => patchDay((current) => ({ ...current, overageEnabled }), true)}
+          onAdjustLast={(delta) => patchDay((current) => adjustLastRun(current, delta), true)}
+          onSkip={() => patchDay((current) => skipDriver(current), true)}
+          onSwap={(bus) => patchDay((current) => swapBusNumber(current, current.activeRosterId ?? "", bus), true)}
+          onSheet={(text) =>
+            patchDay((current) => {
+              const parsed = parseCheckInSheet(text);
+              if (!parsed.length) return current;
+              const roster = autoAssignPucks(parsed.map((row, index) => ({
+                id: newId(),
+                busPuck: row.busPuck,
+                driver: row.driver,
+                phone: row.phone,
+                breakText: "--",
+                siteCode: "",
+                isFillIn: false,
+                breakStatus: "" as const,
+              })).map((row, index) => ({ ...row, id: row.id || `scan-${index}` })));
+              return { ...current, roster, activeRosterId: roster.find((row) => breakStatusOf(row) !== "on")?.id ?? roster[0]?.id ?? null };
+            }, true)
+          }
+          onVoice={(text) =>
+            patchDay((current) => {
+              const action = parseVoiceCommand(current, text);
+              if (action.type === "break") {
+                return { ...current, roster: current.roster.map((row) => (row.id === action.rosterId ? { ...row, breakStatus: "on" } : row)) };
+              }
+              if (action.type === "depart") return logDeparture(setCount(selectRoster(current, action.rosterId), action.pax));
+              return current;
+            }, true)
+          }
+          onExclude={(id) =>
+            patchDay((current) => ({
+              ...current,
+              runs: current.runs.map((run) => (run.id === id ? { ...run, excluded: !run.excluded } : run)),
+            }), true)
+          }
         />
       ) : (
         <div className="rounded-2xl border border-dashed border-white/20 px-4 py-10 text-center">
@@ -423,10 +500,44 @@ function DaySheet({
   onToggleRun,
   onAddRun,
   onEditRun,
+  withPhones,
+  onPhones,
+  onAutoAssign,
+  onCycleBreak,
+  onZero,
+  onToRoute,
+  onSyncRun,
+  onSyncBatch,
+  onMode,
+  onIngress,
+  onOverage,
+  onAdjustLast,
+  onSkip,
+  onSwap,
+  onSheet,
+  onVoice,
+  onExclude,
 }: {
   day: ClipboardDay;
   copied: string | null;
   breakEditId: string | null;
+  withPhones: boolean;
+  onPhones: (value: boolean) => void;
+  onAutoAssign: () => void;
+  onCycleBreak: (id: string) => void;
+  onZero: () => void;
+  onToRoute: () => void;
+  onSyncRun: (id: string) => void;
+  onSyncBatch: () => void;
+  onMode: (mode: ClipboardDay["mode"]) => void;
+  onIngress: (id: string, count: number) => void;
+  onOverage: (enabled: boolean) => void;
+  onAdjustLast: (delta: number) => void;
+  onSkip: () => void;
+  onSwap: (bus: string) => void;
+  onSheet: (text: string) => void;
+  onVoice: (text: string) => void;
+  onExclude: (id: string) => void;
   onCopy: (key: string, text: string) => void;
   onEditDay: () => void;
   onAddRoster: () => void;
@@ -452,6 +563,14 @@ function DaySheet({
   const loading = activeRoster(day);
   const site = loading ? loading.siteCode || siteCodeFromBusPuck(loading.busPuck) : "";
   const totals = dayTotals(day);
+  const last = day.runs[day.runs.length - 1] ?? null;
+  const [nightView, setNightView] = useState<"in" | "out">(day.mode === "special" ? "out" : "in");
+  const [swapValue, setSwapValue] = useState("");
+  const [scanOpen, setScanOpen] = useState(false);
+  const [scanText, setScanText] = useState("");
+  const [voice, setVoice] = useState("");
+  const [voiceNote, setVoiceNote] = useState("");
+  const showRoster = day.mode !== "special" || nightView === "in";
 
   return (
     <div className="space-y-3">
@@ -461,18 +580,68 @@ function DaySheet({
           Edit day
         </button>
       </div>
+      <div className="grid grid-cols-2 gap-1">
+        <button type="button" data-testid="mode-loop" onClick={() => onMode("loop")} className={day.mode === "loop" ? modeOn : modeOff}>Loop</button>
+        <button type="button" data-testid="mode-special" onClick={() => onMode("special")} className={day.mode === "special" ? modeOn : modeOff}>Special event</button>
+      </div>
+      {day.mode === "special" ? (
+        <div className="grid grid-cols-2 gap-1" data-testid="night-view">
+          <button type="button" data-testid="view-ingress" onClick={() => setNightView("in")} className={nightView === "in" ? modeOn : modeOff}>Ingress (In)</button>
+          <button type="button" data-testid="view-egress" onClick={() => setNightView("out")} className={nightView === "out" ? modeOn : modeOff}>Egress (Returns Only)</button>
+        </div>
+      ) : null}
+      {last && showRoster ? (
+        <section className="rounded-2xl border border-[#1E90FF]/40 bg-[#071018] p-2.5" data-testid="last-sent">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#9ecbff]">Last sent bus</p>
+          <p className="mt-1 text-sm font-semibold leading-snug" data-testid="last-sent-line">{departureCopyText(last, day)}</p>
+          <div className="mt-2 grid grid-cols-4 gap-1">
+            <button type="button" data-testid="late-runner" onClick={() => onAdjustLast(1)} className={thumb}>+1 Late</button>
+            <button type="button" data-testid="late-minus" onClick={() => onAdjustLast(-1)} className={thumb}>−1</button>
+            <button type="button" onClick={() => onEditRun(last.id)} className={thumb}>Edit</button>
+            <button type="button" data-testid="copy-last-sent" onClick={() => onCopy("last", departureCopyText(last, day))} className={thumb}>{copied === "last" ? "Copied" : "Copy"}</button>
+          </div>
+        </section>
+      ) : null}
+      {showRoster ? (
+        <form
+          className="flex gap-1"
+          data-testid="voice-bar"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (!voice.trim()) return;
+            onVoice(voice);
+            setVoiceNote(voice.trim());
+            setVoice("");
+          }}
+        >
+          <input value={voice} onChange={(event) => setVoice(event.target.value)} placeholder='Say "16 pax on 3.4"' aria-label="Voice command" className="h-11 min-w-0 flex-1 rounded-xl border border-white/15 bg-black px-3 text-sm" />
+          <button type="button" className={thumb} onClick={() => listen(setVoice)}>Mic</button>
+          <button type="submit" className={thumb}>Run</button>
+        </form>
+      ) : null}
+      {voiceNote ? <p className="text-[12px] text-[#d7e8ff]" data-testid="voice-note">Heard: {voiceNote}</p> : null}
       <CrewBar />
       <CurbSelect />
       <RelayStrip />
+      {day.mode === "special" && nightView === "in" ? <IngressCard day={day} onCount={onIngress} onOverage={onOverage} /> : null}
 
-      <section className="overflow-hidden rounded-2xl border border-white/10 bg-[#0c0e12]">
+      {showRoster ? <section className="overflow-hidden rounded-2xl border border-white/10 bg-[#0c0e12]">
         <div className="flex flex-wrap items-center justify-between gap-2 px-2.5 py-2">
           <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#9ecbff]">Driver roster</h2>
           <div className="flex flex-wrap gap-1.5">
-            <CopyButton testId="copy-roster" copied={copied === "roster"} label="Copy Roster" onClick={() => onCopy("roster", rosterCopyText(day.roster))} />
-            <CopyButton testId="copy-breaks" copied={copied === "breaks"} label="Copy Breaks" onClick={() => onCopy("breaks", breaksCopyText(day.roster))} />
+            <CopyButton testId="copy-roster" copied={copied === "roster"} label="Copy Roster" onClick={() => onCopy("roster", rosterCopyText(day.roster, withPhones))} />
+            <CopyButton testId="copy-breaks" copied={copied === "breaks"} label="Copy Breaks" onClick={() => onCopy("breaks", breaksCopyText(day.roster, withPhones, day.departureStop || "Residence Inn"))} />
             <button type="button" onClick={onAddRoster} className={chip}>+ Driver</button>
           </div>
+        </div>
+        <div className="space-y-2 px-2.5 pb-2">
+          <PhoneToggle withPhones={withPhones} onChange={onPhones} />
+          <button type="button" data-testid="auto-assign" onClick={onAutoAssign} className="h-11 w-full rounded-xl bg-white text-[13px] font-semibold text-black">
+            Auto-Assign Pucks 3.1–3.6 Top-to-Bottom
+          </button>
+          <button type="button" data-testid="scan-sheet" onClick={() => setScanOpen(true)} className="h-11 w-full rounded-xl bg-[#141820] text-[13px] font-semibold text-white ring-1 ring-white/15">
+            Scan Paper Check-In Sheet
+          </button>
         </div>
         <div className={cn(rosterGrid, "px-2 pb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#b7c3d6]")}>
           <span>Bus\Puck</span>
@@ -491,8 +660,8 @@ function DaySheet({
               )}
             >
               <button type="button" onClick={() => onEditRoster(row.id)} className="min-w-0 text-left">
-                <span className="block truncate font-mono text-[12px] font-semibold text-white">{row.busPuck}</span>
-                {row.siteCode ? <span className="block text-[10px] text-[#8ec5ff]">{row.siteCode}</span> : null}
+                <span className="block truncate font-mono text-[12px] font-semibold text-white">{displayBus(row)}</span>
+                {row.siteCode ? <span className="block text-[10px] text-[#8ec5ff]">{row.siteCode}</span> : <span className="block text-[10px] text-[#f0d48a]">No puck</span>}
               </button>
               <button type="button" onClick={() => onEditRoster(row.id)} className="truncate text-left text-[13px] font-medium">
                 {row.driver}
@@ -500,38 +669,39 @@ function DaySheet({
               <a href={telHref(row.phone) || undefined} className="whitespace-nowrap font-mono text-[11px] text-[#d7e8ff] underline-offset-2 hover:underline">
                 {formatPhone(row.phone)}
               </a>
-              {breakEditId === row.id ? (
-                <input
-                  autoFocus
-                  defaultValue={row.breakText === "--" ? "" : row.breakText}
-                  aria-label={`Break for ${row.driver}`}
-                  onBlur={(event) => {
-                    onBreak(row.id, event.target.value);
-                    onBreakEdit(null);
-                  }}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") (event.target as HTMLInputElement).blur();
-                  }}
-                  className="h-8 min-w-0 rounded-md border border-[#1E90FF] bg-black px-1.5 text-[12px] text-white"
-                />
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => onBreakEdit(row.id)}
-                  className="min-w-0 break-words text-left text-[12px] leading-tight text-[#f2f5fb]"
-                >
-                  {row.breakText || "--"}
+              <div className="min-w-0">
+                <button type="button" data-testid="break-status" onClick={() => onCycleBreak(row.id)} className="block w-full truncate text-left text-[11px] font-semibold text-[#d7e8ff]">
+                  {BREAK_LABEL[breakStatusOf(row)]}
                 </button>
-              )}
+                {breakEditId === row.id ? (
+                  <input
+                    autoFocus
+                    defaultValue={row.breakText === "--" ? "" : row.breakText}
+                    aria-label={`Break for ${row.driver}`}
+                    onBlur={(event) => {
+                      onBreak(row.id, event.target.value);
+                      onBreakEdit(null);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") (event.target as HTMLInputElement).blur();
+                    }}
+                    className="mt-1 h-8 w-full min-w-0 rounded-md border border-[#1E90FF] bg-black px-1.5 text-[12px] text-white"
+                  />
+                ) : (
+                  <button type="button" onClick={() => onBreakEdit(row.id)} className="block w-full truncate text-left text-[11px] text-[#f2f5fb]">
+                    {row.breakText || "--"}
+                  </button>
+                )}
+              </div>
             </li>
           ))}
           {day.roster.length === 0 ? <li className="px-3 py-4 text-sm text-[#b7c3d6]">Add the first driver.</li> : null}
         </ul>
-      </section>
+      </section> : null}
 
-      <section className="space-y-3 rounded-2xl border border-white/10 bg-[#0c0e12] p-2.5">
+      {showRoster ? <section className="space-y-3 rounded-2xl border border-white/10 bg-[#0c0e12] p-2.5" data-testid="now-loading">
         <div className="flex items-center justify-between gap-2">
-          <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#9ecbff]">On deck</h2>
+          <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#9ecbff]">Now loading</h2>
           <button
             type="button"
             data-testid="split-toggle"
@@ -553,6 +723,11 @@ function DaySheet({
           </div>
           <button type="button" aria-label="Next bus" onClick={() => onCycle(1)} className={cycleBtn}>›</button>
         </div>
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-1">
+          <input value={swapValue} onChange={(event) => setSwapValue(event.target.value)} placeholder="Swap bus # 5215" aria-label="Swap bus number" className="h-11 rounded-xl border border-white/15 bg-black px-3 text-sm" />
+          <button type="button" data-testid="swap-bus" onClick={() => { onSwap(swapValue); setSwapValue(""); }} className={thumb}>Swap</button>
+        </div>
+        <button type="button" data-testid="skip-driver" onClick={onSkip} className="h-11 w-full rounded-xl bg-[#141820] text-sm font-semibold ring-1 ring-white/15">Skip / Next Driver</button>
         <div className="flex flex-wrap gap-1.5">
           {day.roster.map((row) => (
             <button
@@ -605,6 +780,10 @@ function DaySheet({
         <p className="text-center text-sm font-medium text-[#e7edf6]" data-testid="clicker-count">
           {day.splitMode ? `Total ${boardingTotal(day)}` : `${boardingTotal(day)} on board`}
         </p>
+        <div className="grid grid-cols-2 gap-2">
+          <button type="button" data-testid="zero-pax" onClick={onZero} className={chip + " h-11 justify-center"}>0 pax</button>
+          <button type="button" data-testid="zero-route" onClick={onToRoute} className={chip + " h-11 justify-center"}>0 pax (to route)</button>
+        </div>
         <label className="flex min-h-12 items-center gap-3 rounded-xl bg-black px-3 text-sm">
           <input
             data-testid="log-site-toggle"
@@ -629,17 +808,38 @@ function DaySheet({
           onClick={onDepart}
           className="h-14 w-full rounded-2xl bg-gradient-to-r from-[#1E90FF] to-[#8B5CF6] text-lg font-semibold text-white disabled:opacity-40"
         >
-          Depart / Log Run
+          Loaded · Send Bus
         </button>
-      </section>
+      </section> : null}
 
-      <section className="overflow-hidden rounded-2xl border border-white/10 bg-[#0c0e12]">
-        <div className="flex flex-wrap items-center justify-between gap-2 px-2.5 py-2">
-          <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#9ecbff]">Dispatch log</h2>
+      {showRoster ? <BatchPanel day={day} onSync={onSyncBatch} /> : null}
+      {day.mode === "special" && nightView === "out" ? <EgressFooter day={day} /> : null}
+      {scanOpen ? (
+        <Sheet title="Scan check-in sheet" onClose={() => setScanOpen(false)}>
+          <p className="text-sm text-[#d5dbe6]">Snap the paper, paste the names, or load a sample scan. Buses get pucks 3.1–3.6 from the top.</p>
+          <input type="file" accept="image/*" capture="environment" aria-label="Check-in photo" className="mt-3 block w-full text-sm" onChange={() => setScanText((current) => current || SAMPLE_SCAN)} />
+          <textarea value={scanText} onChange={(event) => setScanText(event.target.value)} rows={6} aria-label="Check-in text" className="mt-3 w-full rounded-xl border border-white/15 bg-black p-3 text-sm" />
+          <button type="button" className="mt-2 h-11 w-full rounded-xl bg-[#141820] text-sm font-semibold ring-1 ring-white/15" onClick={() => setScanText(SAMPLE_SCAN)}>Load sample scan</button>
+          <button type="button" data-testid="apply-scan" className="mt-2 h-11 w-full rounded-xl bg-white text-sm font-semibold text-black" onClick={() => { onSheet(scanText); setScanOpen(false); }}>Apply lineup</button>
+        </Sheet>
+      ) : null}
+      {(day.mode !== "special" || nightView === "out") ? <section className="overflow-hidden rounded-2xl border border-white/10 bg-[#0c0e12]" data-testid={day.mode === "special" ? "egress-log" : "loop-log"}>
+        <div className="space-y-2 px-2.5 py-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#9ecbff]">{day.mode === "special" ? "Egress returns" : "Dispatch log"}</h2>
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="text-[12px] text-[#d5dbe6]">{totals.runs} runs · {totals.pax} pax</span>
             <button type="button" onClick={onAddRun} className={chip}>+ Run</button>
           </div>
+          <CopyButton
+            testId="copy-last"
+            copied={copied === "last"}
+            label="Copy Last Departure"
+            onClick={() => {
+              const last = day.runs[day.runs.length - 1];
+              if (last) onCopy("last", departureCopyText(last, day));
+            }}
+          />
         </div>
         <div className={cn(logGrid, "px-2 pb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#b7c3d6]")}>
           <span>Time</span>
@@ -649,26 +849,44 @@ function DaySheet({
           <span>Site</span>
         </div>
         <ul data-testid="dispatch-log">
-          {day.runs.map((run) => (
-            <li key={run.id} data-testid="run-row" className={cn(logGrid, "border-t border-white/10 px-2 py-1.5 text-[12px]")}>
-              <button type="button" data-testid="run-time" onClick={() => onEditRun(run.id)} className="text-left font-mono font-medium">
-                {run.timeLabel}
-              </button>
-              <span className="truncate font-mono">{run.busPuck}</span>
-              <span className="truncate">{run.driver}</span>
-              <span className="font-semibold tabular-nums" data-testid="run-pax">
-                {run.pax}
-                {day.splitMode ? (
-                  <span className="mt-0.5 block text-[10px] font-medium leading-tight text-[#c5d4ea]">
-                    {shortStop(day.stopAName)} {run.stopAPax ?? 0}
-                    <br />
-                    {shortStop(day.stopBName)} {run.stopBPax ?? 0}
-                  </span>
-                ) : null}
-              </span>
-              <button type="button" data-testid="run-site" onClick={() => onToggleRun(run.id)} className="break-words text-left leading-tight text-[#f4f7fb]">
-                {siteLabel(run)}
-              </button>
+          {day.runs.map((run, index) => (
+            <li key={run.id} data-testid="run-row" className="border-t border-white/10 px-2 py-1.5 text-[12px]">
+              <div className={logGrid}>
+                <button type="button" data-testid="run-time" onClick={() => onEditRun(run.id)} className="text-left font-mono font-medium">
+                  {run.timeLabel}
+                </button>
+                <span className="truncate font-mono">{run.busPuck.replace(/\\/g, "/")}</span>
+                <span className="truncate">{run.driver}</span>
+                <span className="font-semibold tabular-nums" data-testid="run-pax">
+                  {day.mode === "special" ? `${egressRunLabel(day.runs, index)} · ${egressPax(run)}` : egressPax(run)}
+                  {day.splitMode ? (
+                    <span className="mt-0.5 block text-[10px] font-medium leading-tight text-[#c5d4ea]">
+                      {shortStop(day.stopAName)} {run.stopAPax ?? 0}
+                      <br />
+                      {shortStop(day.stopBName)} {run.stopBPax ?? 0}
+                    </span>
+                  ) : null}
+                </span>
+                <button type="button" data-testid="run-site" onClick={() => onToggleRun(run.id)} className="break-words text-left leading-tight text-[#f4f7fb]">
+                  {siteLabel(run)}
+                </button>
+              </div>
+              <div className="mt-1 flex items-start justify-between gap-2">
+                <p className="min-w-0 text-[11px] leading-snug text-[#d7e8ff]" data-testid="departure-line">{departureCopyText(run, day)}</p>
+                <div className="flex shrink-0 gap-1">
+                  <button type="button" data-testid="copy-departure" onClick={() => onCopy(`run-${run.id}`, departureCopyText(run, day))} className="h-8 rounded-lg bg-white/10 px-2 text-[11px] font-semibold">
+                    {copied === `run-${run.id}` ? "Copied" : "Copy"}
+                  </button>
+                  <button type="button" data-testid="sync-run" onClick={() => onSyncRun(run.id)} className="h-8 rounded-lg bg-white/10 px-2 text-[11px] font-semibold">
+                    {run.synced === false ? "Pending" : "Synced"}
+                  </button>
+                  {day.mode === "special" ? (
+                    <button type="button" data-testid="late-sweep" onClick={() => onExclude(run.id)} className="h-8 rounded-lg bg-white/10 px-2 text-[11px] font-semibold">
+                      {run.excluded ? "Excluded" : "Late Sweep"}
+                    </button>
+                  ) : null}
+                </div>
+              </div>
             </li>
           ))}
           {day.runs.length === 0 ? <li className="px-3 py-4 text-sm text-[#b7c3d6]">No runs logged yet.</li> : null}
@@ -677,10 +895,43 @@ function DaySheet({
           <p className="text-sm font-semibold leading-snug">{summaryLine(day)}</p>
           <CopyButton testId="copy-log" copied={copied === "log"} label="Copy Dispatch Log" onClick={() => onCopy("log", dispatchLogCopyText(day))} />
         </div>
-      </section>
+        </div>
+      </section> : null}
     </div>
   );
 }
+
+function listen(setVoice: (value: string) => void) {
+  const speech = window as Window & { SpeechRecognition?: new () => SpeechRec; webkitSpeechRecognition?: new () => SpeechRec };
+  const Ctor = speech.SpeechRecognition ?? speech.webkitSpeechRecognition;
+  if (!Ctor) {
+    setVoice("16 pax on 3.4");
+    return;
+  }
+  const rec = new Ctor();
+  rec.lang = "en-US";
+  rec.onresult = (event) => {
+    const said = event.results[0]?.[0]?.transcript ?? "";
+    if (said) setVoice(said);
+  };
+  rec.start();
+}
+
+type SpeechRec = {
+  lang: string;
+  start: () => void;
+  onresult: (event: { results: Array<Array<{ transcript: string }>> }) => void;
+};
+
+const SAMPLE_SCAN = `241 Edwin 407-486-7494
+P3128 Robbie 321-332-3499
+5215 Blanca 407-692-6375
+219 David 407-234-4399
+343 Philip 321-276-9786
+260 Kevin 863-585-8306
+1611 Albaro 321-240-0169`;
+
+const thumb = "h-11 rounded-xl bg-[#141820] px-1 text-[11px] font-semibold text-white ring-1 ring-white/15";
 
 function Counter({
   name,
@@ -788,6 +1039,11 @@ function NewDaySheet({
             clickerB: 0,
             pendingLogged: Boolean(roster[0]?.siteCode),
             pendingNote: "",
+            mode: "loop",
+            seedRevision: "",
+            departureStop: "Residence Inn",
+            ingress: [],
+            overageEnabled: false,
             roster,
             runs: [],
           });
@@ -930,6 +1186,7 @@ function RosterSheet({
   const [phone, setPhone] = useState(initial?.phone ?? "");
   const [breakText, setBreakText] = useState(initial?.breakText ?? "--");
   const [siteCode, setSiteCode] = useState(initial?.siteCode ?? "");
+  const [fillIn, setFillIn] = useState(initial?.isFillIn ?? false);
 
   return (
     <Sheet title={initial ? "Edit driver" : "Add driver"} onClose={onClose}>
@@ -938,13 +1195,16 @@ function RosterSheet({
         onSubmit={(event) => {
           event.preventDefault();
           if (!busPuck.trim() || !driver.trim()) return;
+          const puck = fillIn ? busPuck.trim().replace(/\\/g, "/").split("/")[0] ?? busPuck.trim() : busPuck.trim().replace(/\\/g, "/");
           onSave({
             id: initial?.id ?? newId(),
-            busPuck: busPuck.trim(),
+            busPuck: puck,
             driver: driver.trim(),
             phone: formatPhone(phone),
             breakText: breakText.trim() || "--",
-            siteCode: siteCode.trim() || siteCodeFromBusPuck(busPuck),
+            siteCode: fillIn ? "" : siteCode.trim() || siteCodeFromBusPuck(puck),
+            isFillIn: fillIn,
+            breakStatus: fillIn ? "fill-in" : initial?.breakStatus || "back",
           });
         }}
       >
@@ -967,6 +1227,10 @@ function RosterSheet({
           <input value={breakText} onChange={(event) => setBreakText(event.target.value)} placeholder="8:00-9:30" aria-label="Break" className={field} />
         </div>
         <input value={siteCode} onChange={(event) => setSiteCode(event.target.value)} placeholder="R3-01" aria-label="Site code" className={field} />
+        <label className="flex min-h-11 items-center gap-3 text-sm">
+          <input type="checkbox" checked={fillIn} onChange={(event) => setFillIn(event.target.checked)} className="size-6 accent-[#1E90FF]" />
+          Fill-in / relief · no puck
+        </label>
         <button type="submit" className={primaryBtn}>Save driver</button>
         {initial ? (
           <button
@@ -1006,6 +1270,8 @@ function RunSheet({
   const [siteCode, setSiteCode] = useState(initial?.siteCode ?? "");
   const [siteNote, setSiteNote] = useState(initial?.siteNote ?? "");
   const [logged, setLogged] = useState(initial?.logged ?? false);
+  const [unknown, setUnknown] = useState(initial?.paxUnknown ?? false);
+  const [advance, setAdvance] = useState(initial?.advance ?? false);
 
   return (
     <Sheet title={initial ? "Edit run" : "Add run"} onClose={onClose}>
@@ -1026,6 +1292,11 @@ function RunSheet({
             siteCode: siteCode.trim() || siteCodeFromBusPuck(busPuck),
             siteNote: siteNote.trim() === "--" ? "" : siteNote.trim(),
             logged,
+            synced: initial?.synced ?? false,
+            paxUnknown: unknown,
+            advance,
+            stopName: initial?.stopName ?? day.departureStop,
+            excluded: initial?.excluded ?? false,
           });
         }}
       >
@@ -1058,6 +1329,14 @@ function RunSheet({
         <label className="flex items-center gap-3 text-sm">
           <input type="checkbox" checked={logged} onChange={(event) => setLogged(event.target.checked)} className="size-6 accent-[#1E90FF]" />
           Logged to client site
+        </label>
+        <label className="flex items-center gap-3 text-sm">
+          <input type="checkbox" checked={unknown} onChange={(event) => setUnknown(event.target.checked)} className="size-6 accent-[#1E90FF]" />
+          Uncounted pax (--)
+        </label>
+        <label className="flex items-center gap-3 text-sm">
+          <input type="checkbox" checked={advance} onChange={(event) => setAdvance(event.target.checked)} className="size-6 accent-[#1E90FF]" />
+          0 pax to route
         </label>
         <button type="submit" className={primaryBtn}>Save run</button>
         {initial ? (
@@ -1101,6 +1380,8 @@ function Sheet({ title, onClose, children }: { title: string; onClose: () => voi
 const rosterGrid = "grid grid-cols-[4.35rem_3.7rem_minmax(6.3rem,1.05fr)_minmax(0,0.95fr)] gap-x-1";
 const logGrid = "grid grid-cols-[4.55rem_4.2rem_minmax(0,0.62fr)_3.35rem_minmax(0,1.15fr)] gap-x-1";
 const chip = "inline-flex h-10 shrink-0 items-center rounded-full bg-[#141820] px-3 text-[12px] font-semibold text-white ring-1 ring-white/15 touch-manipulation";
+const modeOn = "h-11 rounded-xl bg-gradient-to-r from-[#1E90FF] to-[#8B5CF6] text-[12px] font-semibold text-white";
+const modeOff = "h-11 rounded-xl bg-[#141820] text-[12px] font-semibold text-[#d5dbe6] ring-1 ring-white/10";
 const field = "h-11 w-full rounded-xl border border-white/15 bg-black px-3 text-base text-white outline-none focus:border-[#1E90FF]";
 const primaryBtn = "h-12 w-full rounded-xl bg-gradient-to-r from-[#1E90FF] to-[#8B5CF6] text-base font-semibold text-white touch-manipulation";
 const cycleBtn = "grid size-12 shrink-0 place-items-center rounded-2xl bg-black text-3xl leading-none text-white ring-1 ring-white/15 touch-manipulation";
@@ -1141,12 +1422,12 @@ function remember(programId: string, dayId: string) {
 function readLocalPrograms() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return withMonday(buildSeedPrograms()).programs;
+    if (!raw) return syncOfficialDays(buildSeedPrograms()).programs;
     const parsed = JSON.parse(raw) as ClipboardProgram[];
-    if (!Array.isArray(parsed) || parsed.length === 0) return withMonday(buildSeedPrograms()).programs;
-    return withMonday(parsed).programs;
+    if (!Array.isArray(parsed) || parsed.length === 0) return syncOfficialDays(buildSeedPrograms()).programs;
+    return syncOfficialDays(parsed).programs;
   } catch {
-    return withMonday(buildSeedPrograms()).programs;
+    return syncOfficialDays(buildSeedPrograms()).programs;
   }
 }
 

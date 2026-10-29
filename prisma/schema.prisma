@@ -444,6 +444,11 @@ model ClipboardDay {
   clickerB       Int               @default(0)
   pendingLogged  Boolean           @default(true)
   pendingNote    String            @default("")
+  mode           String            @default("loop")
+  seedRevision   String            @default("")
+  departureStop  String            @default("")
+  ingressJson    String            @default("[]")
+  overageEnabled Boolean           @default(false)
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
   roster         ClipboardRoster[]
@@ -460,8 +465,10 @@ model ClipboardRoster {
   busPuck    String
   driverName String
   phone      String       @default("")
-  breakText  String       @default("--")
-  siteCode   String       @default("")
+  breakText   String       @default("--")
+  siteCode    String       @default("")
+  isFillIn    Boolean      @default(false)
+  breakStatus String       @default("")
 
   @@index([dayId])
 }
@@ -486,6 +493,11 @@ model ClipboardRun {
   siteCode   String       @default("")
   siteNote   String       @default("")
   logged     Boolean      @default(false)
+  synced     Boolean      @default(true)
+  paxUnknown Boolean      @default(false)
+  advance    Boolean      @default(false)
+  stopName   String       @default("")
+  excluded   Boolean      @default(false)
 
   @@index([dayId])
 }

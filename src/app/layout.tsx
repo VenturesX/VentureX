@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { ExperienceBar } from "@/components/experience/bar";
 import { Toaster } from "@/components/ui/sonner";
 import { ServiceWorkerRegister } from "@/components/sw-register";
 import "./globals.css";
@@ -15,19 +16,19 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Venture Directors",
-  description: "Orlando-first event and group transportation operations.",
-  applicationName: "Venture Directors",
+  title: "VentureX",
+  description: "Group transportation, from quote to curb.",
+  applicationName: "VentureX",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
-    title: "Venture Directors",
+    title: "VentureX",
     statusBarStyle: "black-translucent",
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#000000",
+  themeColor: "#6366f1",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -39,7 +40,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`dark ${geistSans.variable} ${geistMono.variable} h-full`}
     >
-      <body className="min-h-full flex flex-col">
+      <body className="min-h-full flex flex-col bg-[#090b10]">
+        <ExperienceBar />
         {children}
         <Toaster theme="dark" />
         <ServiceWorkerRegister />

@@ -2,13 +2,13 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Venture Directors",
-    short_name: "Venture Ops",
-    description: "Event and group transportation operations for DMC and conference movements.",
+    name: "VentureX",
+    short_name: "VentureX",
+    description: "Group transportation, from quote to curb.",
     start_url: "/",
     display: "standalone",
-    background_color: "#000000",
-    theme_color: "#000000",
+    background_color: "#090b10",
+    theme_color: "#6366f1",
     icons: [
       { src: "/icons/icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
       { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },

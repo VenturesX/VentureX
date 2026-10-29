@@ -1,8 +1,8 @@
 import type { PrismaClient } from "@prisma/client";
 import { db } from "../db";
 import { asHeadway } from "./logic";
-import { buildSeedPrograms, withMonday } from "./seed-data";
-import type { ClipboardDay, ClipboardProgram, DispatchRun, HeadwayMinutes, RosterRow } from "./types";
+import { buildSeedPrograms, syncOfficialDays } from "./seed-data";
+import type { BreakStatus, ClipboardDay, ClipboardProgram, DayMode, DispatchRun, HeadwayMinutes, IngressStop, RosterRow } from "./types";
 
 type ClipClient = PrismaClient;
 
@@ -50,7 +50,7 @@ function parseDay(input: unknown, index: number): ClipboardDay {
   return {
     id: idOf(record.id, `day-${index + 1}`),
     label: text(record.label, 80) || `Day ${index + 1}`,
-    notes: text(record.notes, 400),
+    notes: text(record.notes, 800),
     splitMode: Boolean(record.splitMode),
     stopAName: text(record.stopAName, 40) || "Hilton",
     stopBName: text(record.stopBName, 40) || "Element",
@@ -61,6 +61,11 @@ function parseDay(input: unknown, index: number): ClipboardDay {
     clickerB: integer(record.clickerB),
     pendingLogged: Boolean(record.pendingLogged),
     pendingNote: text(record.pendingNote, 120),
+    mode: record.mode === "special" ? "special" : "loop",
+    seedRevision: text(record.seedRevision, 80),
+    departureStop: text(record.departureStop, 80),
+    ingress: parseIngress(record.ingress),
+    overageEnabled: Boolean(record.overageEnabled),
     roster: rosterIn.map((row, rowIndex) => parseRoster(row, rowIndex)),
     runs: runsIn.map((run, runIndex) => parseRun(run, runIndex)),
   };
@@ -75,6 +80,8 @@ function parseRoster(input: unknown, index: number): RosterRow {
     phone: text(record.phone, 40),
     breakText: text(record.breakText, 80) || "--",
     siteCode: text(record.siteCode, 40),
+    isFillIn: Boolean(record.isFillIn),
+    breakStatus: breakStatus(record.breakStatus),
   };
 }
 
@@ -91,7 +98,42 @@ function parseRun(input: unknown, index: number): DispatchRun {
     siteCode: text(record.siteCode, 40),
     siteNote: text(record.siteNote, 120),
     logged: Boolean(record.logged),
+    synced: record.synced !== false,
+    paxUnknown: Boolean(record.paxUnknown),
+    advance: Boolean(record.advance),
+    stopName: text(record.stopName, 80),
+    excluded: Boolean(record.excluded),
   };
+}
+
+function breakStatus(value: unknown): BreakStatus | "" {
+  if (value === "back" || value === "on" || value === "need" || value === "fill-in") return value;
+  return "";
+}
+
+function parseIngress(value: unknown): IngressStop[] {
+  if (!Array.isArray(value)) return [];
+  return value.slice(0, 12).map((item, index) => {
+    const record = asRecord(item);
+    return {
+      id: idOf(record.id, `stop-${index + 1}`),
+      name: text(record.name, 80) || `Stop ${index + 1}`,
+      count: integer(record.count),
+      staffed: record.staffed !== false,
+    };
+  });
+}
+
+function ingressFromJson(value: string): IngressStop[] {
+  try {
+    return parseIngress(JSON.parse(value) as unknown);
+  } catch {
+    return [];
+  }
+}
+
+function dayMode(value: string): DayMode {
+  return value === "special" ? "special" : "loop";
 }
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -135,6 +177,11 @@ export async function readClipboard(client: ClipClient = db): Promise<ClipboardP
       clickerB: item.clickerB,
       pendingLogged: item.pendingLogged,
       pendingNote: item.pendingNote,
+      mode: dayMode(item.mode),
+      seedRevision: item.seedRevision,
+      departureStop: item.departureStop,
+      ingress: ingressFromJson(item.ingressJson),
+      overageEnabled: item.overageEnabled,
       roster: item.roster.map((row) => ({
         id: row.id,
         busPuck: row.busPuck,
@@ -142,6 +189,8 @@ export async function readClipboard(client: ClipClient = db): Promise<ClipboardP
         phone: row.phone,
         breakText: row.breakText,
         siteCode: row.siteCode,
+        isFillIn: row.isFillIn,
+        breakStatus: breakStatus(row.breakStatus),
       })),
       runs: item.runs.map((runRow) => ({
         id: runRow.id,
@@ -154,6 +203,11 @@ export async function readClipboard(client: ClipClient = db): Promise<ClipboardP
         siteCode: runRow.siteCode,
         siteNote: runRow.siteNote,
         logged: runRow.logged,
+        synced: runRow.synced,
+        paxUnknown: runRow.paxUnknown,
+        advance: runRow.advance,
+        stopName: runRow.stopName,
+        excluded: runRow.excluded,
       })),
     })),
   }));
@@ -187,6 +241,11 @@ export async function replaceClipboard(client: ClipClient, programs: ClipboardPr
               clickerB: item.clickerB,
               pendingLogged: item.pendingLogged,
               pendingNote: item.pendingNote,
+              mode: item.mode,
+              seedRevision: item.seedRevision,
+              departureStop: item.departureStop,
+              ingressJson: JSON.stringify(item.ingress ?? []),
+              overageEnabled: item.overageEnabled,
               roster: {
                 create: item.roster.map((row, rowIndex) => ({
                   id: row.id,
@@ -196,6 +255,8 @@ export async function replaceClipboard(client: ClipClient, programs: ClipboardPr
                   phone: row.phone,
                   breakText: row.breakText || "--",
                   siteCode: row.siteCode,
+                  isFillIn: row.isFillIn,
+                  breakStatus: row.breakStatus,
                 })),
               },
               runs: {
@@ -211,6 +272,11 @@ export async function replaceClipboard(client: ClipClient, programs: ClipboardPr
                   siteCode: runRow.siteCode,
                   siteNote: runRow.siteNote,
                   logged: runRow.logged,
+                  synced: runRow.synced,
+                  paxUnknown: runRow.paxUnknown,
+                  advance: runRow.advance,
+                  stopName: runRow.stopName,
+                  excluded: runRow.excluded,
                 })),
               },
             })),
@@ -229,7 +295,7 @@ export async function loadClipboard() {
   const count = await db.clipboardProgram.count();
   if (count === 0) await seedClipboard(db);
   const programs = await readClipboard(db);
-  const merged = withMonday(programs);
+  const merged = syncOfficialDays(programs);
   if (merged.changed) {
     try {
       await replaceClipboard(db, merged.programs);

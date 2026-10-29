@@ -24,6 +24,10 @@ export default async function AdminPage() {
         { href: "/client", label: "Client" },
       ]}
     >
+      <p className="mb-4 rounded-2xl border border-white/10 bg-[#0c0e12] p-4 text-sm" data-testid="payee">
+        Make all checks payable to Arron Molina. Payee: Arron Molina / Venture Directors LLC.
+        The live tier switches and margin tracker are on the Big Dog admin walkthrough.
+      </p>
       <GuestAccessPanel />
       <FieldSettings eventId={event.id} />
       <AdminBoard eventId={event.id} />
