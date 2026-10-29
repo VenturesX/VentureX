@@ -497,6 +497,7 @@ model ClipboardRun {
   paxUnknown Boolean      @default(false)
   advance    Boolean      @default(false)
   stopName   String       @default("")
+  excluded   Boolean      @default(false)
 
   @@index([dayId])
 }

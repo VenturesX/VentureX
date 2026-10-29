@@ -6,6 +6,7 @@ import { buildSeedPrograms, syncOfficialDays } from "@/lib/clipboard/seed-data";
 import {
   activeRoster,
   addMinutes,
+  adjustLastRun,
   autoAssignPucks,
   blankIngress,
   boardingTotal,
@@ -23,6 +24,8 @@ import {
   logDeparture,
   markBatchSynced,
   newId,
+  parseCheckInSheet,
+  parseVoiceCommand,
   nowClock,
   nudgeCount,
   repeatRoster,
@@ -30,7 +33,9 @@ import {
   rosterCopyText,
   selectRoster,
   setCount,
+  skipDriver,
   siteCodeFromBusPuck,
+  swapBusNumber,
   siteLabel,
   suggestDayLabel,
   summaryLine,
@@ -322,6 +327,42 @@ export function ClipboardBoard({
             patchDay((current) => ({ ...current, ingress: current.ingress.map((stop) => (stop.id === id ? { ...stop, count } : stop)) }), true)
           }
           onOverage={(overageEnabled) => patchDay((current) => ({ ...current, overageEnabled }), true)}
+          onAdjustLast={(delta) => patchDay((current) => adjustLastRun(current, delta), true)}
+          onSkip={() => patchDay((current) => skipDriver(current), true)}
+          onSwap={(bus) => patchDay((current) => swapBusNumber(current, current.activeRosterId ?? "", bus), true)}
+          onSheet={(text) =>
+            patchDay((current) => {
+              const parsed = parseCheckInSheet(text);
+              if (!parsed.length) return current;
+              const roster = autoAssignPucks(parsed.map((row, index) => ({
+                id: newId(),
+                busPuck: row.busPuck,
+                driver: row.driver,
+                phone: row.phone,
+                breakText: "--",
+                siteCode: "",
+                isFillIn: false,
+                breakStatus: "" as const,
+              })).map((row, index) => ({ ...row, id: row.id || `scan-${index}` })));
+              return { ...current, roster, activeRosterId: roster.find((row) => breakStatusOf(row) !== "on")?.id ?? roster[0]?.id ?? null };
+            }, true)
+          }
+          onVoice={(text) =>
+            patchDay((current) => {
+              const action = parseVoiceCommand(current, text);
+              if (action.type === "break") {
+                return { ...current, roster: current.roster.map((row) => (row.id === action.rosterId ? { ...row, breakStatus: "on" } : row)) };
+              }
+              if (action.type === "depart") return logDeparture(setCount(selectRoster(current, action.rosterId), action.pax));
+              return current;
+            }, true)
+          }
+          onExclude={(id) =>
+            patchDay((current) => ({
+              ...current,
+              runs: current.runs.map((run) => (run.id === id ? { ...run, excluded: !run.excluded } : run)),
+            }), true)
+          }
         />
       ) : (
         <div className="rounded-2xl border border-dashed border-white/20 px-4 py-10 text-center">
@@ -470,6 +511,12 @@ function DaySheet({
   onMode,
   onIngress,
   onOverage,
+  onAdjustLast,
+  onSkip,
+  onSwap,
+  onSheet,
+  onVoice,
+  onExclude,
 }: {
   day: ClipboardDay;
   copied: string | null;
@@ -485,6 +532,12 @@ function DaySheet({
   onMode: (mode: ClipboardDay["mode"]) => void;
   onIngress: (id: string, count: number) => void;
   onOverage: (enabled: boolean) => void;
+  onAdjustLast: (delta: number) => void;
+  onSkip: () => void;
+  onSwap: (bus: string) => void;
+  onSheet: (text: string) => void;
+  onVoice: (text: string) => void;
+  onExclude: (id: string) => void;
   onCopy: (key: string, text: string) => void;
   onEditDay: () => void;
   onAddRoster: () => void;
@@ -510,6 +563,14 @@ function DaySheet({
   const loading = activeRoster(day);
   const site = loading ? loading.siteCode || siteCodeFromBusPuck(loading.busPuck) : "";
   const totals = dayTotals(day);
+  const last = day.runs[day.runs.length - 1] ?? null;
+  const [nightView, setNightView] = useState<"in" | "out">(day.mode === "special" ? "out" : "in");
+  const [swapValue, setSwapValue] = useState("");
+  const [scanOpen, setScanOpen] = useState(false);
+  const [scanText, setScanText] = useState("");
+  const [voice, setVoice] = useState("");
+  const [voiceNote, setVoiceNote] = useState("");
+  const showRoster = day.mode !== "special" || nightView === "in";
 
   return (
     <div className="space-y-3">
@@ -523,17 +584,53 @@ function DaySheet({
         <button type="button" data-testid="mode-loop" onClick={() => onMode("loop")} className={day.mode === "loop" ? modeOn : modeOff}>Loop</button>
         <button type="button" data-testid="mode-special" onClick={() => onMode("special")} className={day.mode === "special" ? modeOn : modeOff}>Special event</button>
       </div>
+      {day.mode === "special" ? (
+        <div className="grid grid-cols-2 gap-1" data-testid="night-view">
+          <button type="button" data-testid="view-ingress" onClick={() => setNightView("in")} className={nightView === "in" ? modeOn : modeOff}>Ingress (In)</button>
+          <button type="button" data-testid="view-egress" onClick={() => setNightView("out")} className={nightView === "out" ? modeOn : modeOff}>Egress (Returns Only)</button>
+        </div>
+      ) : null}
+      {last && showRoster ? (
+        <section className="rounded-2xl border border-[#1E90FF]/40 bg-[#071018] p-2.5" data-testid="last-sent">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#9ecbff]">Last sent bus</p>
+          <p className="mt-1 text-sm font-semibold leading-snug" data-testid="last-sent-line">{departureCopyText(last, day)}</p>
+          <div className="mt-2 grid grid-cols-4 gap-1">
+            <button type="button" data-testid="late-runner" onClick={() => onAdjustLast(1)} className={thumb}>+1 Late</button>
+            <button type="button" data-testid="late-minus" onClick={() => onAdjustLast(-1)} className={thumb}>−1</button>
+            <button type="button" onClick={() => onEditRun(last.id)} className={thumb}>Edit</button>
+            <button type="button" data-testid="copy-last-sent" onClick={() => onCopy("last", departureCopyText(last, day))} className={thumb}>{copied === "last" ? "Copied" : "Copy"}</button>
+          </div>
+        </section>
+      ) : null}
+      {showRoster ? (
+        <form
+          className="flex gap-1"
+          data-testid="voice-bar"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (!voice.trim()) return;
+            onVoice(voice);
+            setVoiceNote(voice.trim());
+            setVoice("");
+          }}
+        >
+          <input value={voice} onChange={(event) => setVoice(event.target.value)} placeholder='Say "16 pax on 3.4"' aria-label="Voice command" className="h-11 min-w-0 flex-1 rounded-xl border border-white/15 bg-black px-3 text-sm" />
+          <button type="button" className={thumb} onClick={() => listen(setVoice)}>Mic</button>
+          <button type="submit" className={thumb}>Run</button>
+        </form>
+      ) : null}
+      {voiceNote ? <p className="text-[12px] text-[#d7e8ff]" data-testid="voice-note">Heard: {voiceNote}</p> : null}
       <CrewBar />
       <CurbSelect />
       <RelayStrip />
-      {day.mode === "special" ? <IngressCard day={day} onCount={onIngress} onOverage={onOverage} /> : null}
+      {day.mode === "special" && nightView === "in" ? <IngressCard day={day} onCount={onIngress} onOverage={onOverage} /> : null}
 
-      <section className="overflow-hidden rounded-2xl border border-white/10 bg-[#0c0e12]">
+      {showRoster ? <section className="overflow-hidden rounded-2xl border border-white/10 bg-[#0c0e12]">
         <div className="flex flex-wrap items-center justify-between gap-2 px-2.5 py-2">
           <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#9ecbff]">Driver roster</h2>
           <div className="flex flex-wrap gap-1.5">
             <CopyButton testId="copy-roster" copied={copied === "roster"} label="Copy Roster" onClick={() => onCopy("roster", rosterCopyText(day.roster, withPhones))} />
-            <CopyButton testId="copy-breaks" copied={copied === "breaks"} label="Copy Breaks" onClick={() => onCopy("breaks", breaksCopyText(day.roster, withPhones))} />
+            <CopyButton testId="copy-breaks" copied={copied === "breaks"} label="Copy Breaks" onClick={() => onCopy("breaks", breaksCopyText(day.roster, withPhones, day.departureStop || "Residence Inn"))} />
             <button type="button" onClick={onAddRoster} className={chip}>+ Driver</button>
           </div>
         </div>
@@ -541,6 +638,9 @@ function DaySheet({
           <PhoneToggle withPhones={withPhones} onChange={onPhones} />
           <button type="button" data-testid="auto-assign" onClick={onAutoAssign} className="h-11 w-full rounded-xl bg-white text-[13px] font-semibold text-black">
             Auto-Assign Pucks 3.1–3.6 Top-to-Bottom
+          </button>
+          <button type="button" data-testid="scan-sheet" onClick={() => setScanOpen(true)} className="h-11 w-full rounded-xl bg-[#141820] text-[13px] font-semibold text-white ring-1 ring-white/15">
+            Scan Paper Check-In Sheet
           </button>
         </div>
         <div className={cn(rosterGrid, "px-2 pb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#b7c3d6]")}>
@@ -597,11 +697,11 @@ function DaySheet({
           ))}
           {day.roster.length === 0 ? <li className="px-3 py-4 text-sm text-[#b7c3d6]">Add the first driver.</li> : null}
         </ul>
-      </section>
+      </section> : null}
 
-      <section className="space-y-3 rounded-2xl border border-white/10 bg-[#0c0e12] p-2.5">
+      {showRoster ? <section className="space-y-3 rounded-2xl border border-white/10 bg-[#0c0e12] p-2.5" data-testid="now-loading">
         <div className="flex items-center justify-between gap-2">
-          <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#9ecbff]">On deck</h2>
+          <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#9ecbff]">Now loading</h2>
           <button
             type="button"
             data-testid="split-toggle"
@@ -623,6 +723,11 @@ function DaySheet({
           </div>
           <button type="button" aria-label="Next bus" onClick={() => onCycle(1)} className={cycleBtn}>›</button>
         </div>
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-1">
+          <input value={swapValue} onChange={(event) => setSwapValue(event.target.value)} placeholder="Swap bus # 5215" aria-label="Swap bus number" className="h-11 rounded-xl border border-white/15 bg-black px-3 text-sm" />
+          <button type="button" data-testid="swap-bus" onClick={() => { onSwap(swapValue); setSwapValue(""); }} className={thumb}>Swap</button>
+        </div>
+        <button type="button" data-testid="skip-driver" onClick={onSkip} className="h-11 w-full rounded-xl bg-[#141820] text-sm font-semibold ring-1 ring-white/15">Skip / Next Driver</button>
         <div className="flex flex-wrap gap-1.5">
           {day.roster.map((row) => (
             <button
@@ -703,13 +808,22 @@ function DaySheet({
           onClick={onDepart}
           className="h-14 w-full rounded-2xl bg-gradient-to-r from-[#1E90FF] to-[#8B5CF6] text-lg font-semibold text-white disabled:opacity-40"
         >
-          Depart / Log Run
+          Loaded · Send Bus
         </button>
-      </section>
+      </section> : null}
 
-      <BatchPanel day={day} onSync={onSyncBatch} />
-      {day.mode === "special" ? <EgressFooter day={day} /> : null}
-      <section className="overflow-hidden rounded-2xl border border-white/10 bg-[#0c0e12]" data-testid={day.mode === "special" ? "egress-log" : "loop-log"}>
+      {showRoster ? <BatchPanel day={day} onSync={onSyncBatch} /> : null}
+      {day.mode === "special" && nightView === "out" ? <EgressFooter day={day} /> : null}
+      {scanOpen ? (
+        <Sheet title="Scan check-in sheet" onClose={() => setScanOpen(false)}>
+          <p className="text-sm text-[#d5dbe6]">Snap the paper, paste the names, or load a sample scan. Buses get pucks 3.1–3.6 from the top.</p>
+          <input type="file" accept="image/*" capture="environment" aria-label="Check-in photo" className="mt-3 block w-full text-sm" onChange={() => setScanText((current) => current || SAMPLE_SCAN)} />
+          <textarea value={scanText} onChange={(event) => setScanText(event.target.value)} rows={6} aria-label="Check-in text" className="mt-3 w-full rounded-xl border border-white/15 bg-black p-3 text-sm" />
+          <button type="button" className="mt-2 h-11 w-full rounded-xl bg-[#141820] text-sm font-semibold ring-1 ring-white/15" onClick={() => setScanText(SAMPLE_SCAN)}>Load sample scan</button>
+          <button type="button" data-testid="apply-scan" className="mt-2 h-11 w-full rounded-xl bg-white text-sm font-semibold text-black" onClick={() => { onSheet(scanText); setScanOpen(false); }}>Apply lineup</button>
+        </Sheet>
+      ) : null}
+      {(day.mode !== "special" || nightView === "out") ? <section className="overflow-hidden rounded-2xl border border-white/10 bg-[#0c0e12]" data-testid={day.mode === "special" ? "egress-log" : "loop-log"}>
         <div className="space-y-2 px-2.5 py-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#9ecbff]">{day.mode === "special" ? "Egress returns" : "Dispatch log"}</h2>
@@ -766,6 +880,11 @@ function DaySheet({
                   <button type="button" data-testid="sync-run" onClick={() => onSyncRun(run.id)} className="h-8 rounded-lg bg-white/10 px-2 text-[11px] font-semibold">
                     {run.synced === false ? "Pending" : "Synced"}
                   </button>
+                  {day.mode === "special" ? (
+                    <button type="button" data-testid="late-sweep" onClick={() => onExclude(run.id)} className="h-8 rounded-lg bg-white/10 px-2 text-[11px] font-semibold">
+                      {run.excluded ? "Excluded" : "Late Sweep"}
+                    </button>
+                  ) : null}
                 </div>
               </div>
             </li>
@@ -777,10 +896,42 @@ function DaySheet({
           <CopyButton testId="copy-log" copied={copied === "log"} label="Copy Dispatch Log" onClick={() => onCopy("log", dispatchLogCopyText(day))} />
         </div>
         </div>
-      </section>
+      </section> : null}
     </div>
   );
 }
+
+function listen(setVoice: (value: string) => void) {
+  const speech = window as Window & { SpeechRecognition?: new () => SpeechRec; webkitSpeechRecognition?: new () => SpeechRec };
+  const Ctor = speech.SpeechRecognition ?? speech.webkitSpeechRecognition;
+  if (!Ctor) {
+    setVoice("16 pax on 3.4");
+    return;
+  }
+  const rec = new Ctor();
+  rec.lang = "en-US";
+  rec.onresult = (event) => {
+    const said = event.results[0]?.[0]?.transcript ?? "";
+    if (said) setVoice(said);
+  };
+  rec.start();
+}
+
+type SpeechRec = {
+  lang: string;
+  start: () => void;
+  onresult: (event: { results: Array<Array<{ transcript: string }>> }) => void;
+};
+
+const SAMPLE_SCAN = `241 Edwin 407-486-7494
+P3128 Robbie 321-332-3499
+5215 Blanca 407-692-6375
+219 David 407-234-4399
+343 Philip 321-276-9786
+260 Kevin 863-585-8306
+1611 Albaro 321-240-0169`;
+
+const thumb = "h-11 rounded-xl bg-[#141820] px-1 text-[11px] font-semibold text-white ring-1 ring-white/15";
 
 function Counter({
   name,
@@ -1145,6 +1296,7 @@ function RunSheet({
             paxUnknown: unknown,
             advance,
             stopName: initial?.stopName ?? day.departureStop,
+            excluded: initial?.excluded ?? false,
           });
         }}
       >

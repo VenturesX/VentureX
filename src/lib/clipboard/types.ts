@@ -37,6 +37,7 @@ export type DispatchRun = {
   paxUnknown: boolean;
   advance: boolean;
   stopName: string;
+  excluded: boolean;
 };
 
 export type ClipboardDay = {

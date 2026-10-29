@@ -6,8 +6,8 @@ import { departureCopyText, driverTallies, falconBlocked, ingressMath, pendingRu
 export function PhoneToggle({ withPhones, onChange }: { withPhones: boolean; onChange: (value: boolean) => void }) {
   return (
     <div className="grid grid-cols-2 gap-1" data-testid="phone-toggle">
-      <button type="button" aria-pressed={!withPhones} onClick={() => onChange(false)} className={toggleClass(!withPhones)}>No phones</button>
-      <button type="button" aria-pressed={withPhones} onClick={() => onChange(true)} className={toggleClass(withPhones)}>With phones</button>
+      <button type="button" aria-pressed={!withPhones} onClick={() => onChange(false)} className={toggleClass(!withPhones)}>Phones off</button>
+      <button type="button" aria-pressed={withPhones} onClick={() => onChange(true)} className={toggleClass(withPhones)}>Phones on</button>
     </div>
   );
 }

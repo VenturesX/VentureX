@@ -32,7 +32,7 @@ function run(
   pax: number,
   site: string,
   stops?: { a: number; b: number },
-  extras: Partial<Pick<DispatchRun, "synced" | "paxUnknown" | "advance" | "stopName">> = {},
+  extras: Partial<Pick<DispatchRun, "synced" | "paxUnknown" | "advance" | "stopName" | "excluded">> = {},
 ): DispatchRun {
   const note = site === "--" || site.endsWith("✓") ? "" : site;
   const logged = site.endsWith("✓");
@@ -54,6 +54,7 @@ function run(
     paxUnknown: extras.paxUnknown ?? false,
     advance: extras.advance ?? false,
     stopName: extras.stopName ?? "",
+    excluded: extras.excluded ?? false,
   };
 }
 

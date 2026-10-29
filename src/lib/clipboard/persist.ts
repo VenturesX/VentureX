@@ -102,6 +102,7 @@ function parseRun(input: unknown, index: number): DispatchRun {
     paxUnknown: Boolean(record.paxUnknown),
     advance: Boolean(record.advance),
     stopName: text(record.stopName, 80),
+    excluded: Boolean(record.excluded),
   };
 }
 
@@ -206,6 +207,7 @@ export async function readClipboard(client: ClipClient = db): Promise<ClipboardP
         paxUnknown: runRow.paxUnknown,
         advance: runRow.advance,
         stopName: runRow.stopName,
+        excluded: runRow.excluded,
       })),
     })),
   }));
@@ -274,6 +276,7 @@ export async function replaceClipboard(client: ClipClient, programs: ClipboardPr
                   paxUnknown: runRow.paxUnknown,
                   advance: runRow.advance,
                   stopName: runRow.stopName,
+                  excluded: runRow.excluded,
                 })),
               },
             })),
