@@ -1,8 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { ExperienceBar } from "@/components/experience/bar";
 import { Toaster } from "@/components/ui/sonner";
 import { ServiceWorkerRegister } from "@/components/sw-register";
+import { APP_NAME, COMPANY_NAME, MISSION, TAGLINE, siteUrl } from "@/lib/brand";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -15,20 +15,38 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const url = siteUrl();
+
 export const metadata: Metadata = {
-  title: "VentureX",
-  description: "Group transportation, from quote to curb.",
-  applicationName: "VentureX",
+  metadataBase: new URL(url),
+  title: {
+    default: `${COMPANY_NAME} — ${TAGLINE}`,
+    template: `%s — ${COMPANY_NAME}`,
+  },
+  description: `${TAGLINE} ${MISSION}`,
+  applicationName: APP_NAME,
   manifest: "/manifest.webmanifest",
+  openGraph: {
+    type: "website",
+    siteName: COMPANY_NAME,
+    title: `${COMPANY_NAME} — ${TAGLINE}`,
+    description: MISSION,
+    url,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `${COMPANY_NAME} — ${TAGLINE}`,
+    description: MISSION,
+  },
   appleWebApp: {
     capable: true,
-    title: "VentureX",
+    title: APP_NAME,
     statusBarStyle: "black-translucent",
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#6366f1",
+  themeColor: "#090b10",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -41,7 +59,6 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`dark ${geistSans.variable} ${geistMono.variable} h-full`}
     >
       <body className="min-h-full flex flex-col bg-[#090b10]">
-        <ExperienceBar />
         {children}
         <Toaster theme="dark" />
         <ServiceWorkerRegister />

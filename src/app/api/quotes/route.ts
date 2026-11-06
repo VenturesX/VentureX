@@ -198,6 +198,7 @@ async function createQuote(
           email: data.email,
           phone: data.phone,
           notes: data.notes ?? null,
+          market: data.market,
           manifestFileName: manifest?.name ?? null,
           manifestMimeType: manifest?.mime ?? null,
           manifestBytes: manifest?.bytes ?? null,

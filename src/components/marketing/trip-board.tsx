@@ -169,7 +169,8 @@ export function TripBoard({ token }: { token: string }) {
       ) : null}
       {board.pickups && board.pickups.length > 0 ? (
         <section className="mt-5">
-          <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-white/60">Pickup spots</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-white/60">X marks the spot</h2>
+          <p className="mt-1 text-sm text-white/60">Where to wait or load.</p>
           <ul className="mt-2 space-y-2">
             {board.pickups.map((spot) => (
               <li key={spot} className="rounded-xl border border-white/10 px-3 py-3 text-sm">{spot}</li>

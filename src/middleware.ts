@@ -23,6 +23,12 @@ function isPublic(pathname: string, method: string) {
   if (pathname === "/api/guest/code" && method === "POST") return true;
   if (pathname === "/api/guest/unlock" && method === "POST") return true;
   if (pathname === "/api/guest/requests" && method === "POST") return true;
+  if (pathname === "/light" || pathname.startsWith("/light/")) return true;
+  if (pathname.startsWith("/api/light")) return true;
+  if (pathname.startsWith("/api/sms")) return true;
+  if (pathname === "/plan" || pathname.startsWith("/plan/")) return true;
+  if (pathname === "/contact" || pathname.startsWith("/contact/")) return true;
+  if (pathname === "/team" || pathname.startsWith("/team/")) return true;
   return PUBLIC.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }
 
@@ -73,5 +79,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|icons/|.*\\.(?:svg|png|jpg|ico)$).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|icons/|marketing/|.*\\.(?:svg|png|jpe?g|webp|gif|avif|ico|woff2?)$).*)"],
 };

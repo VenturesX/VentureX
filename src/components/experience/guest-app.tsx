@@ -57,6 +57,7 @@ export function GuestApp() {
           {HOTELS.map(([name], index) => (
             <button key={name} type="button" className={index === hotel ? on : off} onClick={() => setHotel(index)}>{name}</button>
           ))}
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#9ecbff]">X marks the spot</p>
           <p className="rounded-2xl bg-[#0c0e12] p-3 text-lg font-semibold leading-snug">{note}</p>
           <p className="text-sm text-[#d5dbe6]">Next bus ETA about 6 min. Loop pace until a puck is linked.</p>
         </section>

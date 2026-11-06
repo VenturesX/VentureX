@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { TripBoard } from "@/components/marketing/trip-board";
 
 export const metadata: Metadata = {
-  title: "Your trip — Venture Directors",
+  title: "Your trip",
   description: "Pickup notes and the schedule for your group.",
 };
 

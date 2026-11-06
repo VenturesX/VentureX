@@ -1,5 +1,6 @@
 "use client";
 
+import { LightAdmin } from "@/components/light/admin-panel";
 import { moneyMath, useWalk, type Tiers } from "@/lib/experience/store";
 
 const SWITCHES: Array<[keyof Tiers, string]> = [
@@ -48,6 +49,7 @@ export function OwnerApp() {
         <p className="text-[12px] text-[#b7c3d6]">Payee: Arron Molina / Venture Directors LLC</p>
         <button type="button" className="mt-2 h-11 w-full rounded-xl bg-white text-sm font-semibold text-black">Generate invoice</button>
       </section>
+      <LightAdmin />
       <button
         type="button"
         data-testid="fresh-reset"
