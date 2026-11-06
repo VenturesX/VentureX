@@ -3,7 +3,7 @@ import Link from "next/link";
 import { TalkLine } from "@/components/marketing/talk-line";
 
 export const metadata: Metadata = {
-  title: "Request received — Venture Directors",
+  title: "Request received",
 };
 
 export default async function QuoteReceivedPage({

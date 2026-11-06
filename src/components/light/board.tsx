@@ -203,7 +203,7 @@ export function LightBoard({ code, token = "" }: { code: string; token?: string 
               return (
                 <div key={trip.id} className="mt-3 border-t border-white/10 pt-3">
                   <p className="text-sm font-semibold">{trip.vehicleLabel} · {trip.vendor || "Vendor open"} · {trip.airSide}</p>
-                  <p className="text-sm text-[#d5dbe6]">{rule?.pickupNote}</p>
+                  {rule?.pickupNote ? <p className="text-sm text-[#d5dbe6]"><span className="font-semibold text-white">X marks the spot.</span> {rule.pickupNote}</p> : null}
                   <p className="text-sm">{trip.driverName ? `Driver ${trip.driverName}` : "Driver open"}{trip.vehicleNumber ? ` · #${trip.vehicleNumber}` : ""} · {trip.status === "SENT" ? "Sent" : trip.status === "QUEUED" ? "Down" : "Open"}</p>
                   {trip.reportedPax != null ? <p className="text-sm">Count {trip.reportedPax}</p> : null}
                   <div className="mt-1 flex flex-wrap gap-1">
