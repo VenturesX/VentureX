@@ -23,6 +23,10 @@ function isPublic(pathname: string, method: string) {
   if (pathname === "/api/guest/code" && method === "POST") return true;
   if (pathname === "/api/guest/unlock" && method === "POST") return true;
   if (pathname === "/api/guest/requests" && method === "POST") return true;
+  if (pathname === "/light" || pathname.startsWith("/light/")) return true;
+  if (pathname.startsWith("/api/light")) return true;
+  if (pathname.startsWith("/api/sms")) return true;
+  if (pathname === "/plan" || pathname.startsWith("/plan/")) return true;
   return PUBLIC.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }
 

@@ -4,7 +4,7 @@ import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { PlaceField } from "@/components/marketing/place-field";
 import { TalkLine } from "@/components/marketing/talk-line";
-import { manifestError, PROFILE_OPTIONS, type QuoteProfile } from "@/lib/quotes";
+import { manifestError, PROFILE_OPTIONS, QUOTE_MARKETS, type QuoteProfile } from "@/lib/quotes";
 import { GUEST_COUNT_MAX, GUEST_RANGES, formatGuestCount, guestRangeFor, type QuotePlan } from "@/lib/guidance";
 
 const MOVES = [
@@ -18,6 +18,7 @@ const WAITS = ["15", "20", "30"] as const;
 
 export function QuoteForm() {
   const router = useRouter();
+  const [market, setMarket] = useState<(typeof QUOTE_MARKETS)[number]>("Orlando");
   const [service, setService] = useState("");
   const [guestExact, setGuestExact] = useState("");
   const [vehiclePreference, setVehiclePreference] = useState("");
@@ -124,6 +125,17 @@ export function QuoteForm() {
 
   return (
     <form id="quote-form" className="space-y-8" onSubmit={onSubmit}>
+      <section className="space-y-3">
+        <h2 className="text-xl font-semibold">Market</h2>
+        <div className="grid grid-cols-2 gap-2">
+          {QUOTE_MARKETS.map((item) => (
+            <Choice key={item} selected={market === item} onClick={() => setMarket(item)}>
+              {item}
+            </Choice>
+          ))}
+        </div>
+        <input type="hidden" name="market" value={market} />
+      </section>
       <section className="space-y-3">
         <h2 className="text-xl font-semibold">The move</h2>
         <div className="grid grid-cols-2 gap-2">

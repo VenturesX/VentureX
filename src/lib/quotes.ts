@@ -1,4 +1,7 @@
 import { z } from "zod";
+import { isQuoteMarket, outOfAreaMessage, QUOTE_MARKETS } from "@/lib/service-area";
+
+export { QUOTE_MARKETS };
 
 export const QUOTE_PROFILES = ["PLANNER", "DESTINATION_PARTNER", "GROUP"] as const;
 export const QUOTE_SERVICE_TYPES = ["AIRPORT_TRANSFER", "DINE_AROUND", "SHUTTLE_LOOP", "POINT_TO_POINT", "CHARTER", "OTHER", "UNSURE"] as const;
@@ -104,6 +107,7 @@ export type QuoteInput = {
   email: string;
   phone: string;
   notes?: string;
+  market: string;
   waitMinutes?: number;
   driveMinutes?: number;
   unsureSteps: string[];
@@ -131,6 +135,7 @@ const quoteSchema = z
     email: z.string(),
     phone: z.string(),
     notes: z.string().optional(),
+    market: z.string().optional(),
     waitMinutes: z.string().optional(),
     driveMinutes: z.string().optional(),
     unsureSteps: z.string().optional(),
@@ -221,6 +226,17 @@ const quoteSchema = z
     if (data.notes && data.notes.length > 4000) {
       ctx.addIssue({ code: "custom", path: ["notes"], message: "Notes must be 4,000 characters or fewer" });
     }
+    if (data.market && !isQuoteMarket(data.market)) {
+      ctx.addIssue({ code: "custom", path: ["market"], message: "Choose Orlando, Greater Orlando, Central Florida, or Port Canaveral." });
+    }
+    for (const key of ["pickup", "dropoff"] as const) {
+      const area = outOfAreaMessage(data[key]);
+      if (area) ctx.addIssue({ code: "custom", path: [key], message: area });
+    }
+    data.stops.forEach((stop) => {
+      const area = outOfAreaMessage(stop);
+      if (area) ctx.addIssue({ code: "custom", path: ["stops"], message: area });
+    });
   })
   .transform((data) => ({
     profile: (oneOf(data.profile, QUOTE_PROFILES) ? data.profile : "GROUP") as QuoteProfile,
@@ -243,6 +259,7 @@ const quoteSchema = z
     email: data.email ? data.email.toLowerCase() : "",
     phone: data.phone,
     notes: data.notes,
+    market: data.market && isQuoteMarket(data.market) ? data.market : "Orlando",
     waitMinutes: data.waitMinutes ? Number(data.waitMinutes) : undefined,
     driveMinutes: data.driveMinutes ? Number(data.driveMinutes) : undefined,
     unsureSteps: parseUnsureSteps(data.unsureSteps),
@@ -275,6 +292,7 @@ export function parseQuoteFields(form: FormData): { ok: true; data: QuoteInput }
     email: field(form, "email"),
     phone: field(form, "phone"),
     notes: notes || undefined,
+    market: field(form, "market") || "Orlando",
     waitMinutes: field(form, "waitMinutes") || undefined,
     driveMinutes: field(form, "driveMinutes") || undefined,
     unsureSteps: field(form, "unsureSteps") || undefined,

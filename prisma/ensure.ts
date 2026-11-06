@@ -23,6 +23,7 @@ async function main() {
 
     let clipboard = -1;
     let shuttle = -1;
+    let light = -1;
     try {
       clipboard = await db.clipboardProgram.count();
     } catch {
@@ -33,7 +34,12 @@ async function main() {
     } catch {
       shuttle = -1;
     }
-    if (clipboard < 0 || shuttle < 0) {
+    try {
+      light = await db.lightProgram.count();
+    } catch {
+      light = -1;
+    }
+    if (clipboard < 0 || shuttle < 0 || light < 0) {
       await db.$disconnect();
       console.log("Updating schema for shuttle tracking…");
       run("npx", ["prisma", "db", "push", "--skip-generate"]);

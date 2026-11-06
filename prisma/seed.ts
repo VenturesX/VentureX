@@ -18,6 +18,7 @@ async function main() {
     console.log("Demo accounts already exist. Leaving quote, guest, and airport records in place.");
     await ensureClipboard();
     await ensureDefaults();
+    await ensureLight();
     return;
   }
 
@@ -478,6 +479,7 @@ async function main() {
 
   await ensureClipboard();
   await ensureDefaults();
+  await ensureLight();
 
   console.log("Seeded Venture Directors");
   console.log(`Event ${event.code} (${event.id})`);
@@ -508,6 +510,11 @@ async function ensureDefaults() {
   } catch (error) {
     console.warn("Settings seed skipped:", error instanceof Error ? error.message : error);
   }
+}
+
+async function ensureLight() {
+  const { ensureLightDemo } = await import("../src/lib/light/seed");
+  await ensureLightDemo(db);
 }
 
 async function ensureSetting(key: string, value: string) {

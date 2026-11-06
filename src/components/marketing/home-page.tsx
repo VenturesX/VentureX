@@ -101,6 +101,12 @@ export function MarketingHome() {
               >
                 Curb clipboard
               </Link>
+              <Link
+                href="/light/NBCU"
+                className="inline-flex h-12 items-center justify-center rounded-full border border-white/30 px-5 text-base font-semibold text-white"
+              >
+                Arrivals board
+              </Link>
             </div>
           </div>
         </div>
@@ -120,6 +126,12 @@ export function MarketingHome() {
             <p className="mt-2 text-xl font-semibold">Monday staff sheet</p>
             <p className="mt-2 text-sm leading-relaxed text-white/75">Roster, passenger counts, and the running log for the hotel curb.</p>
           </Link>
+        </div>
+        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <Link href="/guest" className="flex min-h-11 items-center justify-center rounded-xl border border-white/15 text-sm font-semibold">Guest</Link>
+          <Link href="/staff" className="flex min-h-11 items-center justify-center rounded-xl border border-white/15 text-sm font-semibold">Staff</Link>
+          <Link href="/drive" className="flex min-h-11 items-center justify-center rounded-xl border border-white/15 text-sm font-semibold">Driver</Link>
+          <Link href="/owner" className="flex min-h-11 items-center justify-center rounded-xl border border-white/15 text-sm font-semibold">Owner</Link>
         </div>
       </section>
 

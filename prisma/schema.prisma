@@ -568,6 +568,7 @@ model QuoteRequest {
   email              String
   phone              String
   notes              String?
+  market             String                 @default("Orlando")
   manifestFileName   String?
   manifestMimeType   String?
   manifestBytes      Bytes?
@@ -618,6 +619,243 @@ model GuestAccessAttempt {
   createdAt DateTime @default(now())
 
   @@index([ip, createdAt])
+}
+
+model LightProgram {
+  id               String    @id @default(cuid())
+  name             String
+  code             String    @unique
+  aliases          String    @default("")
+  clientName       String    @default("")
+  hotels           String    @default("")
+  pmName           String    @default("")
+  pmPhone          String    @default("")
+  serviceDate      String    @default("")
+  timezone         String    @default("America/New_York")
+  windowClose      String    @default("20:00")
+  greetOffsetMin   Int       @default(30)
+  greetMinMin      Int       @default(25)
+  greetMaxMin      Int       @default(40)
+  hotelLabel       String    @default("PORTOFINO BAY")
+  textingMode      String    @default("on")
+  showLiveFlights  Boolean   @default(true)
+  showLateAlerts   Boolean   @default(true)
+  showHotelConfirm Boolean   @default(true)
+  finalReportOnly  Boolean   @default(false)
+  status           String    @default("LIVE")
+  isTemplate       Boolean   @default(false)
+  seedRevision     String    @default("")
+  endsAt           DateTime?
+  lastFlightPoll   DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  posts        LightPost[]
+  airlines     LightAirline[]
+  vehicleRules LightVehicleRule[]
+  directory    LightContact[]
+  trips        LightTrip[]
+  flights      LightFlight[]
+  changes      LightChange[]
+  messages     LightMessage[]
+  roster       LightRoster[]
+  alerts       LightAlert[]
+  headsUps     LightHeadsUp[]
+}
+
+model LightPost {
+  id        String       @id @default(cuid())
+  programId String
+  program   LightProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+  code      String
+  label     String
+  sortOrder Int          @default(0)
+
+  @@index([programId])
+}
+
+model LightAirline {
+  id        String       @id @default(cuid())
+  programId String
+  program   LightProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+  airline   String
+  postCode  String
+
+  @@index([programId])
+}
+
+model LightVehicleRule {
+  id          String       @id @default(cuid())
+  programId   String
+  program     LightProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+  vehicleKind String
+  pickupNote  String
+
+  @@index([programId])
+}
+
+model LightContact {
+  id        String        @id @default(cuid())
+  programId String
+  program   LightProgram  @relation(fields: [programId], references: [id], onDelete: Cascade)
+  kind      String
+  name      String
+  company   String        @default("")
+  phone     String        @default("")
+  notes     String        @default("")
+
+  @@index([programId])
+}
+
+model LightTrip {
+  id            String       @id @default(cuid())
+  programId     String
+  program       LightProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+  flightCode    String
+  airline       String       @default("")
+  origin        String       @default("")
+  scheduledTime String       @default("")
+  airSide       String       @default("")
+  postCode      String       @default("")
+  vehicleLabel  String       @default("")
+  vendor        String       @default("")
+  notes         String       @default("")
+  carSeats      Int          @default(0)
+  boosters      Int          @default(0)
+  flags         String       @default("")
+  driverName    String       @default("")
+  driverPhone   String       @default("")
+  vehicleNumber String       @default("")
+  status        String       @default("EXPECTED")
+  reportedPax   Int?
+  sentAt        DateTime?
+  etaLabel      String       @default("")
+  sortOrder     Int          @default(0)
+  hotelToken    String?      @unique
+  hotelMessage  String       @default("")
+  receivedCount Int?
+  receivedAt    DateTime?
+  ownerName     String       @default("")
+  passengers    LightPax[]
+
+  @@index([programId])
+  @@index([programId, flightCode])
+}
+
+model LightPax {
+  id           String    @id @default(cuid())
+  tripId       String
+  trip         LightTrip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  firstName    String    @default("")
+  lastName     String    @default("")
+  cell         String    @default("")
+  notes        String    @default("")
+  bagStatus    String    @default("UNKNOWN")
+  checkedIn    Boolean   @default(false)
+  checkedInAt  DateTime?
+  noShow       Boolean   @default(false)
+  ownTransport Boolean   @default(false)
+  sortOrder    Int       @default(0)
+
+  @@index([tripId])
+}
+
+model LightFlight {
+  id          String       @id @default(cuid())
+  programId   String
+  program     LightProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+  flightCode  String
+  status      String       @default("UNKNOWN")
+  gate        String       @default("")
+  terminal    String       @default("")
+  baggage     String       @default("")
+  prevBaggage String       @default("")
+  scheduledAt String       @default("")
+  estimatedAt String       @default("")
+  actualAt    String       @default("")
+  source      String       @default("manual")
+  pinned      Boolean      @default(false)
+  updatedAt   DateTime     @updatedAt
+
+  @@unique([programId, flightCode])
+  @@index([programId])
+}
+
+model LightChange {
+  id        String       @id @default(cuid())
+  programId String
+  program   LightProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+  actor     String       @default("")
+  action    String
+  detail    String       @default("")
+  createdAt DateTime     @default(now())
+
+  @@index([programId, createdAt])
+}
+
+model LightRoster {
+  id         String       @id @default(cuid())
+  programId  String
+  program    LightProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+  phone      String
+  name       String       @default("")
+  role       String       @default("")
+  postCode   String       @default("")
+  pending    String       @default("")
+  lastTripId String       @default("")
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  @@unique([programId, phone])
+  @@index([phone])
+}
+
+model LightPhone {
+  id        String   @id @default(cuid())
+  phone     String   @unique
+  name      String   @default("")
+  createdAt DateTime @default(now())
+}
+
+model LightMessage {
+  id         String        @id @default(cuid())
+  programId  String?
+  program    LightProgram? @relation(fields: [programId], references: [id], onDelete: Cascade)
+  direction  String
+  phone      String
+  body       String
+  parsedJson String        @default("")
+  status     String        @default("logged")
+  costMicro  Int           @default(0)
+  createdAt  DateTime      @default(now())
+
+  @@index([programId, createdAt])
+  @@index([phone])
+}
+
+model LightAlert {
+  id         String       @id @default(cuid())
+  programId  String
+  program    LightProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+  kind       String
+  flightCode String       @default("")
+  body       String
+  createdAt  DateTime     @default(now())
+
+  @@index([programId])
+}
+
+model LightHeadsUp {
+  id        String       @id @default(cuid())
+  programId String
+  program   LightProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+  fromName  String       @default("")
+  phone     String       @default("")
+  body      String
+  createdAt DateTime     @default(now())
+  ackedAt   DateTime?
+
+  @@index([programId])
 }
 
 model GuestRequest {

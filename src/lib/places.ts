@@ -1,3 +1,5 @@
+import { isServiceAreaLabel } from "@/lib/service-area";
+
 export type PlaceSuggestion = {
   id: string;
   name: string;
@@ -73,6 +75,8 @@ const LOCAL_PLACES: LocalPlace[] = [
   { id: "saratoga", name: "Disney's Saratoga Springs Resort & Spa", address: "1960 Broadway, Lake Buena Vista, FL 32830", area: "Disney" },
   { id: "old-key-west", name: "Disney's Old Key West Resort", address: "1510 North Cove Road, Lake Buena Vista, FL 32830", area: "Disney" },
 
+  { id: "port-canaveral", name: "Port Canaveral", address: "Port Canaveral, FL 32920", area: "Port Canaveral Central Florida" },
+  { id: "cape-canaveral", name: "Cape Canaveral", address: "Cape Canaveral, FL 32920", area: "Port Canaveral Brevard" },
   { id: "portofino", name: "Loews Portofino Bay Hotel at Universal Orlando", address: "5601 Universal Boulevard, Orlando, FL 32819", area: "Universal" },
   { id: "hard-rock", name: "Hard Rock Hotel at Universal Orlando", address: "5800 Universal Boulevard, Orlando, FL 32819", area: "Universal" },
   { id: "royal-pacific", name: "Loews Royal Pacific Resort at Universal Orlando", address: "6300 Hollywood Way, Orlando, FL 32819", area: "Universal" },
@@ -142,7 +146,7 @@ async function googleSuggestions(query: string, apiKey: string): Promise<PlaceSu
       locationBias: {
         circle: {
           center: { latitude: 28.45, longitude: -81.47 },
-          radius: 40000,
+          radius: 90000,
         },
       },
     }),
@@ -176,5 +180,6 @@ async function googleSuggestions(query: string, apiKey: string): Promise<PlaceSu
       };
     })
     .filter((place): place is PlaceSuggestion => Boolean(place))
+    .filter((place) => isServiceAreaLabel(place.label))
     .slice(0, 8);
 }

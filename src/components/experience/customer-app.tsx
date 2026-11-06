@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 
-const MARKETS = ["Orlando (instant baseline)", "Anaheim", "Denver", "Colorado", "Custom quote"] as const;
+const MARKETS = ["Orlando", "Greater Orlando", "Central Florida", "Port Canaveral"] as const;
 const MOVES = ["Airport / port meet & greet", "Convention shuttle loop", "Night event / park buyout", "Executive VIP"] as const;
 const TIERS = [
   ["Tier 1 — Core operations", "Included. Vetted field staff and dispatch."],
@@ -13,7 +13,7 @@ const TIERS = [
 
 export function CustomerApp() {
   const [step, setStep] = useState(0);
-  const [market, setMarket] = useState<(typeof MARKETS)[number]>("Orlando (instant baseline)");
+  const [market, setMarket] = useState<(typeof MARKETS)[number]>("Orlando");
   const [move, setMove] = useState<(typeof MOVES)[number]>(MOVES[1]);
   const [date, setDate] = useState("2026-10-26");
   const [pax, setPax] = useState("180");

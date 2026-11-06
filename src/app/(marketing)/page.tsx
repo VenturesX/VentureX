@@ -1,5 +1,5 @@
-import { CustomerApp } from "@/components/experience/customer-app";
+import { MarketingHome } from "@/components/marketing/home-page";
 
 export default function HomePage() {
-  return <CustomerApp />;
+  return <MarketingHome />;
 }
