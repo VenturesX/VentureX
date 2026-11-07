@@ -1,23 +1,28 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, BadgeCheck, Plane, Route, Shield, Ship } from "lucide-react";
-import { MISSION } from "@/lib/brand";
+import { ArrowRight, BadgeCheck, Bus, Plane, Route, Shield, Ship } from "lucide-react";
+import { HERO_SUB } from "@/lib/brand";
 
 const SERVICES = [
   {
     icon: Plane,
     title: "Airport Meet & Greet",
-    body: "Greeters at Orlando International (MCO). We watch the flight, meet the party, and move them to the hotel with the right vehicle.",
+    body: "Greeters at the gate. We track every flight, meet your party, and move them where they need to go.",
   },
   {
     icon: Route,
-    title: "Shuttle & Event Transportation",
-    body: "Convention loops, hotel-to-venue moves, and dine-arounds. A schedule the group can follow, and a crew on the curb.",
+    title: "Event Shuttles",
+    body: "Convention loops, dine-arounds, and venue moves. A schedule the group can follow, and a crew on the curb.",
   },
   {
     icon: Ship,
     title: "Cruise Transfers",
-    body: "Cruise and group transfers across Greater Orlando and Central Florida, including Port Canaveral.",
+    body: "Cruise terminals and group transfers, timed to the ship and the flight.",
+  },
+  {
+    icon: Bus,
+    title: "Group Charters",
+    body: "A coach, Sprinter, or SUV sized to the group, with a director on the move when you want one.",
   },
 ];
 
@@ -28,13 +33,13 @@ const STEPS = [
   { title: "Guests know where", body: "A link shows where to wait and load. No app to download." },
 ];
 
-const WORK = ["Meet and greet", "Airport transfers", "Convention shuttles", "Cruise transfers", "Dine-arounds", "Group charters", "…and more"];
-
 const TRUST = [
-  { icon: BadgeCheck, title: "Vetted operators", body: "We only work with top-rated, licensed carriers." },
-  { icon: Shield, title: "Highly experienced crew", body: "Our Venture Directors have 10+ years running Orlando group moves." },
-  { icon: Plane, title: "Safety first", body: "From curb to hotel." },
+  { icon: BadgeCheck, title: "Vetted operators", body: "Top-rated, licensed, and insured." },
+  { icon: Shield, title: "Highly experienced crew", body: "Seasoned group-move pros." },
+  { icon: Plane, title: "Safety first", body: "From curb to destination." },
 ];
+
+const CITIES = ["Fort Myers", "Miami", "Milwaukee", "Anaheim", "Denver"];
 
 export function MarketingHome() {
   return (
@@ -58,7 +63,7 @@ export function MarketingHome() {
               <span className="block text-white">Group Transportation,</span>
               <span className="mt-1 inline-block bg-gradient-to-r from-[#1E90FF] to-[#8B5CF6] bg-clip-text text-transparent">Handled.</span>
             </h1>
-            <p className="mt-5 max-w-md text-base leading-relaxed text-white/85">{MISSION}</p>
+            <p className="mt-5 max-w-md text-base leading-relaxed text-white/85">{HERO_SUB}</p>
             <div className="mt-8">
               <Link
                 href="/quote"
@@ -74,8 +79,8 @@ export function MarketingHome() {
 
       <section id="services" className="mx-auto max-w-6xl scroll-mt-24 px-5 py-16">
         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#1E90FF]">Services</p>
-        <h2 className="mt-2 max-w-xl text-3xl font-semibold tracking-tight">Orlando group transportation</h2>
-        <div className="mt-8 grid gap-4 md:grid-cols-3">
+        <h2 className="mt-2 max-w-xl text-3xl font-semibold tracking-tight">What we run</h2>
+        <div className="mt-8 grid gap-4 sm:grid-cols-2">
           {SERVICES.map((service) => (
             <article key={service.title} className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
               <div className="grid size-10 place-items-center rounded-full bg-[#1E90FF]/15 text-[#1E90FF]">
@@ -85,46 +90,67 @@ export function MarketingHome() {
               <p className="mt-2 text-sm leading-relaxed text-white/75">{service.body}</p>
             </article>
           ))}
-        </div>
-      </section>
-
-      <section id="about" className="scroll-mt-24 border-y border-white/10 bg-white/[0.02]">
-        <div className="mx-auto grid max-w-6xl gap-8 px-5 py-16 md:grid-cols-2">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#1E90FF]">Who we work with</p>
-            <h2 className="mt-2 text-3xl font-semibold tracking-tight">We partner with Orlando&apos;s top destination management companies.</h2>
-            <p className="mt-4 text-sm leading-relaxed text-white/75">
-              We don&apos;t replace DMCs. We back them up with highly experienced crews and the tech to run every move.
-            </p>
-            <p className="mt-3 text-sm leading-relaxed text-white/75">
-              Venture Directors plans the transportation and puts highly experienced directors on the ground so every move runs safely and seamlessly. We work alongside top-rated, licensed and insured operators who drive the vehicles.
-            </p>
-          </div>
-          <div className="rounded-2xl border border-white/10 p-5">
-            <p className="text-sm font-semibold text-[#9ecbff]">10+ years in Orlando</p>
+          <article className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 sm:col-span-2">
+            <h3 className="text-lg font-semibold">…and more</h3>
             <p className="mt-2 text-sm leading-relaxed text-white/75">
-              Meet and greet, airport and convention transfers, and shuttle dispatch across Greater Orlando and Central Florida, including Port Canaveral.
+              If the group needs to move, ask. We will tell you straight whether we can run it.
             </p>
-            <p className="mt-3 text-sm font-medium text-white">Greater Orlando &amp; Central Florida. More cities coming soon.</p>
-            <ul className="mt-5 grid grid-cols-2 gap-2">
-              {WORK.map((item) => (
-                <li key={item} className="rounded-xl bg-white/[0.04] px-3 py-3 text-sm">{item}</li>
-              ))}
-            </ul>
-          </div>
+          </article>
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-5 py-4" aria-label="Safety">
-        <ul className="grid gap-3 md:grid-cols-3">
-          {TRUST.map((item) => (
-            <li key={item.title} className="rounded-2xl border border-white/10 p-5">
-              <item.icon className="size-5 text-[#1E90FF]" />
-              <h3 className="mt-3 text-lg font-semibold">{item.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-white/75">{item.body}</p>
-            </li>
-          ))}
-        </ul>
+      <section className="border-y border-white/10 bg-white/[0.02]" aria-labelledby="safety">
+        <div className="mx-auto max-w-6xl px-5 py-16">
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#1E90FF]">Safety</p>
+          <h2 id="safety" className="mt-2 max-w-3xl text-3xl font-semibold tracking-tight">Safety is our first priority.</h2>
+          <p className="mt-4 max-w-3xl text-sm leading-relaxed text-white/80">
+            Every operator we bring in is vetted, licensed, and insured. Every Venture Director on the ground is experienced and trained. From curb to destination, every guest is counted, boarded, and confirmed.
+          </p>
+          <ul className="mt-8 grid gap-3 md:grid-cols-3">
+            {TRUST.map((item) => (
+              <li key={item.title} className="rounded-2xl border border-white/10 p-5">
+                <item.icon className="size-5 text-[#1E90FF]" />
+                <h3 className="mt-3 text-lg font-semibold">{item.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-white/75">{item.body}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      <section id="about" className="mx-auto grid max-w-6xl scroll-mt-24 gap-8 px-5 py-16 md:grid-cols-2">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#1E90FF]">Who we work with</p>
+          <h2 className="mt-2 text-3xl font-semibold tracking-tight">We partner with top destination management companies.</h2>
+          <p className="mt-4 text-sm leading-relaxed text-white/75">
+            We don&apos;t replace them. We back them with highly experienced crews and the tech to run every move.
+          </p>
+          <p className="mt-3 text-sm leading-relaxed text-white/75">
+            Venture Directors plans the transportation and puts highly experienced directors on the ground so every move runs safely and seamlessly. We work alongside top-rated, licensed and insured operators who drive the vehicles.
+          </p>
+        </div>
+        <div className="rounded-2xl border border-white/10 p-5">
+          <h3 className="text-lg font-semibold">Highly experienced crew</h3>
+          <p className="mt-2 text-sm leading-relaxed text-white/75">
+            Our Venture Directors are seasoned group-move pros who&apos;ve run arrivals, shuttles, and events across the country.
+          </p>
+          <p className="mt-4 text-sm font-medium text-white">Based in Orlando. Home base is Central Florida.</p>
+        </div>
+      </section>
+
+      <section className="px-5 pb-4" aria-labelledby="nationwide">
+        <div className="mx-auto max-w-6xl rounded-3xl border border-white/10 px-6 py-10">
+          <h2 id="nationwide" className="text-3xl font-semibold tracking-tight">Based in Orlando. Ready nationwide.</h2>
+          <p className="mt-3 max-w-2xl text-sm leading-relaxed text-white/75">
+            We operate and partner in cities across the country, including {CITIES.join(", ")}, and more.
+          </p>
+          <Link
+            href="/quote?market=other"
+            className="mt-6 inline-flex h-12 items-center rounded-full bg-white px-5 text-sm font-semibold text-black"
+          >
+            Ask about your city
+          </Link>
+        </div>
       </section>
 
       <section id="how" className="mx-auto max-w-6xl scroll-mt-24 px-5 py-16">

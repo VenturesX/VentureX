@@ -1,8 +1,9 @@
 import { db } from "@/lib/db";
+import { dateAtEtClock, decideCheckIn, isGreeting, parseIntro, POSITIONS, postLabel, samePost, seesAll, todayET, type CheckState } from "@/lib/light/checkin";
 import { decideSms, normalizePhone, type TripSnap } from "@/lib/light/decide";
 import { hotelMessage, paxName } from "@/lib/light/hotel";
 import { groupManifestRows, type ManifestRow } from "@/lib/light/parse-manifest";
-import { airlineName, airlineCode, DEFAULT_AIRLINES, POSTS, ruleKind, tripInTab } from "@/lib/light/posts";
+import { airlineName, airlineCode, DEFAULT_AIRLINES, displayFlight, POSTS, ruleKind, tripInTab } from "@/lib/light/posts";
 import { addMinutes, clockLabel, isAfterWindow } from "@/lib/light/time";
 import { signLightToken, readLightToken } from "@/lib/light/token";
 import { getFlightProvider } from "@/lib/providers/flights";
@@ -440,15 +441,17 @@ function clockFromIso(value: string) {
 export async function handleText(phoneRaw: string, text: string, origin: string) {
   const phone = normalizePhone(phoneRaw);
   const trimmed = text.trim();
-  const codeGuess = trimmed.toUpperCase();
-  let program = await programByCode(codeGuess);
+  const intro = parseIntro(trimmed);
+  let program = intro ? await programByCode(intro.code) : await programByCode(trimmed.toUpperCase());
   const rosterHit = program
     ? null
     : await db.lightRoster.findFirst({ where: { phone }, orderBy: { updatedAt: "desc" } });
   if (!program && rosterHit) program = await db.lightProgram.findUnique({ where: { id: rosterHit.programId } });
   if (!program) {
     await db.lightMessage.create({ data: { direction: "IN", phone, body: trimmed, costMicro: IN_MICRO, status: "no-program" } });
-    const reply = "Text the program code to join. Example: NBCU";
+    const reply = isGreeting(trimmed)
+      ? "What is your name and program number? Example: Aaron 4110"
+      : "Text your name and program number. Example: Aaron 4110";
     await db.lightMessage.create({ data: { direction: "OUT", phone, body: reply, costMicro: OUT_MICRO, status: "logged" } });
     return { reply, programCode: "" };
   }
@@ -458,6 +461,64 @@ export async function handleText(phoneRaw: string, text: string, origin: string)
   }
 
   let roster = await db.lightRoster.findUnique({ where: { programId_phone: { programId: program.id, phone } } });
+  if (!roster && intro) {
+    const sheet = await db.lightRoster.findMany({ where: { programId: program.id } });
+    roster = sheet.find((row) => row.name.toLowerCase() === intro.name.toLowerCase()) ?? null;
+    if (roster && roster.phone !== phone) {
+      roster = await db.lightRoster.update({ where: { id: roster.id }, data: { phone } });
+    }
+  }
+  const active = Boolean(roster?.checkedInAt && !roster.checkedOutAt);
+  const checkState: CheckState | null = roster
+    ? {
+        name: intro?.name || roster.name,
+        postCode: roster.postCode || roster.expectedPost || "B_LOW",
+        pending: roster.pending,
+        checkedIn: active,
+        programName: program.name,
+        programCode: program.code,
+      }
+    : null;
+  const check = checkState ? decideCheckIn(trimmed, checkState) : null;
+  if (!roster && intro) {
+    const reply = `I don't have ${intro.name} on ${program.code}. Check the spelling or ask your lead.`;
+    await sendText(program.id, phone, reply, "reply");
+    return { reply, programCode: program.code };
+  }
+  if (check && (!active || roster?.pending === "signout" || check.pending === "signout" || check.checkOut || check.checkIn || check.headsUp || roster?.pending.startsWith("checkin"))) {
+    if (!roster) {
+      const reply = check.reply;
+      await sendText(program.id, phone, reply, "reply");
+      return { reply, programCode: program.code };
+    }
+    let dayCode = roster.dayCode;
+    if (check.checkIn) {
+      dayCode = String(1000 + Math.floor(Math.random() * 9000));
+    }
+    roster = await db.lightRoster.update({
+      where: { id: roster.id },
+      data: {
+        name: check.name || roster.name,
+        postCode: check.postCode || checkState?.postCode || roster.postCode,
+        pending: check.pending,
+        dayCode: check.checkIn ? dayCode : roster.dayCode,
+        dayCodeDate: check.checkIn ? todayET() : roster.dayCodeDate,
+        checkedInAt: check.checkIn ? new Date() : roster.checkedInAt,
+        checkedOutAt: check.checkOut ? (check.checkOut === "now" ? new Date() : dateAtEtClock(check.checkOut)) : roster.checkedOutAt,
+      },
+    });
+    if (check.headsUp) {
+      await db.lightHeadsUp.create({ data: { programId: program.id, fromName: roster.name || phone, phone, body: check.headsUp } });
+      await log(program.id, roster.name || phone, "position", check.headsUp);
+    }
+    if (check.checkIn) await log(program.id, roster.name, "check-in", roster.postCode);
+    if (check.checkOut) await log(program.id, roster.name, "check-out", check.reply);
+    const reply = check.checkIn
+      ? `${check.reply} Day code ${dayCode}. Team Login, then Director. It ends tonight.`
+      : check.reply;
+    await sendText(program.id, phone, reply, "reply");
+    return { reply, programCode: program.code, dayCode: check.checkIn ? dayCode : "" };
+  }
   const trips = await db.lightTrip.findMany({ where: { programId: program.id }, include: { passengers: true }, orderBy: { sortOrder: "asc" } });
   const snaps: TripSnap[] = trips.map((trip) => ({
     id: trip.id,
@@ -791,3 +852,135 @@ export function tabMatches(postCode: string, tab: string) {
 }
 
 export const EMPTY_POSTS = POSTS;
+
+function flightStatusLabel(status: string, gate: string) {
+  if (status === "LANDED" && gate) return "At gate";
+  if (status === "LANDED") return "Landed";
+  if (status === "DELAYED") return "Delayed";
+  if (status === "ON_TIME") return "On time";
+  if (status === "CANCELLED") return "Canceled";
+  return "Scheduled";
+}
+
+export async function loadCrewDay(code: string) {
+  const person = await db.lightRoster.findFirst({
+    where: { dayCode: code.trim(), dayCodeDate: todayET(), checkedOutAt: null },
+  });
+  if (!person?.checkedInAt) return null;
+  const [program, trips, flights, staff] = await Promise.all([
+    db.lightProgram.findUnique({ where: { id: person.programId } }),
+    db.lightTrip.findMany({ where: { programId: person.programId }, include: { passengers: { orderBy: { sortOrder: "asc" } } } }),
+    db.lightFlight.findMany({ where: { programId: person.programId } }),
+    db.lightRoster.findMany({ where: { programId: person.programId }, orderBy: { name: "asc" } }),
+  ]);
+  if (!program) return null;
+  const byFlight = new Map<string, typeof trips>();
+  for (const trip of trips) {
+    const list = byFlight.get(trip.flightCode) ?? [];
+    list.push(trip);
+    byFlight.set(trip.flightCode, list);
+  }
+  const lines = [...byFlight.entries()].map(([flightCode, parties]) => {
+    const flight = flights.find((item) => item.flightCode === flightCode);
+    const scheduled = parties[0]?.scheduledTime ?? "";
+    const live = flight?.actualAt || flight?.estimatedAt || "";
+    return {
+      flightCode,
+      sort: scheduled,
+      time: clockLabel(live || scheduled),
+      airline: airlineName(airlineCode(flightCode)) || parties[0]?.airline || "",
+      flight: displayFlight(flightCode),
+      status: flightStatusLabel(flight?.status ?? "", flight?.gate ?? ""),
+      postCodes: [...new Set(parties.map((party) => party.postCode))],
+      mine: seesAll(person.postCode) || parties.some((party) => samePost(party.postCode, person.postCode)),
+      parties: parties.map((party) => ({
+        id: party.id,
+        vehicle: party.vehicleLabel,
+        notes: party.notes,
+        carSeats: party.carSeats,
+        boosters: party.boosters,
+        count: party.reportedPax ?? party.passengers.length,
+        names: party.passengers.map((pax) => paxName(pax.firstName, pax.lastName)),
+        cells: party.passengers.map((pax) => pax.cell).filter(Boolean),
+      })),
+    };
+  }).sort((a, b) => a.sort.localeCompare(b.sort));
+  return {
+    person: {
+      name: person.name,
+      postCode: person.postCode,
+      postLabel: postLabel(person.postCode),
+      textAlerts: person.textAlerts,
+      wide: seesAll(person.postCode),
+    },
+    program: { code: program.code, name: program.name },
+    positions: POSITIONS.map((item) => ({ code: item.code, label: item.label })),
+    lines,
+    staff: staff.map((row) => ({ name: row.name, post: postLabel(row.postCode || row.expectedPost), in: Boolean(row.checkedInAt && !row.checkedOutAt) })),
+  };
+}
+
+export async function updateCrewDay(code: string, body: { postCode?: string; textAlerts?: boolean }) {
+  const person = await db.lightRoster.findFirst({ where: { dayCode: code.trim(), dayCodeDate: todayET(), checkedOutAt: null } });
+  if (!person?.checkedInAt) return { error: "Check in first." };
+  await db.lightRoster.update({
+    where: { id: person.id },
+    data: {
+      postCode: body.postCode || person.postCode,
+      textAlerts: body.textAlerts ?? person.textAlerts,
+    },
+  });
+  if (body.postCode && body.postCode !== person.postCode) {
+    await log(person.programId, person.name, "position", `${person.name} switched to ${postLabel(body.postCode)}`);
+  }
+  return { ok: true };
+}
+
+export async function loadCrewReport(code = "NBCU") {
+  const program = await programByCode(code);
+  if (!program) return null;
+  const [staff, trips, changes] = await Promise.all([
+    db.lightRoster.findMany({ where: { programId: program.id }, orderBy: { name: "asc" } }),
+    db.lightTrip.findMany({ where: { programId: program.id }, include: { passengers: true } }),
+    db.lightChange.findMany({ where: { programId: program.id }, orderBy: { createdAt: "desc" }, take: 40 }),
+  ]);
+  const sent = trips.filter((trip) => trip.status === "SENT");
+  const pax = sent.reduce((sum, trip) => sum + (trip.reportedPax ?? trip.passengers.length), 0);
+  return {
+    program: {
+      name: program.name,
+      code: program.code,
+      showLateAlerts: program.showLateAlerts,
+      showHotelConfirm: program.showHotelConfirm,
+      finalReportOnly: program.finalReportOnly,
+    },
+    moved: { arrivals: new Set(sent.map((trip) => trip.flightCode)).size, pax, vehicles: sent.length },
+    staff: staff.map((row) => ({
+      name: row.name,
+      post: postLabel(row.postCode || row.expectedPost),
+      in: row.checkedInAt?.toISOString() ?? "",
+      out: row.checkedOutAt?.toISOString() ?? "",
+      hours: hoursLabel(row.checkedInAt, row.checkedOutAt),
+    })),
+    notes: changes.map((row) => ({ actor: row.actor, action: row.action, detail: row.detail, at: row.createdAt.toISOString() })),
+    sheet: trips
+      .slice()
+      .sort((a, b) => a.scheduledTime.localeCompare(b.scheduledTime))
+      .map((trip) => ({
+        time: clockLabel(trip.scheduledTime),
+        flight: displayFlight(trip.flightCode),
+        post: postLabel(trip.postCode),
+        vehicle: trip.vehicleLabel,
+        count: trip.reportedPax ?? trip.passengers.length,
+        names: trip.passengers.map((pax) => paxName(pax.firstName, pax.lastName)).join(", "),
+        notes: trip.notes,
+      })),
+  };
+}
+
+function hoursLabel(start: Date | null, end: Date | null) {
+  if (!start) return "";
+  const stop = end ?? new Date();
+  const minutes = Math.max(0, Math.round((stop.getTime() - start.getTime()) / 60000));
+  return `${Math.floor(minutes / 60)}h ${String(minutes % 60).padStart(2, "0")}m`;
+}

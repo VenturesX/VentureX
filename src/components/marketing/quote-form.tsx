@@ -4,6 +4,7 @@ import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { PlaceField } from "@/components/marketing/place-field";
 import { TalkLine } from "@/components/marketing/talk-line";
+import { OTHER_CITY } from "@/lib/brand";
 import { manifestError, PROFILE_OPTIONS, QUOTE_MARKETS, type QuoteProfile } from "@/lib/quotes";
 import { GUEST_COUNT_MAX, GUEST_RANGES, formatGuestCount, guestRangeFor, type QuotePlan } from "@/lib/guidance";
 
@@ -16,9 +17,10 @@ const MOVES = [
 
 const WAITS = ["15", "20", "30"] as const;
 
-export function QuoteForm() {
+export function QuoteForm({ initialMarket }: { initialMarket?: (typeof QUOTE_MARKETS)[number] }) {
   const router = useRouter();
-  const [market, setMarket] = useState<(typeof QUOTE_MARKETS)[number]>("Orlando");
+  const [market, setMarket] = useState<(typeof QUOTE_MARKETS)[number]>(initialMarket ?? "Orlando");
+  const [marketCity, setMarketCity] = useState("");
   const [service, setService] = useState("");
   const [guestExact, setGuestExact] = useState("");
   const [vehiclePreference, setVehiclePreference] = useState("");
@@ -135,6 +137,13 @@ export function QuoteForm() {
           ))}
         </div>
         <input type="hidden" name="market" value={market} />
+        {market === OTHER_CITY ? (
+          <label className="block text-sm" htmlFor="marketCity">City and state
+            <input id="marketCity" value={marketCity} onChange={(event) => setMarketCity(event.target.value)} placeholder="Denver, CO" className={`${fieldClass} mt-1`} />
+          </label>
+        ) : null}
+        <input type="hidden" name="marketCity" value={market === OTHER_CITY ? marketCity : ""} />
+        {market === OTHER_CITY ? <p className="text-sm text-white/60">We will follow up. This comes in as a lead.</p> : null}
       </section>
       <section className="space-y-3">
         <h2 className="text-xl font-semibold">The move</h2>

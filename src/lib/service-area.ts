@@ -1,4 +1,4 @@
-export const QUOTE_MARKETS = ["Orlando", "Greater Orlando", "Central Florida", "Port Canaveral"] as const;
+export const QUOTE_MARKETS = ["Orlando", "Greater Orlando", "Central Florida", "Port Canaveral", "Other city, tell us where"] as const;
 
 export type QuoteMarket = (typeof QUOTE_MARKETS)[number];
 

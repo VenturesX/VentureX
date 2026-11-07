@@ -569,6 +569,7 @@ model QuoteRequest {
   phone              String
   notes              String?
   market             String                 @default("Orlando")
+  marketCity         String                 @default("")
   manifestFileName   String?
   manifestMimeType   String?
   manifestBytes      Bytes?
@@ -801,9 +802,15 @@ model LightRoster {
   name       String       @default("")
   role       String       @default("")
   postCode   String       @default("")
-  pending    String       @default("")
-  lastTripId String       @default("")
-  createdAt  DateTime     @default(now())
+  pending      String    @default("")
+  lastTripId   String    @default("")
+  expectedPost String    @default("")
+  dayCode      String    @default("")
+  dayCodeDate  String    @default("")
+  checkedInAt  DateTime?
+  checkedOutAt DateTime?
+  textAlerts   Boolean   @default(true)
+  createdAt    DateTime  @default(now())
   updatedAt  DateTime     @updatedAt
 
   @@unique([programId, phone])
