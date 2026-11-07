@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
 import { jsonError } from "@/lib/api";
+import { fieldDenied } from "@/lib/crew-guard";
 import { isDatabaseUnavailable } from "@/lib/db-error";
 import { readDesk, recordRelay, saveDesk } from "@/lib/shuttle/store";
 
 export async function GET() {
+  const denied = await fieldDenied();
+  if (denied) return denied;
   try {
     const result = await readDesk();
     return NextResponse.json(result);
@@ -17,6 +20,8 @@ export async function GET() {
 }
 
 export async function PUT(request: Request) {
+  const denied = await fieldDenied();
+  if (denied) return denied;
   try {
     const body = (await request.json()) as { desk?: unknown };
     const result = await saveDesk(body.desk ?? body);
@@ -30,6 +35,8 @@ export async function PUT(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const denied = await fieldDenied();
+  if (denied) return denied;
   try {
     const body = (await request.json()) as {
       puckId?: string;

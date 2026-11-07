@@ -614,6 +614,14 @@ model EventFaq {
   @@index([eventId])
 }
 
+model CrewLoginAttempt {
+  id        String   @id @default(cuid())
+  ip        String
+  createdAt DateTime @default(now())
+
+  @@index([ip, createdAt])
+}
+
 model GuestAccessAttempt {
   id        String   @id @default(cuid())
   ip        String
@@ -627,6 +635,8 @@ model LightProgram {
   name             String
   code             String    @unique
   aliases          String    @default("")
+  accessCodeHash   String    @default("")
+  clientCodeHash   String    @default("")
   clientName       String    @default("")
   hotels           String    @default("")
   pmName           String    @default("")

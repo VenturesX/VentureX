@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 import { jsonError } from "@/lib/api";
+import { fieldDenied } from "@/lib/crew-guard";
 import { falconUrlError, parseFalconPayload } from "@/lib/shuttle/falcon";
 import { readDesk, saveDesk } from "@/lib/shuttle/store";
 import type { ShuttleStop } from "@/lib/shuttle/types";
 
 export async function POST(request: Request) {
+  const denied = await fieldDenied();
+  if (denied) return denied;
   try {
     const body = (await request.json()) as { url?: string; payload?: unknown; eventCode?: string };
     let payload = body.payload;

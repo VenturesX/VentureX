@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { crewDenied } from "@/lib/crew-guard";
 import { rowsFromUpload } from "@/lib/light/files";
 import { parseManifestText, type ManifestRow } from "@/lib/light/parse-manifest";
 import { publishManifest } from "@/lib/light/service";
@@ -7,6 +8,8 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
+  const denied = await crewDenied(["crew", "admin"]);
+  if (denied) return denied;
   const contentType = request.headers.get("content-type") || "";
   if (contentType.includes("multipart/form-data")) {
     const form = await request.formData();

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { jsonError, requireApi } from "@/lib/api";
 import { db } from "@/lib/db";
+import { notifyOffice } from "@/lib/notify";
 
 export async function GET() {
   try {
@@ -33,6 +34,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Choose the best time for a call." }, { status: 400 });
   }
   const row = await db.callbackRequest.create({ data: { name, phone, bestTime } });
+  await notifyOffice("New callback", `${name}\n${phone}\nBest time: ${bestTime}`);
   return NextResponse.json({ ok: true, id: row.id });
 }
 

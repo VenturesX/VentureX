@@ -3,11 +3,27 @@ import { hotelMessage, paxName } from "@/lib/light/hotel";
 import { DEFAULT_AIRLINES, DEFAULT_RULES, POSTS } from "@/lib/light/posts";
 import { todayET } from "@/lib/light/checkin";
 import { airlineOf, NBCU_FLIGHTS, NBCU_REVISION, NBCU_TRIPS } from "@/lib/light/seed-data";
+import { hashAccessCodes } from "@/lib/crew-access";
+
+async function ensureAccessHashes(db: PrismaClient) {
+  const programs = await db.lightProgram.findMany({ select: { id: true, code: true, aliases: true, accessCodeHash: true } });
+  for (const program of programs) {
+    if (program.accessCodeHash) continue;
+    const codes = [program.code, ...program.aliases.split(",")];
+    await db.lightProgram.update({
+      where: { id: program.id },
+      data: { accessCodeHash: await hashAccessCodes(codes, true) },
+    });
+  }
+}
 
 export async function ensureLightDemo(db: PrismaClient) {
   try {
     const existing = await db.lightProgram.findUnique({ where: { code: "NBCU" } });
-    if (existing?.seedRevision === NBCU_REVISION) return existing.id;
+    if (existing?.seedRevision === NBCU_REVISION) {
+      await ensureAccessHashes(db);
+      return existing.id;
+    }
     if (existing) await db.lightProgram.delete({ where: { id: existing.id } });
 
     const program = await db.lightProgram.create({
@@ -136,6 +152,7 @@ export async function ensureLightDemo(db: PrismaClient) {
       ],
     });
     console.log(`Seeded NBCU light board (${NBCU_TRIPS.length} parties)`);
+    await ensureAccessHashes(db);
     return program.id;
   } catch (error) {
     console.warn("Light demo seed skipped:", error instanceof Error ? error.message : error);

@@ -1,13 +1,18 @@
 import { NextResponse } from "next/server";
+import { crewDenied } from "@/lib/crew-guard";
 import { adminReply, loadAdmin, saveAdmin } from "@/lib/light/service";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+  const denied = await crewDenied(["crew", "admin"]);
+  if (denied) return denied;
   return NextResponse.json(await loadAdmin());
 }
 
 export async function POST(request: Request) {
+  const denied = await crewDenied(["crew", "admin"]);
+  if (denied) return denied;
   const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
   if (!body) return NextResponse.json({ error: "Send JSON." }, { status: 400 });
   if (body.action === "reply") {
