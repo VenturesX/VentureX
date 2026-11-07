@@ -3,11 +3,11 @@ import { DEFAULT_EXPERT_PHONE, DEFAULT_EXPERT_TEL } from "@/lib/guidance";
 export const COMPANY_NAME = "Venture Directors";
 export const COMPANY_LEGAL = "Venture Directors LLC";
 export const APP_NAME = "VentureX";
-export const COMPANY_EMAIL = "venturedirectors@gmail.com";
+export const COMPANY_EMAIL = "info@venturedirectors.com";
 export const COMPANY_PHONE = DEFAULT_EXPERT_PHONE;
 export const COMPANY_PHONE_TEL = DEFAULT_EXPERT_TEL;
 export const DEFAULT_SITE_URL = "https://www.venturedirectors.com";
-export const MISSION = "Getting every guest from point A to point B, safely and seamlessly.";
+export const MISSION = "Getting guests from A to B, safely and seamlessly.";
 export const TAGLINE = "Group Transportation, Handled.";
 
 export function siteUrl() {

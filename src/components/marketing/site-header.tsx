@@ -93,7 +93,7 @@ export function SiteFooter() {
           <Wordmark compact />
         </Link>
         <p className="max-w-xl text-sm leading-relaxed text-white/75">
-          {COMPANY_LEGAL} plans group transportation for Orlando DMCs. Orlando, Greater Orlando, and Central Florida, including Port Canaveral.
+          {COMPANY_LEGAL} plans the transportation and puts highly experienced directors on the ground. Greater Orlando and Central Florida, including Port Canaveral. More cities coming soon.
         </p>
         <div className="flex flex-col gap-1 text-sm">
           <a className="w-fit text-white" href={`mailto:${COMPANY_EMAIL}`}>{COMPANY_EMAIL}</a>

@@ -6,7 +6,7 @@ import Link from "next/link";
 const MARKETS = ["Orlando", "Greater Orlando", "Central Florida", "Port Canaveral"] as const;
 const MOVES = ["Airport / port meet & greet", "Convention shuttle loop", "Night event / park buyout", "Executive VIP"] as const;
 const TIERS = [
-  ["Tier 1 — Core operations", "Included. Vetted field staff and dispatch."],
+  ["Tier 1 — Core operations", "Included. Highly experienced field staff and dispatch."],
   ["Tier 2 — Live shuttle & rider portal", "+$1,500 or per bus. Guest GPS, wayfinding, client ridership."],
   ["Tier 3 — Full VIP & airport concierge", "+$3,000 or $5/pax. Flights, family, bags, 15-min seat holds."],
 ] as const;

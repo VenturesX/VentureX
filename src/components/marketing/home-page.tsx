@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Plane, Route, Ship } from "lucide-react";
+import { ArrowRight, BadgeCheck, Plane, Route, Shield, Ship } from "lucide-react";
 import { MISSION } from "@/lib/brand";
 
 const SERVICES = [
@@ -16,19 +16,25 @@ const SERVICES = [
   },
   {
     icon: Ship,
-    title: "Group Transfers / Port Canaveral",
-    body: "Point-to-point across Greater Orlando and Central Florida, including cruise transfers at Port Canaveral.",
+    title: "Cruise Transfers",
+    body: "Cruise and group transfers across Greater Orlando and Central Florida, including Port Canaveral.",
   },
 ];
 
 const STEPS = [
   { title: "Tell us the move", body: "Dates, guest count, and the stops. A quote request takes a few minutes." },
   { title: "We confirm it", body: "You see the vehicle plan and the price. Nothing is reserved until you accept." },
-  { title: "Operators drive", body: "Licensed carriers run the vehicles. We coordinate the day with your DMC." },
-  { title: "Guests know where", body: "A link shows where to wait or load. No app to download." },
+  { title: "Venture Directors on the ground", body: "Our highly experienced directors greet, load, and dispatch while vetted, licensed operators drive. We confirm every move." },
+  { title: "Guests know where", body: "A link shows where to wait and load. No app to download." },
 ];
 
-const WORK = ["Meet and greet", "Airport transfers", "Convention shuttles", "Port Canaveral", "Dine-arounds", "Group charters"];
+const WORK = ["Meet and greet", "Airport transfers", "Convention shuttles", "Cruise transfers", "Dine-arounds", "Group charters", "…and more"];
+
+const TRUST = [
+  { icon: BadgeCheck, title: "Vetted operators", body: "We only work with top-rated, licensed carriers." },
+  { icon: Shield, title: "Highly experienced crew", body: "Our Venture Directors have 10+ years running Orlando group moves." },
+  { icon: Plane, title: "Safety first", body: "From curb to hotel." },
+];
 
 export function MarketingHome() {
   return (
@@ -86,12 +92,12 @@ export function MarketingHome() {
         <div className="mx-auto grid max-w-6xl gap-8 px-5 py-16 md:grid-cols-2">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#1E90FF]">Who we work with</p>
-            <h2 className="mt-2 text-3xl font-semibold tracking-tight">The crew and tech behind Orlando&apos;s DMCs.</h2>
+            <h2 className="mt-2 text-3xl font-semibold tracking-tight">We partner with Orlando&apos;s top destination management companies.</h2>
             <p className="mt-4 text-sm leading-relaxed text-white/75">
-              We feed and partner with destination management companies, including MMI, TTS, CSI, PRA, and CMM. We do not replace them.
+              We don&apos;t replace DMCs. We back them up with highly experienced crews and the tech to run every move.
             </p>
             <p className="mt-3 text-sm leading-relaxed text-white/75">
-              Venture Directors plans the transportation and puts people on the ground. Licensed operators drive the vehicles.
+              Venture Directors plans the transportation and puts highly experienced directors on the ground so every move runs safely and seamlessly. We work alongside top-rated, licensed and insured operators who drive the vehicles.
             </p>
           </div>
           <div className="rounded-2xl border border-white/10 p-5">
@@ -99,6 +105,7 @@ export function MarketingHome() {
             <p className="mt-2 text-sm leading-relaxed text-white/75">
               Meet and greet, airport and convention transfers, and shuttle dispatch across Greater Orlando and Central Florida, including Port Canaveral.
             </p>
+            <p className="mt-3 text-sm font-medium text-white">Greater Orlando &amp; Central Florida. More cities coming soon.</p>
             <ul className="mt-5 grid grid-cols-2 gap-2">
               {WORK.map((item) => (
                 <li key={item} className="rounded-xl bg-white/[0.04] px-3 py-3 text-sm">{item}</li>
@@ -106,6 +113,18 @@ export function MarketingHome() {
             </ul>
           </div>
         </div>
+      </section>
+
+      <section className="mx-auto max-w-6xl px-5 py-4" aria-label="Safety">
+        <ul className="grid gap-3 md:grid-cols-3">
+          {TRUST.map((item) => (
+            <li key={item.title} className="rounded-2xl border border-white/10 p-5">
+              <item.icon className="size-5 text-[#1E90FF]" />
+              <h3 className="mt-3 text-lg font-semibold">{item.title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-white/75">{item.body}</p>
+            </li>
+          ))}
+        </ul>
       </section>
 
       <section id="how" className="mx-auto max-w-6xl scroll-mt-24 px-5 py-16">
