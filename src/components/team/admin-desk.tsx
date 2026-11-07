@@ -89,8 +89,8 @@ export function AdminDesk() {
                 <tr key={row.name} className="border-b border-white/10">
                   <td className="py-2">{row.name}</td>
                   <td>{row.post}</td>
-                  <td>{row.in ? new Date(row.in).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : ""}</td>
-                  <td>{row.out ? new Date(row.out).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : ""}</td>
+                  <td>{etTime(row.in)}</td>
+                  <td>{etTime(row.out)}</td>
                   <td>{row.hours}</td>
                 </tr>
               ))}
@@ -136,6 +136,11 @@ export function AdminDesk() {
       ) : null}
     </div>
   );
+}
+
+function etTime(value: string) {
+  if (!value) return "";
+  return new Date(value).toLocaleTimeString("en-US", { timeZone: "America/New_York", hour: "numeric", minute: "2-digit" });
 }
 
 function Stat({ label, value }: { label: string; value: string }) {
