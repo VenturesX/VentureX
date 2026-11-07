@@ -43,7 +43,7 @@ export function TextSim() {
       </label>
       <div className="min-h-48 space-y-2 rounded-2xl bg-[#0c0e12] p-3" data-testid="text-thread">
         {lines.map((line, index) => (
-          <p key={index} className={`whitespace-pre-wrap break-all rounded-xl px-3 py-2 text-sm ${line.direction === "IN" ? "bg-[#1E90FF]" : "bg-white/10"}`}>{line.body}</p>
+          <p key={index} className={`whitespace-pre-wrap break-words rounded-xl px-3 py-2 text-sm ${line.direction === "IN" ? "bg-[#1E90FF]" : "bg-white/10"}`}>{line.body}</p>
         ))}
       </div>
       <div className="flex gap-1">
