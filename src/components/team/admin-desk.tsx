@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { TextSim } from "@/components/light/text-sim";
 import { AdminOffice } from "@/components/team/admin-office";
 import { AdminQuotes } from "@/components/team/admin-quotes";
+import { GuestSetup } from "@/components/team/guest-setup";
 
 type Report = {
   program: { name: string; code: string; showLateAlerts: boolean; showHotelConfirm: boolean; finalReportOnly: boolean };
@@ -19,12 +20,14 @@ const LEVELS = ["Owner", "Lead", "Client"] as const;
 export function AdminDesk() {
   const [level, setLevel] = useState<(typeof LEVELS)[number] | "">("");
   const [locked, setLocked] = useState(false);
+  const [guestProgram, setGuestProgram] = useState("");
   const [panel, setPanel] = useState<"desk" | "quotes" | "setup">("desk");
   const [report, setReport] = useState<Report | null>(null);
 
   useEffect(() => {
     void fetch("/api/team/session").then(async (response) => {
-      const json = (await response.json()) as { signedIn?: { kind?: string } };
+      const json = (await response.json()) as { signedIn?: { kind?: string; programId?: string; clientManagesGroups?: boolean } };
+      if (json.signedIn?.clientManagesGroups && json.signedIn.programId) setGuestProgram(json.signedIn.programId);
       if (json.signedIn?.kind === "client") {
         setLevel("Client");
         setLocked(true);
@@ -92,6 +95,7 @@ export function AdminDesk() {
       ) : null}
       {panel === "quotes" && level !== "Client" ? <AdminQuotes /> : null}
       {panel === "setup" && level === "Owner" ? <AdminOffice /> : null}
+      {level === "Client" && guestProgram ? <GuestSetup programId={guestProgram} owner={false} /> : null}
       {panel === "desk" || level === "Client" ? <>
       <section className="grid grid-cols-3 gap-2 text-center">
         <Stat label="Arrivals" value={String(report?.moved.arrivals ?? 0)} />

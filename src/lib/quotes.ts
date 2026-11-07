@@ -112,6 +112,7 @@ export type QuoteInput = {
   marketCity: string;
   outOfArea: boolean;
   waitMinutes?: number;
+  waitVaries?: boolean;
   driveMinutes?: number;
   unsureSteps: string[];
 };
@@ -141,6 +142,7 @@ const quoteSchema = z
     market: z.string().optional(),
     marketCity: z.string().optional(),
     waitMinutes: z.string().optional(),
+    waitVaries: z.string().optional(),
     driveMinutes: z.string().optional(),
     unsureSteps: z.string().optional(),
   })
@@ -221,8 +223,8 @@ const quoteSchema = z
         ctx.addIssue({ code: "custom", path: ["phone"], message: "Enter a phone number we can call or text" });
       }
     }
-    if (data.waitMinutes && !["15", "20", "30"].includes(data.waitMinutes)) {
-      ctx.addIssue({ code: "custom", path: ["waitMinutes"], message: "Choose a 15, 20, or 30 minute wait" });
+    if (data.waitVaries !== "yes" && data.waitMinutes && !["15", "20", "30"].includes(data.waitMinutes)) {
+      ctx.addIssue({ code: "custom", path: ["waitMinutes"], message: "Choose a 15, 20, or 30 minute wait, or say it varies" });
     }
     if (data.driveMinutes && (!/^\d+$/.test(data.driveMinutes) || Number(data.driveMinutes) < 1 || Number(data.driveMinutes) > 300)) {
       ctx.addIssue({ code: "custom", path: ["driveMinutes"], message: "Enter drive minutes from 1 to 300" });
@@ -261,7 +263,8 @@ const quoteSchema = z
     market: data.market && isQuoteMarket(data.market) ? data.market : "Orlando",
     marketCity: (data.marketCity ?? "").trim(),
     outOfArea: data.market === OTHER_CITY || [data.pickup, data.dropoff, ...data.stops].some((place) => outOfAreaMessage(place)),
-    waitMinutes: data.waitMinutes ? Number(data.waitMinutes) : undefined,
+    waitVaries: data.waitVaries === "yes",
+    waitMinutes: data.waitVaries === "yes" ? undefined : data.waitMinutes ? Number(data.waitMinutes) : undefined,
     driveMinutes: data.driveMinutes ? Number(data.driveMinutes) : undefined,
     unsureSteps: parseUnsureSteps(data.unsureSteps),
   }));
@@ -296,6 +299,7 @@ export function parseQuoteFields(form: FormData): { ok: true; data: QuoteInput }
     market: field(form, "market") || "Orlando",
     marketCity: field(form, "marketCity") || "",
     waitMinutes: field(form, "waitMinutes") || undefined,
+    waitVaries: field(form, "waitVaries") || undefined,
     driveMinutes: field(form, "driveMinutes") || undefined,
     unsureSteps: field(form, "unsureSteps") || undefined,
   });

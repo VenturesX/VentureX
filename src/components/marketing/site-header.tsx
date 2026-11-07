@@ -34,7 +34,17 @@ export function SiteHeader() {
     };
   }, [open]);
 
+  const tripBar = open ? null : (
+    <div className="fixed inset-x-0 bottom-0 z-30 border-t border-white/10 bg-[#090b10]/95 px-4 py-3 backdrop-blur md:hidden">
+      <p className="text-center text-xs text-white/60">Already traveling with us?</p>
+      <Link href="/trip" className="mt-2 flex h-12 items-center justify-center rounded-full bg-white text-sm font-semibold text-black">
+        Open my trip
+      </Link>
+    </div>
+  );
+
   return (
+    <>
     <header className="sticky top-0 z-40 border-b border-white/10 bg-[#090b10]/90 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4">
         <Link href="/" className="flex min-w-0 items-center gap-2.5" aria-label="Venture Directors home">
@@ -48,7 +58,13 @@ export function SiteHeader() {
             </Link>
           ))}
         </nav>
-        <Link href="/quote" className={`${quoteButtonClass} ml-auto h-10 px-3 sm:px-4`}>
+        <div className="ml-auto hidden items-center gap-3 md:flex">
+          <p className="text-right text-xs leading-tight text-white/60">Already traveling<br />with us?</p>
+          <Link href="/trip" className="inline-flex h-10 items-center rounded-full border border-white/20 px-4 text-sm font-semibold text-white">
+            Open my trip
+          </Link>
+        </div>
+        <Link href="/quote" className={`${quoteButtonClass} ml-auto h-10 px-3 sm:px-4 md:ml-3`}>
           <span className="sm:hidden">Quote</span>
           <span className="hidden sm:inline">Get a Quote</span>
         </Link>
@@ -77,10 +93,15 @@ export function SiteHeader() {
             <Link href="/quote" className="py-3 text-lg font-semibold" onClick={() => setOpenPath(null)}>
               Get a Quote
             </Link>
+            <Link href="/trip" className="py-3 text-lg" onClick={() => setOpenPath(null)}>
+              Open my trip
+            </Link>
           </nav>
         </div>
       ) : null}
     </header>
+    {tripBar}
+    </>
   );
 }
 
@@ -103,9 +124,10 @@ export function SiteFooter() {
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
           <Link href="/quote" className="font-semibold text-[#9ecbff]">Get a Quote</Link>
           <Link href="/contact" className="text-white/80">Contact</Link>
-          <Link href="/team" className="text-xs text-white/40">Team Login</Link>
+          <Link href="/trip" className="text-white/80">Open my trip</Link>
         </div>
         <p className="text-xs text-white/40">© {new Date().getFullYear()} {COMPANY_LEGAL}</p>
+        <Link href="/team" className="w-fit text-xs text-white/35">Team Login</Link>
       </div>
     </footer>
   );

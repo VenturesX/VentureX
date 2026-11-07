@@ -560,6 +560,7 @@ model QuoteRequest {
   repPriceCents      Int?
   needsExpertCall    Boolean                @default(false)
   waitMinutes        Int?
+  waitVaries         Boolean                @default(false)
   driveMinutes       Int?
   recommendation     String?
   unsureSteps        String                 @default("[]")
@@ -653,6 +654,7 @@ model LightProgram {
   showLateAlerts   Boolean   @default(true)
   showHotelConfirm Boolean   @default(true)
   finalReportOnly  Boolean   @default(false)
+  clientManagesGroups Boolean @default(false)
   status           String    @default("LIVE")
   isTemplate       Boolean   @default(false)
   seedRevision     String    @default("")
@@ -670,6 +672,8 @@ model LightProgram {
   changes      LightChange[]
   messages     LightMessage[]
   roster       LightRoster[]
+  groups       LightGroup[]
+  schedule     LightScheduleItem[]
   alerts       LightAlert[]
   headsUps     LightHeadsUp[]
 }
@@ -767,11 +771,78 @@ model LightPax {
   stage        String    @default("EXPECTED")
   stageAt      DateTime?
   stageBy      String    @default("")
+  passHash     String    @default("")
+  passDate     String    @default("")
+  passSeal     String    @default("")
   noShow       Boolean   @default(false)
   ownTransport Boolean   @default(false)
   sortOrder    Int       @default(0)
+  groups       LightGroupMember[]
 
   @@index([tripId])
+}
+
+model LightGroup {
+  id        String             @id @default(cuid())
+  programId String
+  program   LightProgram       @relation(fields: [programId], references: [id], onDelete: Cascade)
+  name      String
+  kind      String             @default("NAMED")
+  codeHash  String             @default("")
+  codeSeal  String             @default("")
+  sortOrder Int                @default(0)
+  members   LightGroupMember[]
+  items     LightItemGroup[]
+
+  @@index([programId])
+}
+
+model LightGroupMember {
+  id      String     @id @default(cuid())
+  groupId String
+  group   LightGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  paxId   String
+  pax     LightPax   @relation(fields: [paxId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, paxId])
+  @@index([paxId])
+}
+
+model LightScheduleItem {
+  id         String           @id @default(cuid())
+  programId  String
+  program    LightProgram     @relation(fields: [programId], references: [id], onDelete: Cascade)
+  title      String
+  kind       String
+  timeLabel  String           @default("")
+  sortKey    String           @default("")
+  summary    String           @default("")
+  detail     String           @default("")
+  spot       String           @default("")
+  route      String           @default("")
+  frequency  String           @default("")
+  flightCode String           @default("")
+  paxId      String           @default("")
+  groups     LightItemGroup[]
+
+  @@index([programId])
+}
+
+model LightItemGroup {
+  itemId  String
+  groupId String
+  item    LightScheduleItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  group   LightGroup        @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@id([itemId, groupId])
+}
+
+model GuestPortalAttempt {
+  id        String   @id @default(cuid())
+  ip        String
+  createdAt DateTime @default(now())
+
+  @@index([ip, createdAt])
 }
 
 model LightFlight {

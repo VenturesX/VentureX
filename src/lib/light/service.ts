@@ -456,6 +456,16 @@ export async function handleText(phoneRaw: string, text: string, origin: string)
     return { reply, programCode: "" };
   }
   await db.lightMessage.create({ data: { programId: program.id, direction: "IN", phone, body: trimmed, costMicro: IN_MICRO, status: "logged" } });
+  if (/^trip code$/i.test(trimmed)) {
+    const person = await db.lightPax.findFirst({ where: { cell: phone, trip: { programId: program.id } } });
+    if (person) {
+      const { issuePass } = await import("@/lib/guest-portal");
+      const pass = await issuePass(person.id);
+      const reply = `Your trip code is ${pass}. It ends tonight. Open my trip on the site.`;
+      await db.lightMessage.create({ data: { programId: program.id, direction: "OUT", phone, body: reply, costMicro: OUT_MICRO, status: "logged" } });
+      return { reply, programCode: program.code };
+    }
+  }
   if (program.textingMode === "off") {
     return { reply: "Texting is off for this program.", programCode: program.code };
   }
