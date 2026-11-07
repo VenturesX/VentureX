@@ -14,7 +14,7 @@ export default function QuotePage() {
       <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#1E90FF]">Get a quote</p>
       <h1 className="mt-2 text-4xl font-semibold tracking-tight">Plan the move.</h1>
       <p className="mt-3 text-sm leading-relaxed text-white/70">
-        Orlando, Greater Orlando, Central Florida, and Port Canaveral. The vehicle plan shows as you go. Nothing is reserved until you accept a quote.
+        Greater Orlando and Central Florida, including Port Canaveral. More cities coming soon. The vehicle plan shows as you go. Nothing is reserved until you accept a quote.
       </p>
       <div className="mt-6">
         <QuickAnswers />

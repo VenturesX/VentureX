@@ -15,7 +15,7 @@ export default function ContactPage() {
       <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#1E90FF]">Contact</p>
       <h1 className="mt-2 text-4xl font-semibold tracking-tight">Talk with Venture Directors.</h1>
       <p className="mt-3 text-sm leading-relaxed text-white/75">
-        {COMPANY_LEGAL}. Orlando, Greater Orlando, and Central Florida, including Port Canaveral.
+        {COMPANY_LEGAL}. Greater Orlando and Central Florida, including Port Canaveral. More cities coming soon.
       </p>
       <div className="mt-8 space-y-2 text-base">
         <a className="block font-semibold" href={`mailto:${COMPANY_EMAIL}`}>{COMPANY_EMAIL}</a>
