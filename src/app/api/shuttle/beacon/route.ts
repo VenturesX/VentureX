@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
 import { jsonError } from "@/lib/api";
+import { fieldDenied } from "@/lib/crew-guard";
 import { isDatabaseUnavailable } from "@/lib/db-error";
 import { knownPuck, recordFix } from "@/lib/shuttle/store";
 
 export async function POST(request: Request) {
+  const denied = await fieldDenied();
+  if (denied) return denied;
   try {
     const body = (await request.json()) as {
       puckId?: string;

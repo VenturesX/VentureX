@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { TextSim } from "@/components/light/text-sim";
+import { AdminOffice } from "@/components/team/admin-office";
+import { AdminQuotes } from "@/components/team/admin-quotes";
 
 type Report = {
   program: { name: string; code: string; showLateAlerts: boolean; showHotelConfirm: boolean; finalReportOnly: boolean };
@@ -16,12 +18,26 @@ const LEVELS = ["Owner", "Lead", "Client"] as const;
 
 export function AdminDesk() {
   const [level, setLevel] = useState<(typeof LEVELS)[number] | "">("");
+  const [locked, setLocked] = useState(false);
+  const [panel, setPanel] = useState<"desk" | "quotes" | "setup">("desk");
   const [report, setReport] = useState<Report | null>(null);
+
+  useEffect(() => {
+    void fetch("/api/team/session").then(async (response) => {
+      const json = (await response.json()) as { signedIn?: { kind?: string } };
+      if (json.signedIn?.kind === "client") {
+        setLevel("Client");
+        setLocked(true);
+        return;
+      }
+      setLevel("Owner");
+    });
+  }, []);
 
   useEffect(() => {
     if (!level) return;
     const timer = window.setTimeout(() => {
-      void fetch("/api/team/report?code=NBCU").then(async (response) => {
+      void fetch("/api/team/report").then(async (response) => {
         if (response.ok) setReport((await response.json()) as Report);
       });
     }, 0);
@@ -29,18 +45,7 @@ export function AdminDesk() {
   }, [level]);
 
   if (!level) {
-    return (
-      <div className="mx-auto max-w-lg space-y-3 px-5 py-10 text-white">
-        <Link href="/team" className="text-sm text-[#9ecbff]">Team Login</Link>
-        <h1 className="text-3xl font-semibold">Admin</h1>
-        <p className="text-sm text-white/70">Password protection comes later. Pick a level for now.</p>
-        {LEVELS.map((item) => (
-          <button key={item} type="button" className="flex min-h-16 w-full items-center rounded-2xl bg-white/10 px-4 text-left text-xl font-semibold" onClick={() => setLevel(item)}>
-            {item}
-          </button>
-        ))}
-      </div>
-    );
+    return <p className="p-6 text-white">Opening…</p>;
   }
 
   const clientLimited = level === "Client";
@@ -63,12 +68,31 @@ export function AdminDesk() {
     <div className="mx-auto max-w-3xl space-y-6 px-5 py-8 text-white print:max-w-none print:text-black" data-testid="admin-desk">
       <div className="flex items-center justify-between print:hidden">
         <Link href="/team" className="text-sm text-[#9ecbff]">Team Login</Link>
-        <button type="button" className="text-sm" onClick={() => setLevel("")}>{level}</button>
+        {locked ? <span className="text-sm">{level}</span> : (
+          <select className="bg-transparent text-sm" aria-label="View" value={level} onChange={(event) => setLevel(event.target.value as (typeof LEVELS)[number])}>
+            {LEVELS.map((item) => <option key={item} value={item}>{item}</option>)}
+          </select>
+        )}
       </div>
       <header>
         <p className="text-xs uppercase tracking-[0.16em] text-[#9ecbff] print:text-black">{level}</p>
         <h1 className="text-3xl font-semibold">{report?.program.name ?? "Program"}</h1>
       </header>
+      {level !== "Client" ? (
+        <div className="flex gap-2 print:hidden">
+          {(["desk", "quotes"] as const).map((item) => (
+            <button key={item} type="button" className={`h-11 rounded-xl px-4 text-sm font-semibold ${panel === item ? "bg-gradient-to-r from-[#1E90FF] to-[#8B5CF6]" : "bg-white/10"}`} onClick={() => setPanel(item)}>
+              {item === "desk" ? "Desk" : "Quotes"}
+            </button>
+          ))}
+          {level === "Owner" ? (
+            <button type="button" className={`h-11 rounded-xl px-4 text-sm font-semibold ${panel === "setup" ? "bg-gradient-to-r from-[#1E90FF] to-[#8B5CF6]" : "bg-white/10"}`} onClick={() => setPanel("setup")}>Setup</button>
+          ) : null}
+        </div>
+      ) : null}
+      {panel === "quotes" && level !== "Client" ? <AdminQuotes /> : null}
+      {panel === "setup" && level === "Owner" ? <AdminOffice /> : null}
+      {panel === "desk" || level === "Client" ? <>
       <section className="grid grid-cols-3 gap-2 text-center">
         <Stat label="Arrivals" value={String(report?.moved.arrivals ?? 0)} />
         <Stat label="Pax moved" value={String(report?.moved.pax ?? 0)} />
@@ -134,6 +158,7 @@ export function AdminDesk() {
           <TextSim />
         </section>
       ) : null}
+      </> : null}
     </div>
   );
 }
