@@ -11,9 +11,10 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const body = (await request.json().catch(() => null)) as { code?: string; postCode?: string; textAlerts?: boolean } | null;
+  const body = (await request.json().catch(() => null)) as { code?: string; postCode?: string; textAlerts?: boolean; signOut?: boolean } | null;
   if (!body?.code) return NextResponse.json({ error: "Enter your day code." }, { status: 400 });
   const result = await updateCrewDay(body.code, body);
   if ("error" in result && result.error) return NextResponse.json(result, { status: 404 });
+  if (result.signedOut) return NextResponse.json(result);
   return NextResponse.json(await loadCrewDay(body.code));
 }

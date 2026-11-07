@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { field, onBtn } from "@/components/light/styles";
+import { CrewBar } from "@/components/team/crew-bar";
 
 type Party = { id: string; vehicle: string; notes: string; carSeats: number; boosters: number; count: number; names: string[]; cells: string[] };
 type Line = { flightCode: string; time: string; airline: string; flight: string; status: string; postCodes: string[]; mine: boolean; parties: Party[] };
@@ -30,8 +31,18 @@ export function DirectorGate() {
       return;
     }
     setError("");
+    sessionStorage.setItem("vd-day-code", value);
+    setCode(value);
     setDay(json);
   }
+
+  useEffect(() => {
+    const saved = sessionStorage.getItem("vd-day-code");
+    if (saved) {
+      setCode(saved);
+      void open(saved);
+    }
+  }, []);
 
   if (!day) {
     return (
@@ -66,9 +77,8 @@ function MyDay({ day, code, onChange }: { day: Day; code: string; onChange: (day
   }
 
   return (
-    <div className="mx-auto max-w-lg px-4 py-6 text-white" data-testid="my-day">
-      <Link href="/team" className="text-sm text-[#9ecbff]">Team Login</Link>
-      <h1 className="mt-2 text-3xl font-semibold">{day.person.name}</h1>
+    <div className="mx-auto max-w-lg px-4 pb-24 pt-6 text-white" data-testid="my-day">
+      <h1 className="text-3xl font-semibold">{day.person.name}</h1>
       <p className="text-sm text-white/70">{day.program.name} · {day.person.postLabel}</p>
       <div className="mt-4 grid grid-cols-4 gap-1">
         {TABS.map((item) => (
@@ -106,34 +116,24 @@ function MyDay({ day, code, onChange }: { day: Day; code: string; onChange: (day
             </div>
           ) : null}
           <ul className="mt-2 divide-y divide-white/10" data-testid="flight-lines">
-            {shown.map((line) => (
-              <li key={line.flightCode}>
-                <details className="group py-1">
-                  <summary className="flex min-h-14 cursor-pointer list-none flex-wrap items-baseline gap-x-3 text-lg font-semibold [&::-webkit-details-marker]:hidden">
-                    <span>{line.time}</span>
+            {shown.map((line) => {
+              const count = line.parties.reduce((sum, party) => sum + party.count, 0);
+              return (
+                <li key={line.flightCode}>
+                  <Link href={`/team/clipboard?flight=${line.flightCode}`} className="flex min-h-14 items-baseline gap-3 py-3 text-lg font-semibold">
+                    <span className="w-24 shrink-0">{line.time}</span>
                     <span className="flex-1">{line.airline} {line.flight}</span>
                     <span className="text-base font-medium text-white/80">{line.status}</span>
-                  </summary>
-                  <div className="space-y-3 pb-3 pl-1 text-base">
-                    {line.parties.map((party) => (
-                      <div key={party.id}>
-                        <p>{party.count} pax · {party.vehicle}</p>
-                        <ol className="mt-1 list-decimal pl-5">
-                          {party.names.map((name) => <li key={name}>{name}</li>)}
-                        </ol>
-                        {party.carSeats || party.boosters ? <p className="text-white/75">{party.carSeats ? `${party.carSeats} car seat` : ""} {party.boosters ? `${party.boosters} booster` : ""}</p> : null}
-                        {party.cells.length ? <p className="text-white/75">{party.cells.join(", ")}</p> : null}
-                        {party.notes ? <p className="text-white/75">{party.notes}</p> : null}
-                      </div>
-                    ))}
-                  </div>
-                </details>
-              </li>
-            ))}
+                    <span className="w-8 text-right">{count}</span>
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
           {shown.length === 0 ? <p className="mt-6 text-base text-white/70">No flights on this post.</p> : null}
         </>
       )}
+      <CrewBar code={code} person={day.person} positions={day.positions} onDay={(next) => onChange(next as Day)} />
     </div>
   );
 }
