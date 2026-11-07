@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { OTHER_CITY } from "@/lib/brand";
 import { isQuoteMarket, outOfAreaMessage, QUOTE_MARKETS } from "@/lib/service-area";
 
 export { QUOTE_MARKETS };
@@ -108,6 +109,8 @@ export type QuoteInput = {
   phone: string;
   notes?: string;
   market: string;
+  marketCity: string;
+  outOfArea: boolean;
   waitMinutes?: number;
   driveMinutes?: number;
   unsureSteps: string[];
@@ -136,6 +139,7 @@ const quoteSchema = z
     phone: z.string(),
     notes: z.string().optional(),
     market: z.string().optional(),
+    marketCity: z.string().optional(),
     waitMinutes: z.string().optional(),
     driveMinutes: z.string().optional(),
     unsureSteps: z.string().optional(),
@@ -227,16 +231,11 @@ const quoteSchema = z
       ctx.addIssue({ code: "custom", path: ["notes"], message: "Notes must be 4,000 characters or fewer" });
     }
     if (data.market && !isQuoteMarket(data.market)) {
-      ctx.addIssue({ code: "custom", path: ["market"], message: "Choose Orlando, Greater Orlando, Central Florida, or Port Canaveral." });
+      ctx.addIssue({ code: "custom", path: ["market"], message: "Choose a market, or tell us the city." });
     }
-    for (const key of ["pickup", "dropoff"] as const) {
-      const area = outOfAreaMessage(data[key]);
-      if (area) ctx.addIssue({ code: "custom", path: [key], message: area });
+    if (data.market === OTHER_CITY && (data.marketCity ?? "").trim().length < 2) {
+      ctx.addIssue({ code: "custom", path: ["marketCity"], message: "Tell us the city and state." });
     }
-    data.stops.forEach((stop) => {
-      const area = outOfAreaMessage(stop);
-      if (area) ctx.addIssue({ code: "custom", path: ["stops"], message: area });
-    });
   })
   .transform((data) => ({
     profile: (oneOf(data.profile, QUOTE_PROFILES) ? data.profile : "GROUP") as QuoteProfile,
@@ -260,6 +259,8 @@ const quoteSchema = z
     phone: data.phone,
     notes: data.notes,
     market: data.market && isQuoteMarket(data.market) ? data.market : "Orlando",
+    marketCity: (data.marketCity ?? "").trim(),
+    outOfArea: data.market === OTHER_CITY || [data.pickup, data.dropoff, ...data.stops].some((place) => outOfAreaMessage(place)),
     waitMinutes: data.waitMinutes ? Number(data.waitMinutes) : undefined,
     driveMinutes: data.driveMinutes ? Number(data.driveMinutes) : undefined,
     unsureSteps: parseUnsureSteps(data.unsureSteps),
@@ -293,6 +294,7 @@ export function parseQuoteFields(form: FormData): { ok: true; data: QuoteInput }
     phone: field(form, "phone"),
     notes: notes || undefined,
     market: field(form, "market") || "Orlando",
+    marketCity: field(form, "marketCity") || "",
     waitMinutes: field(form, "waitMinutes") || undefined,
     driveMinutes: field(form, "driveMinutes") || undefined,
     unsureSteps: field(form, "unsureSteps") || undefined,

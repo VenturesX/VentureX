@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { ServiceWorkerRegister } from "@/components/sw-register";
-import { APP_NAME, COMPANY_NAME, MISSION, TAGLINE, siteUrl } from "@/lib/brand";
+import { APP_NAME, COMPANY_NAME, SITE_DESCRIPTION, TAGLINE, siteUrl } from "@/lib/brand";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -23,20 +23,20 @@ export const metadata: Metadata = {
     default: `${COMPANY_NAME} — ${TAGLINE}`,
     template: `%s — ${COMPANY_NAME}`,
   },
-  description: `${TAGLINE} ${MISSION}`,
+  description: SITE_DESCRIPTION,
   applicationName: APP_NAME,
   manifest: "/manifest.webmanifest",
   openGraph: {
     type: "website",
     siteName: COMPANY_NAME,
     title: `${COMPANY_NAME} — ${TAGLINE}`,
-    description: MISSION,
+    description: SITE_DESCRIPTION,
     url,
   },
   twitter: {
     card: "summary_large_image",
     title: `${COMPANY_NAME} — ${TAGLINE}`,
-    description: MISSION,
+    description: SITE_DESCRIPTION,
   },
   appleWebApp: {
     capable: true,

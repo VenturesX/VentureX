@@ -1,6 +1,7 @@
 import type { PrismaClient } from "@prisma/client";
 import { hotelMessage, paxName } from "@/lib/light/hotel";
 import { DEFAULT_AIRLINES, DEFAULT_RULES, POSTS } from "@/lib/light/posts";
+import { todayET } from "@/lib/light/checkin";
 import { airlineOf, NBCU_FLIGHTS, NBCU_REVISION, NBCU_TRIPS } from "@/lib/light/seed-data";
 
 export async function ensureLightDemo(db: PrismaClient) {
@@ -13,7 +14,7 @@ export async function ensureLightDemo(db: PrismaClient) {
       data: {
         name: "NBCU Family Weekend",
         code: "NBCU",
-        aliases: "6011",
+        aliases: "6011,4110",
         clientName: "NBCU",
         hotels: "Loews Portofino Bay Hotel",
         pmName: "Katrina Byerwalters",
@@ -116,6 +117,24 @@ export async function ensureLightDemo(db: PrismaClient) {
         },
       });
     }
+    const today = todayET();
+    await db.lightRoster.createMany({
+      data: [
+        { programId: program.id, phone: "+14075550111", name: "Aaron", role: "greeter", postCode: "B2", expectedPost: "B2" },
+        { programId: program.id, phone: "+14075550122", name: "Jessica", role: "greeter", postCode: "A_HIGH", expectedPost: "A_HIGH" },
+        {
+          programId: program.id,
+          phone: "+14075550133",
+          name: "Marissa",
+          role: "greeter",
+          postCode: "B_HIGH",
+          expectedPost: "B_HIGH",
+          dayCode: "4821",
+          dayCodeDate: today,
+          checkedInAt: new Date(),
+        },
+      ],
+    });
     console.log(`Seeded NBCU light board (${NBCU_TRIPS.length} parties)`);
     return program.id;
   } catch (error) {

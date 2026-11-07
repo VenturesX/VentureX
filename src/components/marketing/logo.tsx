@@ -15,8 +15,8 @@ export function VentureMark({ className }: { className?: string }) {
         </linearGradient>
       </defs>
       <path fill={`url(#${id})`} d={PIN_PATH} />
-      <path d="M23.5 18.5 40.5 33.5" fill="none" stroke="#fff" strokeWidth="3.4" strokeLinecap="round" />
-      <path d="M40.5 18.5 23.5 33.5" fill="none" stroke="#fff" strokeWidth="3.4" strokeLinecap="round" />
+      <path d="M25 20 39 32" fill="none" stroke="#fff" strokeWidth="4.4" strokeLinecap="round" />
+      <path d="M39 20 25 32" fill="none" stroke="#fff" strokeWidth="4.4" strokeLinecap="round" />
     </svg>
   );
 }

@@ -143,13 +143,13 @@ export async function POST(request: Request) {
       },
       manifest,
       {
-        needsExpertCall: plan.needsExpert || parsed.data.unsureSteps.length > 0,
+        needsExpertCall: plan.needsExpert || parsed.data.unsureSteps.length > 0 || parsed.data.outOfArea,
         recommendation: priced.recommendation,
         repCount,
         repPriceCents: repCount > 0 ? rateRep ?? (await currentRepPriceCents()) : null,
       },
     );
-    return NextResponse.json({ ok: true, id: row.id, reference: row.reference, needsExpertCall: plan.needsExpert || parsed.data.unsureSteps.length > 0 });
+    return NextResponse.json({ ok: true, id: row.id, reference: row.reference, needsExpertCall: plan.needsExpert || parsed.data.unsureSteps.length > 0 || parsed.data.outOfArea });
   } catch (error) {
     return jsonError(error);
   }
@@ -199,6 +199,7 @@ async function createQuote(
           phone: data.phone,
           notes: data.notes ?? null,
           market: data.market,
+          marketCity: data.marketCity,
           manifestFileName: manifest?.name ?? null,
           manifestMimeType: manifest?.mime ?? null,
           manifestBytes: manifest?.bytes ?? null,

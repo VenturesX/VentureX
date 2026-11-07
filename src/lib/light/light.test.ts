@@ -106,7 +106,7 @@ describe("ops rules", () => {
   });
 
   it("limits quote markets to Central Florida", () => {
-    assert.deepEqual([...QUOTE_MARKETS], ["Orlando", "Greater Orlando", "Central Florida", "Port Canaveral"]);
+    assert.deepEqual([...QUOTE_MARKETS], ["Orlando", "Greater Orlando", "Central Florida", "Port Canaveral", "Other city, tell us where"]);
     assert.equal(QUOTE_MARKETS.some((market) => /anaheim|denver|colorado/i.test(market)), false);
   });
 });

@@ -1,7 +1,7 @@
 import { splitPerson } from "@/lib/light/parse-manifest";
 import { airlineCode, airlineName, postFromSide } from "@/lib/light/posts";
 
-export const NBCU_REVISION = "nbcu-nov5-2026-v1";
+export const NBCU_REVISION = "nbcu-nov5-2026-v3";
 
 export type SeedPax = { firstName: string; lastName: string };
 export type SeedTrip = {

@@ -29,6 +29,7 @@ function isPublic(pathname: string, method: string) {
   if (pathname === "/plan" || pathname.startsWith("/plan/")) return true;
   if (pathname === "/contact" || pathname.startsWith("/contact/")) return true;
   if (pathname === "/team" || pathname.startsWith("/team/")) return true;
+  if (pathname.startsWith("/api/team")) return true;
   return PUBLIC.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }
 

@@ -51,7 +51,7 @@ export function TextSim() {
         <button type="button" className={onBtn} data-testid="text-send" onClick={() => void send(text)}>Send</button>
       </div>
       <div className="grid grid-cols-2 gap-1">
-        {["NBCU", "Marissa", "1", "2", "Miguel 45", "EDIT", "46", "6 on the way hold bus 2 min"].map((sample) => (
+        {["hello", "Aaron 4110", "YES", "B2", "good night", "Miguel 45"].map((sample) => (
           <button key={sample} type="button" className={offBtn} onClick={() => void send(sample)}>{sample}</button>
         ))}
       </div>
