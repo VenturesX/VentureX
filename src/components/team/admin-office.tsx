@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { field } from "@/components/light/styles";
+import { GuestSetup } from "@/components/team/guest-setup";
 
 type Staff = { id: string; name: string; phone: string; postCode: string; in: boolean };
 type Program = { id: string; name: string; code: string; aliases: string; hasClientCode: boolean; staff: Staff[] };
@@ -119,6 +120,7 @@ function ProgramEditor({
         <p className="text-xs text-white/50">If no client code is set, the program code opens the client view.</p>
       </form>
       <button className="h-11 rounded-xl bg-white/10 px-4 text-sm font-semibold" type="button" onClick={() => void act({ action: "reset-day-codes", programId: program.id })}>Reset day codes</button>
+      <GuestSetup programId={program.id} owner />
       <div>
         <p className="font-semibold">Staff</p>
         <ul className="mt-2 divide-y divide-white/10">

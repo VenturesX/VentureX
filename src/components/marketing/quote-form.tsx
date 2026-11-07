@@ -15,7 +15,12 @@ const MOVES = [
   ["DINE_AROUND", "Dine-around"],
 ] as const;
 
-const WAITS = ["15", "20", "30"] as const;
+const WAITS = [
+  ["15", "15 min"],
+  ["20", "20 min"],
+  ["30", "30 min"],
+  ["varies", "Varies / mix"],
+] as const;
 
 export function QuoteForm({ initialMarket }: { initialMarket?: (typeof QUOTE_MARKETS)[number] }) {
   const router = useRouter();
@@ -64,7 +69,8 @@ export function QuoteForm({ initialMarket }: { initialMarket?: (typeof QUOTE_MAR
               pickup,
               dropoff,
               stops: stopKey ? stopKey.split("|") : [],
-              waitMinutes,
+              waitMinutes: waitMinutes === "varies" ? undefined : Number(waitMinutes) || undefined,
+              waitVaries: waitMinutes === "varies",
               driveMinutes,
               vehiclePreference,
               startDate,
@@ -204,11 +210,12 @@ export function QuoteForm({ initialMarket }: { initialMarket?: (typeof QUOTE_MAR
         </div>
         {service === "SHUTTLE_LOOP" ? (
           <div>
-            <p className="text-sm">Acceptable wait</p>
-            <div className="mt-2 grid grid-cols-3 gap-2">
-              {WAITS.map((minutes) => (
-                <Choice key={minutes} selected={waitMinutes === minutes} onClick={() => setWaitMinutes(minutes)}>
-                  {minutes} min
+            <p className="text-sm font-medium">Average guest wait time</p>
+            <p className="mt-1 text-sm text-white/60">How long a guest waits at the stop for the next shuttle.</p>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              {WAITS.map(([value, label]) => (
+                <Choice key={value} selected={waitMinutes === value} onClick={() => setWaitMinutes(value)}>
+                  {label}
                 </Choice>
               ))}
             </div>
@@ -325,7 +332,8 @@ export function QuoteForm({ initialMarket }: { initialMarket?: (typeof QUOTE_MAR
       <input type="hidden" name="startTime" value={startTime} />
       <input type="hidden" name="endDate" value={endDate} />
       <input type="hidden" name="endTime" value={endTime} />
-      <input type="hidden" name="waitMinutes" value={waitMinutes} />
+      <input type="hidden" name="waitMinutes" value={waitMinutes === "varies" ? "" : waitMinutes} />
+      <input type="hidden" name="waitVaries" value={waitMinutes === "varies" ? "yes" : ""} />
       <input type="hidden" name="driveMinutes" value={driveMinutes} />
       <input type="hidden" name="luggage" value="NONE" />
       <input type="hidden" name="vehicleCount" value={plan?.vehicleCount ?? 0} />

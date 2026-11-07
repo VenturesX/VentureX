@@ -123,6 +123,7 @@ export type QuotePlanInput = {
   dropoff: string;
   stops: string[];
   waitMinutes?: number;
+  waitVaries?: boolean;
   driveMinutes?: number;
   vehiclePreference: string;
   email: string;
@@ -309,7 +310,7 @@ export function requestHasBlanks(input: QuotePlanInput) {
   if (input.pickup.trim().length < 2 || input.dropoff.trim().length < 2) return true;
   if (!input.startDate) return true;
   if (!input.email && !input.phone) return true;
-  if (input.serviceType === "SHUTTLE_LOOP" && !input.waitMinutes) return true;
+  if (input.serviceType === "SHUTTLE_LOOP" && !input.waitMinutes && !input.waitVaries) return true;
   return false;
 }
 
@@ -335,6 +336,15 @@ function recommendLoop(input: QuotePlanInput, vehicle: FleetVehicle, timing: Tim
   const source = legs.every((leg) => leg.source === legs[0].source) ? legs[0].source : "table";
   const cycle = legs.reduce((sum, leg) => sum + leg.drive + timing.curbBufferMinutes, 0) + stopCount * dwell;
   const math = formatLoopMath(legs, timing, stopCount);
+  if (input.waitVaries && !input.waitMinutes) {
+    const byCapacity = input.passengerCount ? Math.ceil(input.passengerCount / vehicle.usable) : 0;
+    const noun = vehicleNoun(vehicle.label, byCapacity || 1);
+    const headline = byCapacity
+      ? `We suggest ${formatGuestCount(byCapacity)} ${noun} for ${formatGuestCount(input.passengerCount)} guests.`
+      : `Full loop about ${cycle} min.`;
+    const detail = "Average wait varies through the day. We'll size the loop with you. This is a recommendation, not a confirmed plan.";
+    return finishPlan(headline, math, detail, byCapacity, vehicle, cycle, source, true);
+  }
   const byHeadway = input.waitMinutes ? Math.ceil(cycle / input.waitMinutes) : 0;
   const byCapacity = input.passengerCount ? Math.ceil(input.passengerCount / vehicle.usable) : 0;
   const count = Math.max(byHeadway, byCapacity);

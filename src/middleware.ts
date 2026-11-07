@@ -26,6 +26,8 @@ function isPublic(pathname: string, method: string) {
   if (pathname.startsWith("/api/sms")) return true;
   if (pathname === "/plan" || pathname.startsWith("/plan/")) return true;
   if (pathname === "/contact" || pathname.startsWith("/contact/")) return true;
+  if (pathname === "/trip" || pathname.startsWith("/trip/")) return true;
+  if (pathname === "/api/trip" || pathname.startsWith("/api/trip/")) return true;
   if (pathname === "/team") return true;
   if (pathname === "/api/team/unlock" || pathname === "/api/team/session") return true;
   if (pathname.startsWith("/light/h/") || pathname === "/api/light/hotel") return true;
@@ -34,6 +36,7 @@ function isPublic(pathname: string, method: string) {
 
 function crewLock(pathname: string): "staff" | "desk" | "admin" | "field" | null {
   if (pathname === "/api/team/quotes" || pathname === "/api/team/office") return "admin";
+  if (pathname === "/api/team/guest-portal") return "desk";
   if (pathname === "/api/team/report" || pathname === "/team/admin") return "desk";
   if (pathname.startsWith("/api/team") || pathname.startsWith("/team/")) return "staff";
   if (pathname === "/light" || pathname.startsWith("/light/") || pathname.startsWith("/api/light")) return "staff";
