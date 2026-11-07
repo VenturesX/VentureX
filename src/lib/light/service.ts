@@ -893,6 +893,22 @@ export async function loadCrewDay(code: string) {
       status: flightStatusLabel(flight?.status ?? "", flight?.gate ?? ""),
       postCodes: [...new Set(parties.map((party) => party.postCode))],
       mine: seesAll(person.postCode) || parties.some((party) => samePost(party.postCode, person.postCode)),
+      origin: parties[0]?.origin ?? "",
+      airSide: parties[0]?.airSide ?? "",
+      guests: parties.flatMap((party) => party.passengers.map((pax) => ({
+        id: pax.id,
+        tripId: party.id,
+        name: paxName(pax.firstName, pax.lastName),
+        cell: pax.cell,
+        checkedIn: pax.checkedIn,
+        stage: pax.stage,
+        stageAt: pax.stageAt?.toISOString() ?? "",
+        stageBy: pax.stageBy,
+        vehicle: party.vehicleLabel,
+        notes: party.notes,
+        carSeats: party.carSeats,
+        boosters: party.boosters,
+      }))),
       parties: parties.map((party) => ({
         id: party.id,
         vehicle: party.vehicleLabel,
@@ -920,9 +936,14 @@ export async function loadCrewDay(code: string) {
   };
 }
 
-export async function updateCrewDay(code: string, body: { postCode?: string; textAlerts?: boolean }) {
+export async function updateCrewDay(code: string, body: { postCode?: string; textAlerts?: boolean; signOut?: boolean }) {
   const person = await db.lightRoster.findFirst({ where: { dayCode: code.trim(), dayCodeDate: todayET(), checkedOutAt: null } });
   if (!person?.checkedInAt) return { error: "Check in first." };
+  if (body.signOut) {
+    await db.lightRoster.update({ where: { id: person.id }, data: { checkedOutAt: new Date(), dayCode: "" } });
+    await log(person.programId, person.name, "check-out", "Signed out from the app");
+    return { ok: true, signedOut: true };
+  }
   await db.lightRoster.update({
     where: { id: person.id },
     data: {
@@ -933,7 +954,7 @@ export async function updateCrewDay(code: string, body: { postCode?: string; tex
   if (body.postCode && body.postCode !== person.postCode) {
     await log(person.programId, person.name, "position", `${person.name} switched to ${postLabel(body.postCode)}`);
   }
-  return { ok: true };
+  return { ok: true, signedOut: false };
 }
 
 export async function loadCrewReport(code = "NBCU") {
@@ -976,6 +997,51 @@ export async function loadCrewReport(code = "NBCU") {
         notes: trip.notes,
       })),
   };
+}
+
+export async function runDesk(code: string, body: { action?: string; paxIds?: string[]; tripId?: string; count?: number; destination?: string; vehicle?: string }) {
+  const person = await db.lightRoster.findFirst({ where: { dayCode: code.trim(), dayCodeDate: todayET(), checkedOutAt: null } });
+  if (!person?.checkedInAt) return { error: "Check in first." };
+  const ids = body.paxIds ?? [];
+  const now = new Date();
+  if (body.action === "check" && ids.length) {
+    await db.lightPax.updateMany({ where: { id: { in: ids } }, data: { checkedIn: true, checkedInAt: now } });
+    await log(person.programId, person.name, "check-in", `${ids.length} guests`);
+  }
+  if (body.action === "count" && body.tripId && body.count != null) {
+    await db.lightTrip.update({ where: { id: body.tripId }, data: { reportedPax: body.count } });
+    await log(person.programId, person.name, "count", String(body.count));
+  }
+  if (body.action === "send-down" && ids.length) {
+    await db.lightPax.updateMany({ where: { id: { in: ids } }, data: { stage: "SENT_DOWN", stageAt: now, stageBy: person.name, checkedIn: true, checkedInAt: now } });
+    await log(person.programId, person.name, "sent-down", `${person.name} sent ${ids.length} to dispatch`);
+  }
+  if (body.action === "load" && ids.length) {
+    await db.lightPax.updateMany({ where: { id: { in: ids } }, data: { stage: "LOADING", stageAt: now, stageBy: person.name } });
+    await log(person.programId, person.name, "loading", `${ids.length} in the hold`);
+  }
+  if (body.action === "send" && ids.length) {
+    await db.lightPax.updateMany({ where: { id: { in: ids } }, data: { stage: "SENT", stageAt: now, stageBy: person.name } });
+    const rows = await db.lightPax.findMany({ where: { id: { in: ids } }, select: { tripId: true } });
+    const tripIds = [...new Set(rows.map((row) => row.tripId))];
+    for (const tripId of tripIds) {
+      const waiting = await db.lightPax.count({ where: { tripId, stage: { not: "SENT" } } });
+      if (waiting === 0) {
+        await db.lightTrip.update({
+          where: { id: tripId },
+          data: {
+            status: "SENT",
+            sentAt: now,
+            ...(body.vehicle ? { vehicleLabel: body.vehicle } : {}),
+            ...(body.destination ? { etaLabel: body.destination } : {}),
+          },
+        });
+      }
+    }
+    const note = [body.vehicle, body.destination].filter(Boolean).join(" to ");
+    await log(person.programId, person.name, "sent", `${person.name} sent ${ids.length}${note ? ` · ${note}` : ""}`);
+  }
+  return { ok: true };
 }
 
 function hoursLabel(start: Date | null, end: Date | null) {

@@ -754,6 +754,9 @@ model LightPax {
   bagStatus    String    @default("UNKNOWN")
   checkedIn    Boolean   @default(false)
   checkedInAt  DateTime?
+  stage        String    @default("EXPECTED")
+  stageAt      DateTime?
+  stageBy      String    @default("")
   noShow       Boolean   @default(false)
   ownTransport Boolean   @default(false)
   sortOrder    Int       @default(0)

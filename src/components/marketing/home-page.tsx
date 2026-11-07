@@ -39,8 +39,6 @@ const TRUST = [
   { icon: Plane, title: "Safety first", body: "From curb to destination." },
 ];
 
-const CITIES = ["Fort Myers", "Miami", "Milwaukee", "Anaheim", "Denver"];
-
 export function MarketingHome() {
   return (
     <>
@@ -104,7 +102,7 @@ export function MarketingHome() {
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#1E90FF]">Safety</p>
           <h2 id="safety" className="mt-2 max-w-3xl text-3xl font-semibold tracking-tight">Safety is our first priority.</h2>
           <p className="mt-4 max-w-3xl text-sm leading-relaxed text-white/80">
-            Every operator we bring in is vetted, licensed, and insured. Every Venture Director on the ground is experienced and trained. From curb to destination, every guest is counted, boarded, and confirmed.
+            Every operator we bring in is vetted, licensed, and insured. Every Venture Director on the ground is experienced and trained.
           </p>
           <ul className="mt-8 grid gap-3 md:grid-cols-3">
             {TRUST.map((item) => (
@@ -126,13 +124,13 @@ export function MarketingHome() {
             We don&apos;t replace them. We back them with highly experienced crews and the tech to run every move.
           </p>
           <p className="mt-3 text-sm leading-relaxed text-white/75">
-            Venture Directors plans the transportation and puts highly experienced directors on the ground so every move runs safely and seamlessly. We work alongside top-rated, licensed and insured operators who drive the vehicles.
+            Venture Directors plans the transportation and puts highly experienced directors on the ground so every move runs safely and seamlessly. We work alongside top-rated, licensed and insured operators.
           </p>
         </div>
         <div className="rounded-2xl border border-white/10 p-5">
           <h3 className="text-lg font-semibold">Highly experienced crew</h3>
           <p className="mt-2 text-sm leading-relaxed text-white/75">
-            Our Venture Directors are seasoned group-move pros who&apos;ve run arrivals, shuttles, and events across the country.
+            Our Venture Directors are seasoned group-move pros.
           </p>
           <p className="mt-4 text-sm font-medium text-white">Based in Orlando. Home base is Central Florida.</p>
         </div>
@@ -142,7 +140,7 @@ export function MarketingHome() {
         <div className="mx-auto max-w-6xl rounded-3xl border border-white/10 px-6 py-10">
           <h2 id="nationwide" className="text-3xl font-semibold tracking-tight">Based in Orlando. Ready nationwide.</h2>
           <p className="mt-3 max-w-2xl text-sm leading-relaxed text-white/75">
-            We operate and partner in cities across the country, including {CITIES.join(", ")}, and more.
+            We operate and partner in cities across the country.
           </p>
           <Link
             href="/quote?market=other"
