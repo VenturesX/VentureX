@@ -15,6 +15,10 @@ type LocalPlace = {
 };
 
 const LOCAL_PLACES: LocalPlace[] = [
+  { id: "tpa", name: "Tampa International Airport (TPA)", address: "Tampa, FL", area: "Tampa airport" },
+  { id: "rsw", name: "Southwest Florida International Airport (RSW)", address: "Fort Myers, FL", area: "Fort Myers airport" },
+  { id: "mia", name: "Miami International Airport (MIA)", address: "Miami, FL", area: "Miami airport" },
+  { id: "jax", name: "Jacksonville International Airport (JAX)", address: "Jacksonville, FL", area: "Jacksonville airport" },
   { id: "mco", name: "Orlando International Airport (MCO)", address: "1 Jeff Fuqua Boulevard, Orlando, FL 32827", area: "MCO airport" },
   { id: "mco-a", name: "Orlando International Airport (MCO), Terminal A", address: "1 Jeff Fuqua Boulevard, Orlando, FL 32827", area: "MCO airport" },
   { id: "mco-b", name: "Orlando International Airport (MCO), Terminal B", address: "1 Jeff Fuqua Boulevard, Orlando, FL 32827", area: "MCO airport" },
@@ -95,7 +99,7 @@ export async function suggestPlaces(query: string): Promise<PlaceSuggestion[]> {
       const remote = await googleSuggestions(q, key);
       if (remote.length > 0) return mergeSuggestions(remote, localSuggestions(q));
     } catch (error) {
-      console.error("Google Places lookup failed; using the local Orlando list.");
+      console.error("Google Places lookup failed; using the local Florida list.");
       if (process.env.NODE_ENV === "development") console.error(error);
     }
   }

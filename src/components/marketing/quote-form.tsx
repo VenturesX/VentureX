@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { PlaceField } from "@/components/marketing/place-field";
 import { TalkLine } from "@/components/marketing/talk-line";
 import { OTHER_CITY } from "@/lib/brand";
+import { requiresMarketCity } from "@/lib/service-area";
 import { manifestError, PROFILE_OPTIONS, QUOTE_MARKETS, type QuoteProfile } from "@/lib/quotes";
 import { GUEST_COUNT_MAX, GUEST_RANGES, formatGuestCount, guestRangeFor, type QuotePlan } from "@/lib/guidance";
 
@@ -28,6 +29,7 @@ export function QuoteForm({ initialMarket }: { initialMarket?: (typeof QUOTE_MAR
   const [marketCity, setMarketCity] = useState("");
   const [service, setService] = useState("");
   const [guestExact, setGuestExact] = useState("");
+  const [guestRangeId, setGuestRangeId] = useState<string | null>(null);
   const [vehiclePreference, setVehiclePreference] = useState("");
   const [pickup, setPickup] = useState("");
   const [dropoff, setDropoff] = useState("");
@@ -46,9 +48,11 @@ export function QuoteForm({ initialMarket }: { initialMarket?: (typeof QUOTE_MAR
   const [pending, setPending] = useState(false);
   const [manifestName, setManifestName] = useState<string | null>(null);
 
-  const guestCount = guestExact;
-  const guestNumber = Number(guestExact) || 0;
-  const activeRange = guestRangeFor(guestNumber);
+  const selectedRange = GUEST_RANGES.find((range) => range.id === guestRangeId);
+  const guestCount = guestExact || (selectedRange?.size ? String(selectedRange.size) : "");
+  const guestNumber = Number(guestCount) || 0;
+  const activeRange = guestExact ? guestRangeFor(Number(guestExact)) : selectedRange;
+  const usesGuestEstimate = !guestExact && Boolean(selectedRange?.size);
   const ready = Boolean(service && guestCount && pickup.trim().length >= 2 && dropoff.trim().length >= 2 && startTime && (service !== "SHUTTLE_LOOP" || waitMinutes));
   const repTotal = plan ? plan.repCount + repBump : 0;
   const stopValues = stops.map((stop) => stop.value.trim()).filter((stop) => stop.length >= 2);
@@ -102,6 +106,10 @@ export function QuoteForm({ initialMarket }: { initialMarket?: (typeof QUOTE_MAR
     event.preventDefault();
     const form = event.currentTarget;
     const body = new FormData(form);
+    if (usesGuestEstimate && selectedRange) {
+      const notes = String(body.get("notes") ?? "").trim();
+      body.set("notes", `${notes}${notes ? "\n\n" : ""}Guest count is a planning estimate of ${guestCount} from the selected ${selectedRange.label} range; exact count to be confirmed.`);
+    }
     const file = body.get("manifest");
     if (file instanceof File && file.size > 0) {
       const fileError = manifestError(file);
@@ -143,13 +151,13 @@ export function QuoteForm({ initialMarket }: { initialMarket?: (typeof QUOTE_MAR
           ))}
         </div>
         <input type="hidden" name="market" value={market} />
-        {market === OTHER_CITY ? (
+        {requiresMarketCity(market) ? (
           <label className="block text-sm" htmlFor="marketCity">City and state
-            <input id="marketCity" value={marketCity} onChange={(event) => setMarketCity(event.target.value)} placeholder="Denver, CO" className={`${fieldClass} mt-1`} />
+            <input id="marketCity" value={marketCity} onChange={(event) => setMarketCity(event.target.value)} placeholder={market === OTHER_CITY ? "City, state" : "City, FL"} required className={`${fieldClass} mt-1`} />
           </label>
         ) : null}
-        <input type="hidden" name="marketCity" value={market === OTHER_CITY ? marketCity : ""} />
-        {market === OTHER_CITY ? <p className="text-sm text-white/60">We will follow up. This comes in as a lead.</p> : null}
+        <input type="hidden" name="marketCity" value={requiresMarketCity(market) ? marketCity : ""} />
+        {market === OTHER_CITY ? <p className="text-sm text-white/60">Tell us your city. We will confirm availability and follow up with you.</p> : null}
       </section>
       <section className="space-y-3">
         <h2 className="text-xl font-semibold">The move</h2>
@@ -164,26 +172,31 @@ export function QuoteForm({ initialMarket }: { initialMarket?: (typeof QUOTE_MAR
 
       <section id="guests" className="space-y-3">
         <h2 className="text-xl font-semibold">Guests</h2>
-        <p className="text-sm text-white/70">Tap a range. We size to the top of it, and you can type the exact count.</p>
+        <p id="guest-count-help" className="text-sm text-white/70">Choose a range for a planning estimate, or enter your guest count. For 1,000+ guests, enter a count so we can size your program.</p>
         <div className="grid grid-cols-2 gap-2">
           {GUEST_RANGES.map((range) => (
-            <Choice key={range.id} selected={activeRange?.id === range.id} onClick={() => setGuestExact(String(range.size))}>
+            <Choice key={range.id} selected={activeRange?.id === range.id} onClick={() => { setGuestRangeId(range.id); setGuestExact(""); }}>
               {range.label}
             </Choice>
           ))}
         </div>
-        <label className="block text-sm" htmlFor="guestExact">Exact guest count</label>
+        <label className="block text-sm" htmlFor="guestExact">Guest count, if known</label>
         <input
           id="guestExact"
           inputMode="numeric"
           pattern="[0-9]*"
           enterKeyHint="done"
           autoComplete="off"
+          required={selectedRange?.size === null}
+          aria-describedby="guest-count-help"
           value={guestExact}
           onChange={(event) => setGuestExact(readGuestCount(event.target.value))}
           className="h-14 w-full rounded-xl border border-white/15 bg-black px-3 text-2xl font-semibold tracking-wide text-white outline-none focus:border-[#1E90FF]"
           placeholder="500"
         />
+        {usesGuestEstimate ? <p className="text-sm text-white/70">Planning for up to {formatGuestCount(guestNumber)} guests. Enter a count above to refine the estimate.</p> : null}
+        {selectedRange?.size === null && !guestExact ? <p className="text-sm text-white/70">Enter your expected guest count above. An estimate is welcome; we will confirm the final count with you.</p> : null}
+        {errors.passengerCount ? <p role="alert" className="text-sm text-rose-200">{errors.passengerCount}</p> : null}
         {guestNumber >= 1000 ? <p className="text-sm text-white/60">{formatGuestCount(guestNumber)} guests</p> : null}
       </section>
 
@@ -299,7 +312,7 @@ export function QuoteForm({ initialMarket }: { initialMarket?: (typeof QUOTE_MAR
         <label className="block text-sm" htmlFor="phone">Phone</label>
         <input id="phone" name="phone" type="tel" className={fieldClass} autoComplete="tel" />
         <label className="block text-sm" htmlFor="notes">Notes</label>
-        <textarea id="notes" name="notes" className={`${fieldClass} min-h-24 py-3`} />
+        <textarea id="notes" name="notes" maxLength={3800} className={`${fieldClass} min-h-24 py-3`} />
         <label htmlFor="manifest" className="flex min-h-12 cursor-pointer items-center justify-center rounded-xl border border-dashed border-[#1E90FF]/50 px-3 text-sm">
           {manifestName ?? "Add a flight manifest (optional)"}
         </label>
@@ -386,7 +399,7 @@ function Field({ label, name, children }: { label: string; name: string; childre
 
 function Choice({ selected, onClick, children }: { selected: boolean; onClick: () => void; children: ReactNode }) {
   return (
-    <button type="button" onClick={onClick} className={`min-h-14 w-full rounded-xl border px-3 text-left text-sm font-semibold ${selected ? "border-[#1E90FF] bg-[#1E90FF] text-white" : "border-white/15 bg-black text-white"}`}>
+    <button type="button" aria-pressed={selected} onClick={onClick} className={`min-h-14 w-full rounded-xl border px-3 text-left text-sm font-semibold ${selected ? "border-[#1E90FF] bg-[#1E90FF] text-white" : "border-white/15 bg-black text-white"}`}>
       {children}
     </button>
   );

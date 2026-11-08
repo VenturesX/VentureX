@@ -48,7 +48,7 @@ export type OfficeHours = {
   timezone: "America/New_York";
 };
 
-/** Quick-tap bands for large groups. `size` is the top of the band, so the plan does not come up short. */
+/** Closed bands use their upper bound for planning. Open-ended bands need a guest count. */
 export const GUEST_COUNT_MAX = 50_000;
 
 export const GUEST_RANGES = [
@@ -57,7 +57,7 @@ export const GUEST_RANGES = [
   { id: "100-250", label: "100-250", size: 250, min: 101, max: 250 },
   { id: "250-500", label: "250-500", size: 500, min: 251, max: 500 },
   { id: "500-1000", label: "500-1,000", size: 1000, min: 501, max: 1000 },
-  { id: "1000-plus", label: "1,000+", size: 1500, min: 1001, max: GUEST_COUNT_MAX },
+  { id: "1000-plus", label: "1,000+", size: null, min: 1001, max: GUEST_COUNT_MAX },
 ] as const;
 
 export function guestRangeFor(count: number) {
