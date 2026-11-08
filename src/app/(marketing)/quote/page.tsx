@@ -5,7 +5,7 @@ import { OTHER_CITY } from "@/lib/brand";
 
 export const metadata: Metadata = {
   title: "Get a Quote",
-  description: "Quote group transportation. Central Florida is home. Other cities are welcome.",
+  description: "Plan group transportation in Orlando, Tampa, Fort Myers, Miami, Jacksonville, and across Florida. Share the details of your program for a quote.",
   alternates: { canonical: "/quote" },
 };
 
@@ -16,7 +16,7 @@ export default async function QuotePage({ searchParams }: { searchParams: Promis
       <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#1E90FF]">Get a quote</p>
       <h1 className="mt-2 text-4xl font-semibold tracking-tight">Plan the move.</h1>
       <p className="mt-3 text-sm leading-relaxed text-white/70">
-        Central Florida is home. If your city is somewhere else, tell us and we will follow up. Nothing is reserved until you accept a quote.
+        Tell us about your program in Orlando, Tampa, Fort Myers, Miami, Jacksonville, or elsewhere in Florida. Planning outside Florida? Share your city and we will confirm availability. Nothing is reserved until you accept a quote.
       </p>
       <div className="mt-6">
         <QuickAnswers />

@@ -24,8 +24,8 @@ const base = {
 };
 
 describe("large guest counts", () => {
-  it("sizes each range to its top and keeps 500 in the 250-500 band", () => {
-    assert.deepEqual(GUEST_RANGES.map((range) => range.size), [49, 100, 250, 500, 1000, 1500]);
+  it("uses upper bounds for closed ranges and requires a count for the open range", () => {
+    assert.deepEqual(GUEST_RANGES.map((range) => range.size), [49, 100, 250, 500, 1000, null]);
     assert.equal(guestRangeFor(500)?.label, "250-500");
     assert.equal(guestRangeFor(5000)?.label, "1,000+");
     assert.equal(guestRangeFor(49)?.label, "Under 50");

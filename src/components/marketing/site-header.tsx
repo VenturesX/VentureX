@@ -114,7 +114,7 @@ export function SiteFooter() {
           <Wordmark compact />
         </Link>
         <p className="max-w-xl text-sm leading-relaxed text-white/75">
-          {COMPANY_LEGAL} is based in Orlando and ready nationwide. Central Florida is home. We also partner in cities across the country.
+          {COMPANY_LEGAL} is your DMC transportation partner, based in Orlando and supporting programs across Florida. Ask us about availability outside Florida.
         </p>
         <div className="flex flex-col gap-1 text-sm">
           <a className="w-fit text-white" href={`mailto:${COMPANY_EMAIL}`}>{COMPANY_EMAIL}</a>

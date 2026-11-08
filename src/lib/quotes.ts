@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { OTHER_CITY } from "@/lib/brand";
-import { isQuoteMarket, outOfAreaMessage, QUOTE_MARKETS } from "@/lib/service-area";
+import { isQuoteMarket, outOfAreaMessage, QUOTE_MARKETS, requiresMarketCity } from "@/lib/service-area";
 
 export { QUOTE_MARKETS };
 
@@ -235,7 +235,7 @@ const quoteSchema = z
     if (data.market && !isQuoteMarket(data.market)) {
       ctx.addIssue({ code: "custom", path: ["market"], message: "Choose a market, or tell us the city." });
     }
-    if (data.market === OTHER_CITY && (data.marketCity ?? "").trim().length < 2) {
+    if (requiresMarketCity(data.market ?? "") && (data.marketCity ?? "").trim().length < 2) {
       ctx.addIssue({ code: "custom", path: ["marketCity"], message: "Tell us the city and state." });
     }
   })

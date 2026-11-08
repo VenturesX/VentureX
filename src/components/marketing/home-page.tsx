@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, BadgeCheck, Bus, Plane, Route, Shield, Ship } from "lucide-react";
+import { ArrowRight, BadgeCheck, Bus, ChartNoAxesCombined, Plane, Route, Shield, Ship } from "lucide-react";
 import { HERO_SUB } from "@/lib/brand";
 
 const SERVICES = [
@@ -29,14 +29,14 @@ const SERVICES = [
 const STEPS = [
   { title: "Tell us the move", body: "Dates, guest count, and the stops. A quote request takes a few minutes." },
   { title: "We confirm it", body: "You see the vehicle plan and the price. Nothing is reserved until you accept." },
-  { title: "Venture Directors on the ground", body: "Our highly experienced directors greet, load, and dispatch while vetted, licensed operators drive. We confirm every move." },
+  { title: "Your team on the ground", body: "We greet, load, and dispatch alongside your team while vetted, licensed operators drive. Live passenger counts keep you informed." },
   { title: "Guests know where", body: "A link shows where to wait and load. No app to download." },
 ];
 
 const TRUST = [
-  { icon: BadgeCheck, title: "Vetted operators", body: "Top-rated, licensed, and insured." },
-  { icon: Shield, title: "Highly experienced crew", body: "Seasoned group-move pros." },
-  { icon: Plane, title: "Safety first", body: "From curb to destination." },
+  { icon: BadgeCheck, title: "Vetted operators", body: "Licensed and insured transportation partners." },
+  { icon: Shield, title: "On-site coordination", body: "A team managing guest greetings, loading, and dispatch." },
+  { icon: Plane, title: "Guest care", body: "Clear meeting points and support from curb to destination." },
 ];
 
 export function MarketingHome() {
@@ -62,6 +62,9 @@ export function MarketingHome() {
               <span className="mt-1 inline-block bg-gradient-to-r from-[#1E90FF] to-[#8B5CF6] bg-clip-text text-transparent">Handled.</span>
             </h1>
             <p className="mt-5 max-w-md text-base leading-relaxed text-white/85">{HERO_SUB}</p>
+            <p className="mt-4 max-w-lg text-base leading-relaxed text-white/75">
+              We work alongside Orlando&apos;s destination management companies to plan transportation, welcome guests, and coordinate every move—with live passenger counts that keep your team informed.
+            </p>
             <div className="mt-8">
               <Link
                 href="/quote"
@@ -71,6 +74,28 @@ export function MarketingHome() {
                 <ArrowRight className="size-4" />
               </Link>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="border-y border-[#1E90FF]/20 bg-[#1E90FF]/[0.04]" aria-labelledby="live-counts">
+        <div className="mx-auto grid max-w-6xl gap-8 px-5 py-12 md:grid-cols-2 md:items-center">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#1E90FF]">Live passenger counts</p>
+            <h2 id="live-counts" className="mt-2 text-3xl font-semibold tracking-tight">Stay connected to every move.</h2>
+            <p className="mt-4 text-sm leading-relaxed text-white/80">
+              Your DMC team and clients can follow passenger counts as our crew updates guest statuses. See who is expected, checked in, boarded, and departed throughout the program.
+            </p>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-black/30 p-6">
+            <ChartNoAxesCombined className="size-6 text-[#1E90FF]" aria-hidden="true" />
+            <h3 className="mt-4 text-lg font-semibold">One shared view for your team.</h3>
+            <p className="mt-2 text-sm leading-relaxed text-white/75">
+              From airport arrivals to event shuttles, live counts help planners and on-site crews coordinate the next move together.
+            </p>
+            <Link href="/quote" className="mt-5 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-[#9ecbff]">
+              Plan your program <ArrowRight className="size-4" aria-hidden="true" />
+            </Link>
           </div>
         </div>
       </section>
@@ -119,28 +144,28 @@ export function MarketingHome() {
       <section id="about" className="mx-auto grid max-w-6xl scroll-mt-24 gap-8 px-5 py-16 md:grid-cols-2">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#1E90FF]">Who we work with</p>
-          <h2 className="mt-2 text-3xl font-semibold tracking-tight">We partner with top destination management companies.</h2>
+          <h2 className="mt-2 text-3xl font-semibold tracking-tight">Your DMC transportation partner.</h2>
           <p className="mt-4 text-sm leading-relaxed text-white/75">
-            We don&apos;t replace them. We back them with highly experienced crews and the tech to run every move.
+            We work alongside Orlando&apos;s destination management companies as an extension of your team, supporting your client relationships and the guest experience you promise.
           </p>
           <p className="mt-3 text-sm leading-relaxed text-white/75">
-            Venture Directors plans the transportation and puts highly experienced directors on the ground so every move runs safely and seamlessly. We work alongside top-rated, licensed and insured operators.
+            From transportation planning and airport meet-and-greets to on-site dispatch and live passenger counts, we help your team stay connected throughout the program. Licensed and insured operators handle the driving.
           </p>
         </div>
         <div className="rounded-2xl border border-white/10 p-5">
-          <h3 className="text-lg font-semibold">Highly experienced crew</h3>
+          <h3 className="text-lg font-semibold">A partnership built around your program.</h3>
           <p className="mt-2 text-sm leading-relaxed text-white/75">
-            Our Venture Directors are seasoned group-move pros.
+            You bring the client relationship and program vision. We bring transportation coordination, a crew on the ground, and visibility into each move.
           </p>
-          <p className="mt-4 text-sm font-medium text-white">Based in Orlando. Home base is Central Florida.</p>
+          <p className="mt-4 text-sm font-medium text-white">Based in Orlando. Supporting programs across Florida.</p>
         </div>
       </section>
 
       <section className="px-5 pb-4" aria-labelledby="nationwide">
         <div className="mx-auto max-w-6xl rounded-3xl border border-white/10 px-6 py-10">
-          <h2 id="nationwide" className="text-3xl font-semibold tracking-tight">Based in Orlando. Ready nationwide.</h2>
+          <h2 id="nationwide" className="text-3xl font-semibold tracking-tight">Orlando roots. Florida connections.</h2>
           <p className="mt-3 max-w-2xl text-sm leading-relaxed text-white/75">
-            We operate and partner in cities across the country.
+            Plan airport arrivals, convention transportation, and group moves in Orlando, Tampa, Fort Myers, Miami, Jacksonville, and Port Canaveral. For programs outside Florida, tell us your city and we will confirm availability.
           </p>
           <Link
             href="/quote?market=other"

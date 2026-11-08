@@ -48,7 +48,7 @@ export type OfficeHours = {
   timezone: "America/New_York";
 };
 
-/** Quick-tap bands for large groups. `size` is the top of the band, so the plan does not come up short. */
+/** Closed bands use their upper bound for planning. Open-ended bands need a guest count. */
 export const GUEST_COUNT_MAX = 50_000;
 
 export const GUEST_RANGES = [
@@ -57,7 +57,7 @@ export const GUEST_RANGES = [
   { id: "100-250", label: "100-250", size: 250, min: 101, max: 250 },
   { id: "250-500", label: "250-500", size: 500, min: 251, max: 500 },
   { id: "500-1000", label: "500-1,000", size: 1000, min: 501, max: 1000 },
-  { id: "1000-plus", label: "1,000+", size: 1500, min: 1001, max: GUEST_COUNT_MAX },
+  { id: "1000-plus", label: "1,000+", size: null, min: 1001, max: GUEST_COUNT_MAX },
 ] as const;
 
 export function guestRangeFor(count: number) {
@@ -265,100 +265,7 @@ export function parseTiming(stored: string | null | undefined): TimingSettings {
   try {
     const parsed = JSON.parse(stored) as Partial<TimingSettings>;
     const curbBufferMinutes = clampInt(parsed.curbBufferMinutes, 0, 30, DEFAULT_TIMING.curbBufferMinutes);
-    const loadMinutes = clampInt(parsed.loadMinutes, 0, 60, DEFAULT_TIMING.loadMinutes);
-    const unloadMinutes = clampInt(parsed.unloadMinutes, 0, 60, DEFAULT_TIMING.unloadMinutes);
-    return {
-      curbBufferMinutes,
-      loadMinutes,
-      unloadMinutes,
-      bufferIsDefault: curbBufferMinutes === DEFAULT_TIMING.curbBufferMinutes,
-      loadIsDefault: loadMinutes === DEFAULT_TIMING.loadMinutes,
-      unloadIsDefault: unloadMinutes === DEFAULT_TIMING.unloadMinutes,
-    };
-  } catch {
-    return { ...DEFAULT_TIMING };
-  }
-}
-
-export function matchDrivePair(from: string, to: string, table: DrivePair[]) {
-  let best: DrivePair | null = null;
-  let bestScore = 0;
-  for (const pair of table) {
-    const forward = hitScore(from, pair.from) + hitScore(to, pair.to);
-    const back = hitScore(from, pair.to) + hitScore(to, pair.from);
-    const score = Math.max(forward, back);
-    if (score > bestScore) {
-      best = pair;
-      bestScore = score;
-    }
-  }
-  return bestScore > 0 ? best : null;
-}
-
-export function recommendQuote(input: QuotePlanInput, fleet: FleetVehicle[], timing: TimingSettings, legs: DriveLeg[] | null): QuotePlan {
-  const vehicle = chooseVehicle(input.vehiclePreference, input.passengerCount, fleet);
-  const blanks = requestHasBlanks(input);
-  if (input.serviceType === "SHUTTLE_LOOP") {
-    return recommendLoop(input, vehicle, timing, legs, blanks);
-  }
-  return recommendPoint(input, vehicle, blanks);
-}
-
-export function requestHasBlanks(input: QuotePlanInput) {
-  if (!input.serviceType || input.serviceType === "UNSURE") return true;
-  if (!input.passengerCount) return true;
-  if (input.pickup.trim().length < 2 || input.dropoff.trim().length < 2) return true;
-  if (!input.startDate) return true;
-  if (!input.email && !input.phone) return true;
-  if (input.serviceType === "SHUTTLE_LOOP" && !input.waitMinutes && !input.waitVaries) return true;
-  return false;
-}
-
-function recommendPoint(input: QuotePlanInput, vehicle: FleetVehicle, blanks: boolean): QuotePlan {
-  if (!input.passengerCount) {
-    const text = "Tell us about how many guests, and we can suggest a vehicle. This is a recommendation, not a confirmed plan.";
-    return planShell(text, null, vehicle, 0, 0, null, "none", blanks || input.unsureSteps.length > 0);
-  }
-  const count = Math.max(1, Math.ceil(input.passengerCount / vehicle.usable));
-  const noun = vehicleNoun(vehicle.label, count);
-  const headline = `We suggest ${formatGuestCount(count)} ${noun} for ${formatGuestCount(input.passengerCount)} guests.`;
-  const detail = `We plan on ${vehicle.usable} usable seats out of ${vehicle.seats}. This is a recommendation, not a confirmed plan.`;
-  return finishPlan(headline, null, detail, count, vehicle, null, "none", blanks || input.unsureSteps.length > 0);
-}
-
-function recommendLoop(input: QuotePlanInput, vehicle: FleetVehicle, timing: TimingSettings, legs: DriveLeg[] | null, blanks: boolean): QuotePlan {
-  const stopCount = 2 + input.stops.filter((stop) => stop.trim().length >= 2).length;
-  const dwell = timing.loadMinutes + timing.unloadMinutes;
-  if (!legs || legs.length < 2) {
-    const text = "Add the drive minutes each way, or send this to a Venture Expert. We won't guess a loop time.";
-    return planShell(text, null, vehicle, 0, 0, null, "missing", true);
-  }
-  const source = legs.every((leg) => leg.source === legs[0].source) ? legs[0].source : "table";
-  const cycle = legs.reduce((sum, leg) => sum + leg.drive + timing.curbBufferMinutes, 0) + stopCount * dwell;
-  const math = formatLoopMath(legs, timing, stopCount);
-  if (input.waitVaries && !input.waitMinutes) {
-    const byCapacity = input.passengerCount ? Math.ceil(input.passengerCount / vehicle.usable) : 0;
-    const noun = vehicleNoun(vehicle.label, byCapacity || 1);
-    const headline = byCapacity
-      ? `We suggest ${formatGuestCount(byCapacity)} ${noun} for ${formatGuestCount(input.passengerCount)} guests.`
-      : `Full loop about ${cycle} min.`;
-    const detail = "Average wait varies through the day. We'll size the loop with you. This is a recommendation, not a confirmed plan.";
-    return finishPlan(headline, math, detail, byCapacity, vehicle, cycle, source, true);
-  }
-  const byHeadway = input.waitMinutes ? Math.ceil(cycle / input.waitMinutes) : 0;
-  const byCapacity = input.passengerCount ? Math.ceil(input.passengerCount / vehicle.usable) : 0;
-  const count = Math.max(byHeadway, byCapacity);
-  if (!count) {
-    const headline = `Full loop about ${cycle} min.`;
-    const detail = "Share a guest count and a wait of 15, 20, or 30 minutes and we can suggest vehicles. This is a recommendation, not a confirmed plan.";
-    return finishPlan(headline, math, detail, 0, vehicle, cycle, source, true);
-  }
-  const noun = vehicleNoun(vehicle.label, count);
-  const headline = input.passengerCount
-    ? `We suggest ${formatGuestCount(count)} ${noun} for ${formatGuestCount(input.passengerCount)} guests.`
-    : `We suggest ${formatGuestCount(count)} ${noun}.`;
-  const bits = [`Full loop about ${cycle} min.`];
-  if (byHeadway && input.waitMinutes) bits.push(`A ${input.waitMinutes}-minute wait needs ${formatGuestCount(byHeadway)}.`);
+    const …1292 tokens truncated…es) bits.push(`A ${input.waitMinutes}-minute wait needs ${formatGuestCount(byHeadway)}.`);
   if (byCapacity && input.passengerCount) bits.push(`${formatGuestCount(input.passengerCount)} guests need room on ${formatGuestCount(byCapacity)} at ${vehicle.usable} usable seats.`);
   bits.push("This is a recommendation, not a confirmed plan.");
   if (source === "table") bits.push("Drive time is the default for this route pair.");
