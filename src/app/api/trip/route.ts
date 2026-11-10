@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { externalPortalHref } from "@/lib/external-portals";
 import { applyExtraCode, findProgramByNumber, loadVisibleTrip, noteGuestTry, openProgramSession, tooManyGuestTries } from "@/lib/guest-portal";
 import { readTripToken, signTripToken, TRIP_COOKIE } from "@/lib/guest-session";
 import { ownerCodeMatches } from "@/lib/crew-access";
@@ -45,10 +46,13 @@ export async function POST(request: Request) {
   const current = await readTripToken(store.get(TRIP_COOKIE)?.value || "");
 
   if (step === "open") {
-    if (await ownerCodeMatches(String(body?.code ?? ""))) {
+    const code = String(body?.code ?? "");
+    if (await ownerCodeMatches(code)) {
       return setOwnerSession(NextResponse.json({ ok: true, href: "/team" }), request);
     }
-    const program = await findProgramByNumber(String(body?.code ?? ""));
+    const portal = externalPortalHref(code);
+    if (portal) return NextResponse.json({ ok: true, href: portal });
+    const program = await findProgramByNumber(code);
     if (!program) {
       await noteGuestTry(ip);
       return NextResponse.json({ error: "That program number didn't match." }, { status: 401 });

@@ -164,6 +164,14 @@ try {
   expired.set("vd_crew", await new SignJWT({ kind: "admin", programId: alpha.id, personId: "", name: "Owner" }).setProtectedHeader({ alg: "HS256" }).setExpirationTime(1).sign(new TextEncoder().encode(secret)));
   assert.equal((await request("/api/team/owner", expired)).status, 401);
   passed("expired owner sessions cannot access programs");
+  const portalJar = jar();
+  const portal = await request("/api/trip", portalJar, { step: "open", code: "1219" });
+  assert.equal(portal.status, 200);
+  assert.equal((await portal.json()).href, "https://horizon.venturedirectors.com");
+  assert.equal(portalJar.size, 0);
+  passed("program number 1219 opens the external portal without a guest session");
+  assert.equal((await request("/api/trip", jar(), { step: "open", code: "0000" })).status, 401);
+  passed("unknown program numbers still fail");
   const tripLogin = jar();
   assert.equal((await (await request("/api/trip", tripLogin, { step: "open", code: ownerCode })).json()).href, "/team");
   assert.equal((await request("/api/team/owner", tripLogin)).status, 200);
