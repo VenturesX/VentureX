@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, BadgeCheck, Bus, ChartNoAxesCombined, Plane, Route, Shield, Ship } from "lucide-react";
+import { ArrowRight, BadgeCheck, Bus, ChartNoAxesCombined, Plane, Route, Shield, Ship, Trophy } from "lucide-react";
 import { HERO_SUB } from "@/lib/brand";
 
 const SERVICES = [
@@ -13,6 +13,11 @@ const SERVICES = [
     icon: Route,
     title: "Event Shuttles",
     body: "Convention loops, dine-arounds, and venue moves. A schedule the group can follow, and a crew on the curb.",
+  },
+  {
+    icon: Trophy,
+    title: "Sports & School Transportation",
+    body: "Sports teams, school trips, bands, choirs, and competitions. From local Orlando outings to tournament travel, we coordinate airport, hotel, and venue transfers—directly with your group or alongside your transportation and DMC partners.",
   },
   {
     icon: Ship,
@@ -113,7 +118,7 @@ export function MarketingHome() {
               <p className="mt-2 text-sm leading-relaxed text-white/75">{service.body}</p>
             </article>
           ))}
-          <article className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 sm:col-span-2">
+          <article className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
             <h3 className="text-lg font-semibold">…and more</h3>
             <p className="mt-2 text-sm leading-relaxed text-white/75">
               If the group needs to move, ask. We will tell you straight whether we can run it.
