@@ -2,12 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { BusinessPhone } from "@/components/marketing/business-phone";
-import { isLiveLineOpen, type OfficeHours } from "@/lib/guidance";
 
 const TIMES = ["Morning", "Afternoon", "Evening", "Anytime"];
 
 export function TalkLine() {
-  const [hours, setHours] = useState<OfficeHours | null>(null);
   const [hoursLabel, setHoursLabel] = useState("");
   const [open, setOpen] = useState(false);
   const [bestTime, setBestTime] = useState("");
@@ -19,9 +17,8 @@ export function TalkLine() {
     let cancelled = false;
     void fetch("/api/help")
       .then((response) => response.json())
-      .then((json: { hours?: OfficeHours | null; hoursLabel?: string }) => {
+      .then((json: { hoursLabel?: string }) => {
         if (cancelled) return;
-        setHours(json.hours ?? null);
         setHoursLabel(json.hoursLabel ?? "");
       })
       .catch(() => undefined);
@@ -29,9 +26,6 @@ export function TalkLine() {
       cancelled = true;
     };
   }, []);
-
-  const lineOpen = isLiveLineOpen(hours);
-  const afterHours = lineOpen === false;
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -63,8 +57,8 @@ export function TalkLine() {
 
   return (
     <div id="contact" className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4 text-sm leading-relaxed">
-      <BusinessPhone className="min-h-11 text-base" />
-      {afterHours && hoursLabel ? <p className="mt-2 text-xs text-white/50">Live line {hoursLabel}.</p> : null}
+      <BusinessPhone label="" className="min-h-11 text-base" />
+      {hoursLabel ? <p className="mt-2 text-xs text-white/50">Live line · {hoursLabel}.</p> : null}
       <p className="mt-2 text-white/60">
         Prefer a callback?{" "}
         <button type="button" className="font-medium text-white underline decoration-white/30" onClick={() => setOpen((current) => !current)}>
