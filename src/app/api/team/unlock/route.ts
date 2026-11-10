@@ -8,6 +8,7 @@ import {
   findProgramByAccessCode,
   noteFailedTry,
   ownerCodeMatches,
+  staffCodeMatches,
   tooManyTries,
 } from "@/lib/crew-access";
 import {
@@ -67,6 +68,14 @@ export async function POST(request: Request) {
       const response = NextResponse.json({ ok: true, scope: "all", programName: "", owner: true });
       return setOwnerSession(response, request);
     }
+    if (await staffCodeMatches(code)) {
+      const token = await signGateToken({ scope: "all", programId: "", programName: "", staffOnly: true });
+      const response = NextResponse.json({ ok: true, scope: "all", programName: "" });
+      response.cookies.set(PROGRAM_COOKIE, token, cookieOptions(request, new Date(endOfShiftUnix() * 1000)));
+      response.cookies.set(CREW_COOKIE, "", expiredCookie(request));
+      response.cookies.set(TRIP_COOKIE, "", expiredCookie(request));
+      return response;
+    }
     const program = await findProgramByAccessCode(code);
     if (!program) {
       await noteFailedTry(ip);
@@ -84,6 +93,9 @@ export async function POST(request: Request) {
   const store = await cookies();
   const gate = await readGateToken(store.get(PROGRAM_COOKIE)?.value || "");
   if (!gate) return NextResponse.json({ error: "Start again." }, { status: 401 });
+  if (gate.staffOnly && !["director", "dispatch", "driver"].includes(portal)) {
+    return NextResponse.json({ error: "Choose Director, Dispatch, or Driver." }, { status: 403 });
+  }
   const programLimit = gate.scope === "program" ? gate.programId : null;
   const href = PORTALS[portal as keyof typeof PORTALS];
   const expires = cookieOptions(request, new Date(endOfShiftUnix() * 1000));

@@ -16,10 +16,11 @@ execFileSync("python3", ["-c", "import sqlite3,sys; sqlite3.connect(sys.argv[1])
 const db = new PrismaClient({ datasources: { db: { url: databaseUrl } } });
 const secret = randomUUID();
 const ownerCode = randomUUID();
+const staffCode = randomUUID();
 const port = 43139;
 const base = `http://127.0.0.1:${port}`;
 const server = spawn(process.execPath, ["node_modules/next/dist/bin/next", "start", "-H", "127.0.0.1", "-p", String(port)], {
-  env: { ...process.env, DATABASE_URL: databaseUrl, AUTH_SECRET: secret, OWNER_ACCESS_CODE: ownerCode }, stdio: ["ignore", "pipe", "pipe"],
+  env: { ...process.env, DATABASE_URL: databaseUrl, AUTH_SECRET: secret, OWNER_ACCESS_CODE: ownerCode, STAFF_ACCESS_CODE: staffCode }, stdio: ["ignore", "pipe", "pipe"],
 });
 let logs = "";
 server.stdout.on("data", (data) => { logs += data; });
@@ -108,6 +109,22 @@ try {
   assert.equal(crewDay.status, 200); assert.equal((await crewDay.json()).owner, false);
   assert.equal((await request("/api/team/owner", staff)).status, 401);
   passed("staff day codes still work without gaining owner access");
+  const sharedStaff = jar();
+  const staffEntry = await request("/api/team/unlock", sharedStaff, { step: "gate", code: staffCode });
+  assert.equal(staffEntry.status, 200); assert.notEqual((await staffEntry.json()).owner, true);
+  assert.equal((await request("/api/team/owner", sharedStaff)).status, 401);
+  assert.equal((await request("/api/team/day", sharedStaff)).status, 401);
+  passed("shared staff code opens only the entry gate, not private desks or owner data");
+  assert.equal((await request("/api/team/unlock", sharedStaff, { step: "portal", portal: "admin", code: ownerCode })).status, 403);
+  assert.equal((await request("/api/team/unlock", sharedStaff, { step: "portal", portal: "clipboard", code: "2468" })).status, 403);
+  assert.equal((await request("/api/team/unlock", sharedStaff, { step: "portal", portal: "director", code: "wrong" })).status, 401);
+  passed("staff entry offers only the three workspaces and still verifies day codes");
+  for (const portal of ["director", "dispatch", "driver"]) {
+    const entered = await request("/api/team/unlock", sharedStaff, { step: "portal", portal, code: "2468" });
+    assert.equal(entered.status, 200);
+    assert.equal((await request("/api/team/owner", sharedStaff)).status, 401);
+  }
+  passed("Director, Dispatch, and Driver all accept a valid staff day code");
   const expired = jar();
   expired.set("vd_crew", await new SignJWT({ kind: "admin", programId: alpha.id, personId: "", name: "Owner" }).setProtectedHeader({ alg: "HS256" }).setExpirationTime(1).sign(new TextEncoder().encode(secret)));
   assert.equal((await request("/api/team/owner", expired)).status, 401);

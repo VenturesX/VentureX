@@ -15,6 +15,7 @@ export type GateSession = {
   scope: "program" | "all";
   programId: string;
   programName: string;
+  staffOnly?: boolean;
 };
 
 function secret() {
@@ -70,6 +71,7 @@ export async function readGateToken(token: string): Promise<GateSession | null> 
       scope: payload.scope,
       programId: String(payload.programId ?? ""),
       programName: String(payload.programName ?? ""),
+      staffOnly: payload.staffOnly === true,
     };
   } catch {
     return null;

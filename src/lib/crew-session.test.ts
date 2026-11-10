@@ -1,10 +1,16 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { ownerCodeMatches } from "@/lib/crew-access";
+import { ownerCodeMatches, staffCodeMatches } from "@/lib/crew-access";
 import { endOfShiftUnix } from "@/lib/crew-session";
 import { quoteEmailConfig } from "@/lib/notify";
 
 describe("team lock and quote mail", () => {
+  it("keeps the shared staff gate locked unless a code is configured", async () => {
+    const previous = process.env.STAFF_ACCESS_CODE;
+    delete process.env.STAFF_ACCESS_CODE;
+    try { assert.equal(await staffCodeMatches("not-a-real-code"), false); }
+    finally { if (previous === undefined) delete process.env.STAFF_ACCESS_CODE; else process.env.STAFF_ACCESS_CODE = previous; }
+  });
   it("expires the session at the end of the Orlando day", () => {
     const now = Date.now();
     const exp = endOfShiftUnix(new Date(now)) * 1000;
