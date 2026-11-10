@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Menu, X } from "lucide-react";
-import { APP_NAME, COMPANY_EMAIL, COMPANY_LEGAL, COMPANY_PHONE, COMPANY_PHONE_TEL } from "@/lib/brand";
+import { APP_NAME, COMPANY_EMAIL, COMPANY_LEGAL } from "@/lib/brand";
 import { VentureMark, Wordmark } from "@/components/marketing/logo";
 
 const LINKS = [
@@ -36,7 +36,7 @@ export function SiteHeader() {
 
   const tripBar = open ? null : (
     <div className="fixed inset-x-0 bottom-0 z-30 border-t border-white/10 bg-[#090b10]/95 px-4 py-3 backdrop-blur md:hidden">
-      <p className="text-center text-xs text-white/60">Already traveling with us?</p>
+      <p className="text-center text-xs text-white/60">Already traveling with us?<span className="mt-0.5 block text-[#9ecbff]">24-hour trip support</span></p>
       <Link href="/trip" className="mt-2 flex h-12 items-center justify-center rounded-full bg-white text-sm font-semibold text-black">
         Open my trip
       </Link>
@@ -60,9 +60,12 @@ export function SiteHeader() {
         </nav>
         <div className="ml-auto hidden items-center gap-3 md:flex">
           <p className="text-right text-xs leading-tight text-white/60">Already traveling<br />with us?</p>
-          <Link href="/trip" className="inline-flex h-10 items-center rounded-full border border-white/20 px-4 text-sm font-semibold text-white">
-            Open my trip
-          </Link>
+          <div className="flex flex-col items-center gap-0.5">
+            <Link href="/trip" className="inline-flex h-10 items-center rounded-full border border-white/20 px-4 text-sm font-semibold text-white">
+              Open my trip
+            </Link>
+            <span className="text-[10px] leading-3 text-[#9ecbff]">24-hour trip support</span>
+          </div>
         </div>
         <Link href="/quote" className={`${quoteButtonClass} ml-auto h-10 px-3 sm:px-4 md:ml-3`}>
           <span className="sm:hidden">Quote</span>
@@ -95,6 +98,7 @@ export function SiteHeader() {
             </Link>
             <Link href="/trip" className="py-3 text-lg" onClick={() => setOpenPath(null)}>
               Open my trip
+              <span className="mt-1 block text-xs text-[#9ecbff]">24-hour trip support</span>
             </Link>
           </nav>
         </div>
@@ -118,7 +122,6 @@ export function SiteFooter() {
         </p>
         <div className="flex flex-col gap-1 text-sm">
           <a className="w-fit text-white" href={`mailto:${COMPANY_EMAIL}`}>{COMPANY_EMAIL}</a>
-          <a className="w-fit text-white" href={`tel:${COMPANY_PHONE_TEL}`}>{COMPANY_PHONE}</a>
         </div>
         <p className="text-xs text-white/45">Powered by {APP_NAME}</p>
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">

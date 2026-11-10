@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { TalkLine } from "@/components/marketing/talk-line";
-import { COMPANY_EMAIL, COMPANY_LEGAL, COMPANY_PHONE, COMPANY_PHONE_TEL, siteUrl } from "@/lib/brand";
+import { COMPANY_EMAIL, COMPANY_LEGAL, siteUrl } from "@/lib/brand";
 
 export const metadata: Metadata = {
   title: "Contact",
@@ -19,7 +19,6 @@ export default function ContactPage() {
       </p>
       <div className="mt-8 space-y-2 text-base">
         <a className="block font-semibold" href={`mailto:${COMPANY_EMAIL}`}>{COMPANY_EMAIL}</a>
-        <a className="block font-semibold" href={`tel:${COMPANY_PHONE_TEL}`}>{COMPANY_PHONE}</a>
       </div>
       <div className="mt-8">
         <TalkLine />
