@@ -25,6 +25,7 @@ export function AdminDesk() {
   const [report, setReport] = useState<Report | null>(null);
 
   useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("setup") === "1") setPanel("setup");
     void fetch("/api/team/session").then(async (response) => {
       const json = (await response.json()) as { signedIn?: { kind?: string; programId?: string; clientManagesGroups?: boolean } };
       if (json.signedIn?.clientManagesGroups && json.signedIn.programId) setGuestProgram(json.signedIn.programId);
@@ -70,7 +71,7 @@ export function AdminDesk() {
   return (
     <div className="mx-auto max-w-3xl space-y-6 px-5 py-8 text-white print:max-w-none print:text-black" data-testid="admin-desk">
       <div className="flex items-center justify-between print:hidden">
-        <Link href="/team" className="text-sm text-[#9ecbff]">Team Login</Link>
+        <Link href="/team" className="text-sm text-[#9ecbff]">{locked ? "Team Login" : "← Owner hub"}</Link>
         {locked ? <span className="text-sm">{level}</span> : (
           <select className="bg-transparent text-sm" aria-label="View" value={level} onChange={(event) => setLevel(event.target.value as (typeof LEVELS)[number])}>
             {LEVELS.map((item) => <option key={item} value={item}>{item}</option>)}

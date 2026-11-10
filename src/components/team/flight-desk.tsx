@@ -34,6 +34,7 @@ type Line = {
   guests: Guest[];
 };
 type Day = {
+  owner?: boolean;
   person: { name: string; postCode: string; postLabel: string; textAlerts: boolean };
   program: { name: string };
   positions: { code: string; label: string }[];
@@ -57,6 +58,7 @@ export function FlightDesk({ mode }: { mode: "clipboard" | "dispatch" }) {
   const [picked, setPicked] = useState<string[]>([]);
   const [vehicle, setVehicle] = useState("");
   const [destination, setDestination] = useState("");
+  const [error, setError] = useState("");
 
   const lines = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -71,10 +73,10 @@ export function FlightDesk({ mode }: { mode: "clipboard" | "dispatch" }) {
   useEffect(() => {
     const saved = sessionStorage.getItem("vd-day-code") || "";
     setCode(saved);
-    if (!saved) return;
     void fetch(`/api/team/day?code=${encodeURIComponent(saved)}`).then(async (response) => {
       if (response.ok) setDay((await response.json()) as Day);
-    });
+      else { const json = await response.json(); setError(json.error || "Return to Team Login."); }
+    }).catch(() => setError("Could not open the day. Return to Team Login."));
   }, []);
 
   useEffect(() => {
@@ -84,7 +86,7 @@ export function FlightDesk({ mode }: { mode: "clipboard" | "dispatch" }) {
   }, [focus, query, lines]);
 
   async function act(body: { action: string; paxIds?: string[]; tripId?: string; count?: number }) {
-    if (!code) return;
+    if (!code && !day?.owner) return;
     const response = await fetch("/api/team/desk", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -93,13 +95,14 @@ export function FlightDesk({ mode }: { mode: "clipboard" | "dispatch" }) {
     if (response.ok) {
       setDay((await response.json()) as Day);
       setPicked([]);
-    }
+    } else { const json = await response.json(); setError(json.error || "Could not save that change."); }
   }
 
-  if (!code) {
+  if (!day && error) {
     return (
       <div className="mx-auto max-w-lg px-5 py-10 text-white">
-        <Link href="/team/director" className="text-sm text-[#9ecbff]">Enter your day code</Link>
+        <Link href="/team" className="text-sm text-[#9ecbff]">Team Login / Owner hub</Link>
+        <p role="alert" className="mt-4 text-sm text-red-300">{error}</p>
       </div>
     );
   }
@@ -107,6 +110,8 @@ export function FlightDesk({ mode }: { mode: "clipboard" | "dispatch" }) {
 
   return (
     <div className="mx-auto max-w-lg px-4 pb-24 pt-4 text-white" data-testid={mode}>
+      {day.owner ? <Link href="/team" className="inline-block min-h-11 text-sm text-[#9ecbff]">← Owner hub</Link> : null}
+      {error ? <p role="alert" className="text-sm text-red-300">{error}</p> : null}
       {mode === "clipboard" ? (
         <Link href="/team/director" className="sticky top-0 z-10 block bg-[#090b10] py-3 text-sm font-semibold text-[#9ecbff]">Back to My Day</Link>
       ) : <h1 className="py-3 text-2xl font-semibold">Dispatch</h1>}
@@ -133,7 +138,7 @@ export function FlightDesk({ mode }: { mode: "clipboard" | "dispatch" }) {
           <button type="button" className="h-12 w-full rounded-xl bg-gradient-to-r from-[#1E90FF] to-[#8B5CF6] text-sm font-semibold" onClick={() => void act({ action: "send", paxIds: picked })}>Send</button>
         </div>
       ) : null}
-      <CrewBar code={code} person={day.person} positions={day.positions} onDay={(next) => setDay(next as Day)} />
+      <CrewBar owner={day.owner} code={code} person={day.person} positions={day.positions} onDay={(next) => setDay(next as Day)} />
     </div>
   );
 }

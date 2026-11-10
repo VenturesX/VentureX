@@ -8,6 +8,7 @@ import { CrewBar } from "@/components/team/crew-bar";
 type Party = { id: string; vehicle: string; notes: string; carSeats: number; boosters: number; count: number; names: string[]; cells: string[] };
 type Line = { flightCode: string; time: string; airline: string; flight: string; status: string; postCodes: string[]; mine: boolean; parties: Party[] };
 type Day = {
+  owner?: boolean;
   person: { name: string; postCode: string; postLabel: string; textAlerts: boolean; wide: boolean };
   program: { code: string; name: string };
   positions: { code: string; label: string }[];
@@ -31,17 +32,17 @@ export function DirectorGate() {
       return;
     }
     setError("");
-    sessionStorage.setItem("vd-day-code", value);
+    if (!json.owner) sessionStorage.setItem("vd-day-code", value);
     setCode(value);
     setDay(json);
   }
 
   useEffect(() => {
-    const saved = sessionStorage.getItem("vd-day-code");
-    if (saved) {
-      setCode(saved);
-      void open(saved);
-    }
+    void fetch("/api/team/session").then((response) => response.json()).then((session) => {
+      if (session.signedIn?.kind === "admin") { void open(""); return; }
+      const saved = sessionStorage.getItem("vd-day-code");
+      if (saved) { setCode(saved); void open(saved); }
+    }).catch(() => setError("Could not check your session. Return to Team Login."));
   }, []);
 
   if (!day) {
@@ -58,7 +59,7 @@ export function DirectorGate() {
     );
   }
 
-  return <MyDay day={day} code={code || "4821"} onChange={setDay} />;
+  return <MyDay day={day} code={code} onChange={setDay} />;
 }
 
 function MyDay({ day, code, onChange }: { day: Day; code: string; onChange: (day: Day) => void }) {
@@ -78,6 +79,7 @@ function MyDay({ day, code, onChange }: { day: Day; code: string; onChange: (day
 
   return (
     <div className="mx-auto max-w-lg px-4 pb-24 pt-6 text-white" data-testid="my-day">
+      {day.owner ? <Link href="/team" className="mb-3 inline-block min-h-11 text-sm text-[#9ecbff]">← Owner hub</Link> : null}
       <h1 className="text-3xl font-semibold">{day.person.name}</h1>
       <p className="text-sm text-white/70">{day.program.name} · {day.person.postLabel}</p>
       <div className="mt-4 grid grid-cols-4 gap-1">
@@ -87,7 +89,7 @@ function MyDay({ day, code, onChange }: { day: Day; code: string; onChange: (day
           </button>
         ))}
       </div>
-      <label className="mt-3 block text-sm">Switch position
+      {!day.owner ? <><label className="mt-3 block text-sm">Switch position
         <select className={`${field} mt-1`} value={day.person.postCode} onChange={(event) => void save({ postCode: event.target.value })}>
           {day.positions.map((item) => <option key={item.code} value={item.code}>{item.label}</option>)}
         </select>
@@ -95,6 +97,7 @@ function MyDay({ day, code, onChange }: { day: Day; code: string; onChange: (day
       <button type="button" className="mt-2 min-h-11 text-sm font-semibold text-[#9ecbff]" onClick={() => void save({ textAlerts: !day.person.textAlerts })}>
         Text alerts {day.person.textAlerts ? "on" : "off"}
       </button>
+      </> : null}
       {tab === "Staff" ? (
         <ul className="mt-4 divide-y divide-white/10">
           {day.staff.map((person) => (
@@ -133,7 +136,7 @@ function MyDay({ day, code, onChange }: { day: Day; code: string; onChange: (day
           {shown.length === 0 ? <p className="mt-6 text-base text-white/70">No flights on this post.</p> : null}
         </>
       )}
-      <CrewBar code={code} person={day.person} positions={day.positions} onDay={(next) => onChange(next as Day)} />
+      <CrewBar owner={day.owner} code={code} person={day.person} positions={day.positions} onDay={(next) => onChange(next as Day)} />
     </div>
   );
 }

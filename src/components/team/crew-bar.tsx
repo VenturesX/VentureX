@@ -12,11 +12,13 @@ export function CrewBar({
   person,
   positions,
   onDay,
+  owner = false,
 }: {
   code: string;
   person: Person;
   positions: Position[];
   onDay: (day: unknown) => void;
+  owner?: boolean;
 }) {
   const path = usePathname();
   const router = useRouter();
@@ -66,9 +68,9 @@ export function CrewBar({
             {tab.label}
           </Link>
         ))}
-        <button type="button" className={`min-h-16 text-sm font-semibold ${more ? "text-white" : "text-white/50"}`} onClick={() => setMore((open) => !open)}>
+        {owner ? <Link href="/team" className="flex min-h-16 items-center justify-center text-sm font-semibold text-[#9ecbff]">Owner hub</Link> : <button type="button" className={`min-h-16 text-sm font-semibold ${more ? "text-white" : "text-white/50"}`} onClick={() => setMore((open) => !open)}>
           More
-        </button>
+        </button>}
       </nav>
     </>
   );

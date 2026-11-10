@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { COMPANY_EMAIL, COMPANY_PHONE, COMPANY_PHONE_TEL } from "@/lib/brand";
 import { field, onBtn } from "@/components/light/styles";
 
@@ -20,6 +21,7 @@ type Item = {
 };
 type Trip = {
   signedIn: boolean;
+  ownerPreview?: boolean;
   program?: { name: string };
   guest?: string;
   mine?: { flight: string; time: string; vehicle: string; spot: string; status: string } | null;
@@ -53,12 +55,13 @@ export function GuestTrip() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ step, code }),
       });
-      const json = (await response.json()) as { error?: string };
+      const json = (await response.json()) as { error?: string; href?: string };
       if (!response.ok) {
         setError(json.error || "That code didn't match.");
         return;
       }
       setCode("");
+      if (json.href === "/team") { window.location.assign("/team"); return; }
       await refresh();
       if (step === "code") setTab("My Trip");
     } catch {
@@ -92,6 +95,7 @@ export function GuestTrip() {
 
   return (
     <div className="mx-auto max-w-lg px-4 py-8" data-testid="guest-trip">
+      {trip.ownerPreview ? <div className="mb-5 rounded-xl border border-[#1E90FF]/30 p-3 text-sm"><Link href="/team" className="font-semibold text-[#9ecbff]">← Owner hub</Link><p className="mt-2 text-white/70">General guest preview. Personal rides still require the guest&apos;s text code.</p></div> : null}
       <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#1E90FF]">{trip.program?.name}</p>
       <h1 className="mt-2 text-4xl font-semibold tracking-tight">Your trip, live</h1>
       <p className="mt-2 text-sm text-white/70">{trip.guest ? `Hello, ${trip.guest}.` : "General moves are open. Add your text code for your own ride."}</p>

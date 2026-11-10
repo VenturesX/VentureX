@@ -2,6 +2,9 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { applyExtraCode, findProgramByNumber, loadVisibleTrip, noteGuestTry, openProgramSession, tooManyGuestTries } from "@/lib/guest-portal";
 import { readTripToken, signTripToken, TRIP_COOKIE } from "@/lib/guest-session";
+import { ownerCodeMatches } from "@/lib/crew-access";
+import { setOwnerSession } from "@/lib/owner-access";
+import { crewSession } from "@/lib/crew-guard";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -22,7 +25,8 @@ export async function GET() {
   if (!session) return NextResponse.json({ signedIn: false });
   const trip = await loadVisibleTrip(session);
   if (!trip) return NextResponse.json({ signedIn: false });
-  return NextResponse.json({ signedIn: true, ...trip });
+  const owner = await crewSession();
+  return NextResponse.json({ signedIn: true, ...trip, ownerPreview: owner?.kind === "admin" && owner.programId === session.programId });
 }
 
 export async function POST(request: Request) {
@@ -41,6 +45,9 @@ export async function POST(request: Request) {
   const current = await readTripToken(store.get(TRIP_COOKIE)?.value || "");
 
   if (step === "open") {
+    if (await ownerCodeMatches(String(body?.code ?? ""))) {
+      return setOwnerSession(NextResponse.json({ ok: true, href: "/team" }), request);
+    }
     const program = await findProgramByNumber(String(body?.code ?? ""));
     if (!program) {
       await noteGuestTry(ip);
