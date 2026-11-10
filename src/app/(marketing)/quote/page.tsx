@@ -5,7 +5,7 @@ import { OTHER_CITY } from "@/lib/brand";
 
 export const metadata: Metadata = {
   title: "Get a Quote",
-  description: "Plan group transportation in Orlando, Tampa, Fort Myers, Miami, Jacksonville, and across Florida. Share the details of your program for a quote.",
+  description: "Plan group transportation with Venture Directors. Share the details of your program for a quote.",
   alternates: { canonical: "/quote" },
 };
 

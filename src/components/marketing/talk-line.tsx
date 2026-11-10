@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { BusinessPhone } from "@/components/marketing/business-phone";
+import { formatOfficeHours, OWNER_OFFICE_HOURS } from "@/lib/guidance";
 
 const TIMES = ["Morning", "Afternoon", "Evening", "Anytime"];
 
@@ -57,8 +58,10 @@ export function TalkLine() {
 
   return (
     <div id="contact" className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4 text-sm leading-relaxed">
-      <BusinessPhone label="" className="min-h-11 text-base" />
-      {hoursLabel ? <p className="mt-2 text-xs text-white/50">Live line · {hoursLabel}.</p> : null}
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <BusinessPhone label="" className="min-h-11 text-base" />
+        <span className="text-sm text-white/70">{hoursLabel || formatOfficeHours(OWNER_OFFICE_HOURS)}</span>
+      </div>
       <p className="mt-2 text-white/60">
         Prefer a callback?{" "}
         <button type="button" className="font-medium text-white underline decoration-white/30" onClick={() => setOpen((current) => !current)}>

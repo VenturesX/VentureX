@@ -1,6 +1,6 @@
 import { OTHER_CITY, OTHER_FLORIDA_CITY } from "@/lib/brand";
 
-export const QUOTE_MARKETS = ["Orlando", "Tampa", "Fort Myers", "Miami", "Jacksonville", "Port Canaveral", OTHER_FLORIDA_CITY, OTHER_CITY] as const;
+export const QUOTE_MARKETS = ["Orlando", "Tampa", "Fort Myers", "Miami", "Jacksonville", "Daytona Beach", OTHER_FLORIDA_CITY, OTHER_CITY] as const;
 
 export type QuoteMarket = (typeof QUOTE_MARKETS)[number];
 
@@ -65,6 +65,8 @@ const AREA_HINTS = [
   "longwood",
   "heathrow",
   "doctor phillips",
+  "daytona",
+  "daytona beach",
   "cape canaveral",
   "port canaveral",
   "cocoa",
