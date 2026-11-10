@@ -35,6 +35,7 @@ type Line = {
 };
 type Day = {
   owner?: boolean;
+  wide?: boolean;
   person: { name: string; postCode: string; postLabel: string; textAlerts: boolean };
   program: { name: string };
   positions: { code: string; label: string }[];
@@ -71,9 +72,12 @@ export function FlightDesk({ mode }: { mode: "clipboard" | "dispatch" }) {
   }, [day, query]);
 
   useEffect(() => {
-    const saved = sessionStorage.getItem("vd-day-code") || "";
-    setCode(saved);
-    void fetch(`/api/team/day?code=${encodeURIComponent(saved)}`).then(async (response) => {
+    void fetch("/api/team/session").then((response) => response.json()).then((session) => {
+      const saved = session.signedIn?.openProgram ? "" : sessionStorage.getItem("vd-day-code") || "";
+      setCode(saved);
+      return fetch(`/api/team/day?code=${encodeURIComponent(saved)}`);
+    }).then(async (response) => {
+      if (!response) return;
       if (response.ok) setDay((await response.json()) as Day);
       else { const json = await response.json(); setError(json.error || "Return to Team Login."); }
     }).catch(() => setError("Could not open the day. Return to Team Login."));
@@ -86,7 +90,7 @@ export function FlightDesk({ mode }: { mode: "clipboard" | "dispatch" }) {
   }, [focus, query, lines]);
 
   async function act(body: { action: string; paxIds?: string[]; tripId?: string; count?: number }) {
-    if (!code && !day?.owner) return;
+    if (!code && !day?.wide && !day?.owner) return;
     const response = await fetch("/api/team/desk", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

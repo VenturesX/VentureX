@@ -9,6 +9,7 @@ type Party = { id: string; vehicle: string; notes: string; carSeats: number; boo
 type Line = { flightCode: string; time: string; airline: string; flight: string; status: string; postCodes: string[]; mine: boolean; parties: Party[] };
 type Day = {
   owner?: boolean;
+  wide?: boolean;
   person: { name: string; postCode: string; postLabel: string; textAlerts: boolean; wide: boolean };
   program: { code: string; name: string };
   positions: { code: string; label: string }[];
@@ -32,14 +33,14 @@ export function DirectorGate() {
       return;
     }
     setError("");
-    if (!json.owner) sessionStorage.setItem("vd-day-code", value);
+    if (!json.owner && value) sessionStorage.setItem("vd-day-code", value);
     setCode(value);
     setDay(json);
   }
 
   useEffect(() => {
     void fetch("/api/team/session").then((response) => response.json()).then((session) => {
-      if (session.signedIn?.kind === "admin") { void open(""); return; }
+      if (session.signedIn?.openProgram) { void open(""); return; }
       const saved = sessionStorage.getItem("vd-day-code");
       if (saved) { setCode(saved); void open(saved); }
     }).catch(() => setError("Could not check your session. Return to Team Login."));
@@ -79,7 +80,7 @@ function MyDay({ day, code, onChange }: { day: Day; code: string; onChange: (day
 
   return (
     <div className="mx-auto max-w-lg px-4 pb-24 pt-6 text-white" data-testid="my-day">
-      {day.owner ? <Link href="/team" className="mb-3 inline-block min-h-11 text-sm text-[#9ecbff]">← Owner hub</Link> : null}
+      {day.owner ? <Link href="/team" className="mb-3 inline-block min-h-11 text-sm text-[#9ecbff]">← Owner hub</Link> : day.wide ? <Link href="/team/admin?setup=1" className="mb-3 inline-block min-h-11 text-sm text-[#9ecbff]">Staff and itinerary</Link> : null}
       <h1 className="text-3xl font-semibold">{day.person.name}</h1>
       <p className="text-sm text-white/70">{day.program.name} · {day.person.postLabel}</p>
       <div className="mt-4 grid grid-cols-4 gap-1">
@@ -89,7 +90,7 @@ function MyDay({ day, code, onChange }: { day: Day; code: string; onChange: (day
           </button>
         ))}
       </div>
-      {!day.owner ? <><label className="mt-3 block text-sm">Switch position
+      {!day.wide ? <><label className="mt-3 block text-sm">Switch position
         <select className={`${field} mt-1`} value={day.person.postCode} onChange={(event) => void save({ postCode: event.target.value })}>
           {day.positions.map((item) => <option key={item.code} value={item.code}>{item.label}</option>)}
         </select>

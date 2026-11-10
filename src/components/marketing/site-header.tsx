@@ -118,7 +118,7 @@ export function SiteFooter() {
           <Wordmark compact />
         </Link>
         <p className="max-w-xl text-sm leading-relaxed text-white/75">
-          {COMPANY_LEGAL} is your DMC transportation partner. Florida-based. Wherever your program goes, we go with it.
+          {COMPANY_LEGAL} is your DMC transportation partner.
         </p>
         <div className="flex flex-col gap-1 text-sm">
           <a className="w-fit text-white" href={`mailto:${COMPANY_EMAIL}`}>{COMPANY_EMAIL}</a>

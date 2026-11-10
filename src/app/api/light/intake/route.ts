@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { crewDenied } from "@/lib/crew-guard";
+import { crewDenied, denyOutsideProgram } from "@/lib/crew-guard";
 import { rowsFromUpload } from "@/lib/light/files";
 import { parseManifestText, type ManifestRow } from "@/lib/light/parse-manifest";
 import { publishManifest } from "@/lib/light/service";
@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
-  const denied = await crewDenied(["crew", "admin"]);
+  const denied = await crewDenied(["crew", "admin", "lead"]);
   if (denied) return denied;
   const contentType = request.headers.get("content-type") || "";
   if (contentType.includes("multipart/form-data")) {
@@ -21,6 +21,8 @@ export async function POST(request: Request) {
   const body = (await request.json().catch(() => null)) as { code?: string; text?: string; rows?: ManifestRow[]; publish?: boolean } | null;
   if (!body) return NextResponse.json({ error: "Send JSON." }, { status: 400 });
   if (body.publish) {
+    const outside = await denyOutsideProgram(body.code || "NBCU");
+    if (outside) return outside;
     const result = await publishManifest(body.code || "NBCU", body.rows || [], "Intake");
     if ("error" in result && result.error) return NextResponse.json(result, { status: 400 });
     return NextResponse.json(result);

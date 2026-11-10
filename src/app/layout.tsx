@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
+import { OwnerLock } from "@/components/team/owner-lock";
 import { ServiceWorkerRegister } from "@/components/sw-register";
 import { APP_NAME, COMPANY_NAME, SITE_DESCRIPTION, TAGLINE, siteUrl } from "@/lib/brand";
 import "./globals.css";
@@ -60,6 +61,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col bg-[#090b10]">
         {children}
+        <OwnerLock />
         <Toaster theme="dark" />
         <ServiceWorkerRegister />
       </body>

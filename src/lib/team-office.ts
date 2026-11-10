@@ -23,8 +23,9 @@ function aliasList(input: string) {
     .filter(Boolean);
 }
 
-export async function officeSnapshot() {
+export async function officeSnapshot(programId = "") {
   const programs = await db.lightProgram.findMany({
+    where: programId ? { id: programId } : undefined,
     orderBy: { name: "asc" },
     include: { roster: { orderBy: { name: "asc" } } },
   });
@@ -37,6 +38,7 @@ export async function officeSnapshot() {
       code: program.code,
       aliases: program.aliases,
       hasClientCode: Boolean(program.clientCodeHash),
+      demo: program.demo,
       staff: program.roster.map((person) => ({
         id: person.id,
         name: person.name,

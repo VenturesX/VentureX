@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 import { jwtVerify } from "jose";
 import { PORTAL_ROLES } from "@/lib/roles";
 import type { Role } from "@prisma/client";
-import { CREW_COOKIE, readCrewToken, staffTokenValid, type CrewSession } from "@/lib/crew-session";
+import { CREW_COOKIE, readCrewToken, roleAllows, staffTokenValid } from "@/lib/crew-session";
 
 const PUBLIC = ["/login", "/manifest.webmanifest", "/sw.js", "/icons", "/offline", "/api/auth/me"];
 const SESSION_COOKIE = "vd_session";
@@ -34,8 +34,9 @@ function isPublic(pathname: string, method: string) {
   return PUBLIC.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }
 
-function crewLock(pathname: string): "staff" | "desk" | "admin" | "field" | null {
-  if (pathname === "/api/team/quotes" || pathname === "/api/team/office") return "admin";
+function crewLock(pathname: string): "staff" | "desk" | "admin" | "field" | "lead" | null {
+  if (pathname === "/api/team/quotes" || pathname === "/api/team/owner") return "admin";
+  if (pathname === "/api/team/office") return "lead";
   if (pathname === "/api/team/guest-portal") return "desk";
   if (pathname === "/api/team/report" || pathname === "/team/admin") return "desk";
   if (pathname.startsWith("/api/team") || pathname.startsWith("/team/")) return "staff";
@@ -45,11 +46,9 @@ function crewLock(pathname: string): "staff" | "desk" | "admin" | "field" | null
   return null;
 }
 
-function crewAllows(session: CrewSession | null, lock: "staff" | "desk" | "admin" | "field") {
+function crewAllows(session: { kind: "crew" | "admin" | "client" | "lead" } | null, lock: "staff" | "desk" | "admin" | "field" | "lead") {
   if (!session) return false;
-  if (lock === "admin") return session.kind === "admin";
-  if (lock === "desk") return session.kind === "admin" || session.kind === "client";
-  return session.kind === "crew" || session.kind === "admin";
+  return roleAllows(session.kind, lock);
 }
 
 export async function middleware(request: NextRequest) {

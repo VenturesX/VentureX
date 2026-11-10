@@ -8,8 +8,8 @@ export const runtime = "nodejs";
 
 async function allow(programId: string) {
   const session = await crewSession();
-  if (!session || (session.kind !== "admin" && session.kind !== "client")) return null;
-  if (session.kind === "client" && session.programId !== programId) return null;
+  if (!session || (session.kind !== "admin" && session.kind !== "client" && session.kind !== "lead")) return null;
+  if ((session.kind === "client" || session.kind === "lead") && session.programId !== programId) return null;
   const program = await db.lightProgram.findUnique({ where: { id: programId } });
   if (!program) return null;
   if (session.kind === "client" && !program.clientManagesGroups) return null;

@@ -7,6 +7,7 @@ import { airlineName, airlineCode, DEFAULT_AIRLINES, displayFlight, POSTS, ruleK
 import { addMinutes, clockLabel, isAfterWindow } from "@/lib/light/time";
 import { signLightToken, readLightToken } from "@/lib/light/token";
 import { getFlightProvider } from "@/lib/providers/flights";
+import { programSendsAllowed } from "@/lib/light/outbound";
 import { getSmsProvider } from "@/lib/providers/sms";
 
 const OUT_MICRO = 8500;
@@ -235,6 +236,10 @@ async function pushAlert(program: ProgramRecord, body: string, label: string) {
 }
 
 async function sendText(programId: string | null, to: string, body: string, status = "sent") {
+  if (programId) {
+    const program = await db.lightProgram.findUnique({ where: { id: programId }, select: { demo: true, textingMode: true } });
+    if (!programSendsAllowed(program)) return;
+  }
   let providerStatus = status;
   if (to !== "hotel" && to.includes("+")) {
     try {
@@ -438,7 +443,7 @@ function clockFromIso(value: string) {
   return `${hour}:${minute}`;
 }
 
-export async function handleText(phoneRaw: string, text: string, origin: string) {
+export async function handleText(phoneRaw: string, text: string, origin: string, limitProgramId = "") {
   const phone = normalizePhone(phoneRaw);
   const trimmed = text.trim();
   const intro = parseIntro(trimmed);
@@ -456,6 +461,9 @@ export async function handleText(phoneRaw: string, text: string, origin: string)
     return { reply, programCode: "" };
   }
   await db.lightMessage.create({ data: { programId: program.id, direction: "IN", phone, body: trimmed, costMicro: IN_MICRO, status: "logged" } });
+  if (program.demo || (limitProgramId && program.id !== limitProgramId)) {
+    return { reply: "", programCode: program.code };
+  }
   if (/^trip code$/i.test(trimmed)) {
     const person = await db.lightPax.findFirst({ where: { cell: phone, trip: { programId: program.id } } });
     if (person) {
@@ -873,13 +881,13 @@ function flightStatusLabel(status: string, gate: string) {
 }
 
 // ownerProgramId is supplied only by a server route after verifying the admin session.
-async function dayActor(code: string, ownerProgramId?: string) {
-  if (ownerProgramId) return { programId: ownerProgramId, name: "Owner", postCode: "ALL", textAlerts: false, checkedInAt: new Date() };
+async function dayActor(code: string, ownerProgramId?: string, actorName = "Owner") {
+  if (ownerProgramId) return { programId: ownerProgramId, name: actorName, postCode: "ALL", textAlerts: false, checkedInAt: new Date() };
   return db.lightRoster.findFirst({ where: { dayCode: code.trim(), dayCodeDate: todayET(), checkedOutAt: null } });
 }
 
-export async function loadCrewDay(code: string, ownerProgramId?: string) {
-  const person = await dayActor(code, ownerProgramId);
+export async function loadCrewDay(code: string, ownerProgramId?: string, actorName = "Owner", asOwner = true) {
+  const person = await dayActor(code, ownerProgramId, actorName);
   if (!person?.checkedInAt) return null;
   const [program, trips, flights, staff] = await Promise.all([
     db.lightProgram.findUnique({ where: { id: person.programId } }),
@@ -936,7 +944,8 @@ export async function loadCrewDay(code: string, ownerProgramId?: string) {
     };
   }).sort((a, b) => a.sort.localeCompare(b.sort));
   return {
-    owner: Boolean(ownerProgramId),
+    owner: Boolean(ownerProgramId) && asOwner,
+    wide: Boolean(ownerProgramId),
     person: {
       name: person.name,
       postCode: person.postCode,

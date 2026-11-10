@@ -34,6 +34,12 @@ export function AdminDesk() {
         setLocked(true);
         return;
       }
+      if (json.signedIn?.kind === "lead") {
+        setLevel("Lead");
+        setLocked(true);
+        if (json.signedIn.programId) setGuestProgram(json.signedIn.programId);
+        return;
+      }
       setLevel("Owner");
     });
   }, []);
@@ -71,7 +77,7 @@ export function AdminDesk() {
   return (
     <div className="mx-auto max-w-3xl space-y-6 px-5 py-8 text-white print:max-w-none print:text-black" data-testid="admin-desk">
       <div className="flex items-center justify-between print:hidden">
-        <Link href="/team" className="text-sm text-[#9ecbff]">{locked ? "Team Login" : "← Owner hub"}</Link>
+        <Link href="/team" className="text-sm text-[#9ecbff]">{level === "Lead" ? "← Desks" : locked ? "Team Login" : "← Owner hub"}</Link>
         {locked ? <span className="text-sm">{level}</span> : (
           <select className="bg-transparent text-sm" aria-label="View" value={level} onChange={(event) => setLevel(event.target.value as (typeof LEVELS)[number])}>
             {LEVELS.map((item) => <option key={item} value={item}>{item}</option>)}
@@ -82,7 +88,8 @@ export function AdminDesk() {
         <p className="text-xs uppercase tracking-[0.16em] text-[#9ecbff] print:text-black">{level}</p>
         <h1 className="text-3xl font-semibold">{report?.program.name ?? "Program"}</h1>
       </header>
-      {level !== "Client" ? (
+      {level === "Lead" ? <Link href="/team/director" className="inline-flex min-h-11 items-center text-sm font-semibold text-[#9ecbff]">Open the day, staff board, and clipboard</Link> : null}
+      {level === "Owner" ? (
         <div className="flex gap-2 print:hidden">
           {(["desk", "quotes"] as const).map((item) => (
             <button key={item} type="button" className={`h-11 rounded-xl px-4 text-sm font-semibold ${panel === item ? "bg-gradient-to-r from-[#1E90FF] to-[#8B5CF6]" : "bg-white/10"}`} onClick={() => setPanel(item)}>
@@ -94,8 +101,9 @@ export function AdminDesk() {
           ) : null}
         </div>
       ) : null}
-      {panel === "quotes" && level !== "Client" ? <AdminQuotes /> : null}
+      {panel === "quotes" && level === "Owner" ? <AdminQuotes /> : null}
       {panel === "setup" && level === "Owner" ? <AdminOffice /> : null}
+      {level === "Lead" ? <><AdminOffice lead />{guestProgram ? <GuestSetup programId={guestProgram} owner={false} /> : null}</> : null}
       {level === "Client" && guestProgram ? <GuestSetup programId={guestProgram} owner={false} /> : null}
       {panel === "desk" || level === "Client" ? <>
       <section className="grid grid-cols-3 gap-2 text-center">

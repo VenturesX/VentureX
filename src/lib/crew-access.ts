@@ -82,18 +82,26 @@ export async function findClientProgram(programId: string | null, code: string) 
   return null;
 }
 
-export function ownerCodeConfigured() {
-  return Boolean(process.env.OWNER_ACCESS_CODE);
+export function ownerHubConfigured() {
+  return Boolean(process.env.OWNER_HUB_CODE || process.env.OWNER_ACCESS_CODE);
 }
 
 export async function ownerCodeMatches(code: string) {
-  const envCode = process.env.OWNER_ACCESS_CODE || "";
+  const hub = process.env.OWNER_HUB_CODE || "";
+  if (hub) return sameSecret(code.trim(), hub);
+  const legacy = process.env.OWNER_ACCESS_CODE || "";
+  if (!legacy) return false;
+  return sameSecret(code.trim(), legacy);
+}
+
+export async function staffCodeMatches(code: string) {
+  const envCode = process.env.STAFF_MASTER_CODE || "";
   if (!envCode) return false;
   return sameSecret(code.trim(), envCode);
 }
 
-export async function staffCodeMatches(code: string) {
-  const envCode = process.env.STAFF_ACCESS_CODE || "";
+export async function masterDayMatches(code: string) {
+  const envCode = process.env.MASTER_DAY_CODE || "";
   if (!envCode) return false;
   return sameSecret(code.trim(), envCode);
 }
