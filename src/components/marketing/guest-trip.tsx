@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { COMPANY_EMAIL, COMPANY_PHONE, COMPANY_PHONE_TEL } from "@/lib/brand";
+import { tripRedirectHref } from "@/lib/trip-redirect";
 import { field, onBtn } from "@/components/light/styles";
 
 type Item = {
@@ -61,7 +62,8 @@ export function GuestTrip() {
         return;
       }
       setCode("");
-      if (json.href === "/team") { window.location.assign("/team"); return; }
+      const next = tripRedirectHref(json.href);
+      if (next) { window.location.assign(next); return; }
       await refresh();
       if (step === "code") setTab("My Trip");
     } catch {
