@@ -17,10 +17,10 @@ const db = new PrismaClient({ datasources: { db: { url: databaseUrl } } });
 const secret = randomUUID();
 const ownerCode = randomUUID();
 const staffCode = randomUUID();
-const port = 43139;
+const port = Number(process.env.OWNER_HUB_TEST_PORT || 43139);
 const base = `http://127.0.0.1:${port}`;
 const server = spawn(process.execPath, ["node_modules/next/dist/bin/next", "start", "-H", "127.0.0.1", "-p", String(port)], {
-  env: { ...process.env, DATABASE_URL: databaseUrl, AUTH_SECRET: secret, OWNER_ACCESS_CODE: ownerCode, STAFF_ACCESS_CODE: staffCode }, stdio: ["ignore", "pipe", "pipe"],
+  env: { ...process.env, DATABASE_URL: databaseUrl, AUTH_SECRET: secret, OWNER_ACCESS_CODE: ownerCode, STAFF_ACCESS_CODE: staffCode, RESEND_API_KEY: "" }, stdio: ["ignore", "pipe", "pipe"],
 });
 let logs = "";
 server.stdout.on("data", (data) => { logs += data; });
@@ -63,6 +63,41 @@ try {
   const login = await request("/api/team/unlock", owner, { step: "gate", code: ownerCode });
   assert.equal(login.status, 200); assert.equal((await login.json()).owner, true); assert.ok(owner.get("vd_crew"));
   passed("one owner code establishes the owner session");
+  assert.equal((await request("/api/team/quotes")).status, 401);
+  assert.equal((await request("/api/team/quotes", jar(), {})).status, 401);
+  const form = new FormData();
+  const nextDay = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+  for (const [key, value] of Object.entries({ profile: "GROUP", serviceType: "CHARTER", startDate: nextDay, endDate: nextDay, startTime: "09:00", endTime: "17:00", pickup: "Orlando International Airport", dropoff: "School campus", passengerCount: "42", vehiclePreference: "COACH", luggage: "FULL", coordinatorNeeded: "yes", representativeCount: "2", contactName: "Test school organizer", company: "Test school", email: "organizer@example.com", phone: "4075550100", notes: "Band instruments aboard.\nReturn after awards.", market: "Orlando", waitVaries: "yes", driveMinutes: "30" })) form.set(key, value);
+  form.append("stops", "Hotel first"); form.append("stops", "Competition venue second");
+  const manifest = "name,guests\nTest Guest,1\n";
+  form.set("manifest", new Blob([manifest], { type: "text/csv" }), "school.csv");
+  const submitted = await fetch(`${base}/api/quotes`, { method: "POST", body: form });
+  const receipt = await submitted.json(); assert.equal(submitted.status, 200, JSON.stringify(receipt));
+  const inbox = await (await request("/api/team/quotes", owner)).json();
+  const quote = inbox.quotes.find((row) => row.id === receipt.id);
+  assert.ok(quote); assert.equal(quote.company, "Test school"); assert.equal(quote.vehiclePreference, "COACH"); assert.equal(quote.luggage, "FULL");
+  assert.equal(quote.startTime, "09:00"); assert.equal(quote.endTime, "17:00"); assert.equal(quote.waitVaries, true);
+  assert.deepEqual(JSON.parse(quote.stops), ["Hotel first", "Competition venue second"]);
+  assert.equal(quote.notes.replace(/\r\n/g, "\n"), "Band instruments aboard.\nReturn after awards.");
+  assert.equal(quote.manifestFileName, "school.csv"); assert.equal("manifestBytes" in quote, false);
+  assert.equal(quote.alert.state, "not_configured"); assert.equal(inbox.email.enabled, false); assert.equal("RESEND_API_KEY" in inbox.email, false);
+  passed("public quotes remain saved without email and owners receive complete details with ordered stops");
+  const manifestPath = `/api/team/quotes/${quote.id}/manifest`;
+  assert.equal((await request(manifestPath)).status, 401);
+  assert.equal(await (await request(manifestPath, owner)).text(), manifest);
+  const clientToken = await new SignJWT({ kind: "client", programId: alpha.id, personId: "", name: "Client" }).setProtectedHeader({ alg: "HS256" }).setExpirationTime("1h").sign(new TextEncoder().encode(secret));
+  const nonOwner = jar(); nonOwner.set("vd_crew", clientToken);
+  assert.equal((await request("/api/team/quotes", nonOwner)).status, 401);
+  assert.equal((await request("/api/team/quotes", nonOwner, {})).status, 401);
+  assert.equal((await request(manifestPath, nonOwner)).status, 401);
+  passed("quote details, manifest downloads, and test alerts reject anonymous and non-admin users");
+  const testAlert = await (await request("/api/team/quotes", owner, {})).json();
+  assert.equal(testAlert.alert.state, "not_configured");
+  assert.match(testAlert.alert.detail, /RESEND_API_KEY/);
+  assert.equal(await db.quoteRequest.count(), 1);
+  assert.equal((await (await request("/api/team/quotes", owner)).json()).email.test.state, "not_configured");
+  passed("owner can test email configuration without creating a fake quote");
+
   const programs = await (await request("/api/team/owner", owner)).json();
   assert.deepEqual(programs.programs.map((p) => p.code), ["TESTA", "TESTB"]);
   assert.equal((await request("/api/team/day", owner)).status, 409);
