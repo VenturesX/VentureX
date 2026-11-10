@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { crewDenied } from "@/lib/crew-guard";
+import { crewDenied, crewSession } from "@/lib/crew-guard";
 import { adminReply, loadAdmin, saveAdmin } from "@/lib/light/service";
 
 export const dynamic = "force-dynamic";
@@ -20,6 +20,8 @@ export async function POST(request: Request) {
     if ("error" in result && result.error) return NextResponse.json(result, { status: 400 });
     return NextResponse.json(result);
   }
+  const session = await crewSession();
+  if (session?.kind !== "admin") return NextResponse.json({ error: "Only the owner can change that." }, { status: 403 });
   const result = await saveAdmin(String(body.programId), body);
   return NextResponse.json(result);
 }

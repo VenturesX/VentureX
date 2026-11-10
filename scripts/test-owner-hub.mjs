@@ -16,11 +16,13 @@ execFileSync("python3", ["-c", "import sqlite3,sys; sqlite3.connect(sys.argv[1])
 const db = new PrismaClient({ datasources: { db: { url: databaseUrl } } });
 const secret = randomUUID();
 const ownerCode = randomUUID();
+const legacyCode = randomUUID();
 const staffCode = randomUUID();
+const dayMaster = randomUUID();
 const port = Number(process.env.OWNER_HUB_TEST_PORT || 43139);
 const base = `http://127.0.0.1:${port}`;
 const server = spawn(process.execPath, ["node_modules/next/dist/bin/next", "start", "-H", "127.0.0.1", "-p", String(port)], {
-  env: { ...process.env, DATABASE_URL: databaseUrl, AUTH_SECRET: secret, OWNER_ACCESS_CODE: ownerCode, STAFF_ACCESS_CODE: staffCode, RESEND_API_KEY: "" }, stdio: ["ignore", "pipe", "pipe"],
+  env: { ...process.env, DATABASE_URL: databaseUrl, AUTH_SECRET: secret, OWNER_HUB_CODE: ownerCode, OWNER_ACCESS_CODE: legacyCode, STAFF_MASTER_CODE: staffCode, MASTER_DAY_CODE: dayMaster, RESEND_API_KEY: "" }, stdio: ["ignore", "pipe", "pipe"],
 });
 let logs = "";
 server.stdout.on("data", (data) => { logs += data; });
@@ -59,6 +61,10 @@ try {
 
   assert.equal((await request("/api/team/owner")).status, 401);
   passed("anonymous visitors cannot list owner programs");
+  assert.equal((await request("/api/team/unlock", jar(), { step: "gate", code: legacyCode })).status, 401);
+  assert.equal((await request("/api/team/unlock", jar(), { step: "gate", code: dayMaster })).status, 401);
+  assert.equal((await request("/api/team/unlock", jar(), { step: "portal", portal: "director", code: dayMaster })).status, 401);
+  passed("the older owner code and a day code are rejected before a session exists");
   const owner = jar();
   const login = await request("/api/team/unlock", owner, { step: "gate", code: ownerCode });
   assert.equal(login.status, 200); assert.equal((await login.json()).owner, true); assert.ok(owner.get("vd_crew"));
@@ -153,13 +159,23 @@ try {
   assert.equal((await request("/api/team/unlock", sharedStaff, { step: "portal", portal: "admin", code: ownerCode })).status, 403);
   assert.equal((await request("/api/team/unlock", sharedStaff, { step: "portal", portal: "clipboard", code: "2468" })).status, 403);
   assert.equal((await request("/api/team/unlock", sharedStaff, { step: "portal", portal: "director", code: "wrong" })).status, 401);
-  passed("staff entry offers only the three workspaces and still verifies day codes");
-  for (const portal of ["director", "dispatch", "driver"]) {
+  const master = await request("/api/team/unlock", sharedStaff, { step: "portal", portal: "director", code: dayMaster });
+  assert.equal(master.status, 200);
+  assert.equal((await master.json()).chooseProgram, true);
+  const opened = await request("/api/team/unlock", sharedStaff, { step: "program", portal: "director", programId: alpha.id, code: dayMaster });
+  assert.equal(opened.status, 200);
+  assert.equal((await request("/api/team/owner", sharedStaff)).status, 401);
+  passed("staff desks stay off the owner hub, and the day code works only after sign-in");
+  for (const portal of ["lead", "director", "dispatch", "driver"]) {
     const entered = await request("/api/team/unlock", sharedStaff, { step: "portal", portal, code: "2468" });
     assert.equal(entered.status, 200);
     assert.equal((await request("/api/team/owner", sharedStaff)).status, 401);
+    if (portal === "lead") {
+      assert.equal((await request("/api/team/office", sharedStaff, { action: "set-client-code", id: alpha.id, code: "CLIENT" })).status, 403);
+    }
   }
-  passed("Director, Dispatch, and Driver all accept a valid staff day code");
+  passed("Program Lead, Director, Dispatch, and Driver accept a valid staff day code");
+  passed("a program lead cannot change what the client is allowed to see");
   const expired = jar();
   expired.set("vd_crew", await new SignJWT({ kind: "admin", programId: alpha.id, personId: "", name: "Owner" }).setProtectedHeader({ alg: "HS256" }).setExpirationTime(1).sign(new TextEncoder().encode(secret)));
   assert.equal((await request("/api/team/owner", expired)).status, 401);

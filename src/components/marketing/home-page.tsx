@@ -68,7 +68,7 @@ export function MarketingHome() {
             </h1>
             <p className="mt-5 max-w-md text-base leading-relaxed text-white/85">{HERO_SUB}</p>
             <p className="mt-4 max-w-lg text-base leading-relaxed text-white/75">
-              We partner with destination management companies and event planners to coordinate group transportation, welcome guests, and keep programs moving. Based in Orlando, serving Florida, and ready to travel with your team.
+              We partner with destination management companies and event planners to coordinate group transportation, welcome guests, and keep programs moving. Based in Orlando. Available for on-site program support nationwide.
             </p>
             <div className="mt-8">
               <Link
@@ -161,16 +161,12 @@ export function MarketingHome() {
           <p className="mt-2 text-sm leading-relaxed text-white/75">
             You bring the client relationship and program vision. We bring transportation coordination, a crew on the ground, and visibility into each move.
           </p>
-          <p className="mt-4 text-sm font-medium text-white">Florida-based. Wherever your program goes, we go with it.</p>
         </div>
       </section>
 
       <section className="px-5 pb-4" aria-labelledby="nationwide">
         <div className="mx-auto max-w-6xl rounded-3xl border border-white/10 px-6 py-10">
           <h2 id="nationwide" className="text-3xl font-semibold tracking-tight">Orlando roots. Florida connections.</h2>
-          <p className="mt-3 max-w-2xl text-sm leading-relaxed text-white/75">
-            Florida-based. Wherever your program goes, we go with it.
-          </p>
           <Link
             href="/quote?market=other"
             className="mt-6 inline-flex h-12 items-center rounded-full bg-white px-5 text-sm font-semibold text-black"

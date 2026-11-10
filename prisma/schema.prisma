@@ -655,6 +655,7 @@ model LightProgram {
   showHotelConfirm Boolean   @default(true)
   finalReportOnly  Boolean   @default(false)
   clientManagesGroups Boolean @default(false)
+  demo             Boolean   @default(false)
   status           String    @default("LIVE")
   isTemplate       Boolean   @default(false)
   seedRevision     String    @default("")

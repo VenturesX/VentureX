@@ -6,7 +6,7 @@ import { loadCrewReport } from "@/lib/light/service";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
-  const denied = await crewDenied(["admin", "client"]);
+  const denied = await crewDenied(["admin", "client", "lead"]);
   if (denied) return denied;
   const session = await crewSession();
   let code = new URL(request.url).searchParams.get("code") || "";

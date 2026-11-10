@@ -4,6 +4,7 @@ import { DEFAULT_AIRLINES, DEFAULT_RULES, POSTS } from "@/lib/light/posts";
 import { todayET } from "@/lib/light/checkin";
 import { airlineOf, NBCU_FLIGHTS, NBCU_REVISION, NBCU_TRIPS } from "@/lib/light/seed-data";
 import { hashAccessCodes } from "@/lib/crew-access";
+import { ensureDemoAirport } from "@/lib/light/demo-program";
 import { ensureGuestPortal } from "@/lib/guest-portal";
 
 async function ensureAccessHashes(db: PrismaClient) {
@@ -24,6 +25,7 @@ export async function ensureLightDemo(db: PrismaClient) {
     if (existing?.seedRevision === NBCU_REVISION) {
       await ensureAccessHashes(db);
       await ensureGuestPortal(db);
+      await ensureDemoAirport(db);
       return existing.id;
     }
     if (existing) await db.lightProgram.delete({ where: { id: existing.id } });
@@ -156,9 +158,15 @@ export async function ensureLightDemo(db: PrismaClient) {
     console.log(`Seeded NBCU light board (${NBCU_TRIPS.length} parties)`);
     await ensureAccessHashes(db);
     await ensureGuestPortal(db);
+    await ensureDemoAirport(db);
     return program.id;
   } catch (error) {
     console.warn("Light demo seed skipped:", error instanceof Error ? error.message : error);
+    try {
+      await ensureDemoAirport(db);
+    } catch (demoError) {
+      console.warn("DEMO airport seed skipped:", demoError instanceof Error ? demoError.message : demoError);
+    }
     return null;
   }
 }

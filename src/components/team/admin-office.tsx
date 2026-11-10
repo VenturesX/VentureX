@@ -11,7 +11,7 @@ type Snapshot = { programs: Program[]; positions: Position[] };
 
 const blankStaff = { id: "", name: "", phone: "", postCode: "B_HIGH" };
 
-export function AdminOffice() {
+export function AdminOffice({ lead = false }: { lead?: boolean }) {
   const [data, setData] = useState<Snapshot | null>(null);
   const [error, setError] = useState("");
   const [openId, setOpenId] = useState("");
@@ -54,16 +54,16 @@ export function AdminOffice() {
 
   return (
     <section className="space-y-4">
-      <h2 className="text-xl font-semibold">Programs</h2>
-      <p className="text-sm text-white/70">One demo program is seeded. Add the rest here. Codes are stored hashed.</p>
+      <h2 className="text-xl font-semibold">{lead ? "Your program" : "Programs"}</h2>
+      <p className="text-sm text-white/70">{lead ? "Staff assignments for this program. Client visibility and owner access stay with the owner." : "NBCU and the labeled DEMO airport program are seeded. Add the rest here. Codes are stored hashed."}</p>
       {error ? <p className="text-sm text-red-300">{error}</p> : null}
-      <form className="space-y-2 rounded-2xl border border-white/10 p-4" onSubmit={(event) => { event.preventDefault(); void act({ action: "create-program", ...draft }); }}>
+      {lead ? null : <form className="space-y-2 rounded-2xl border border-white/10 p-4" onSubmit={(event) => { event.preventDefault(); void act({ action: "create-program", ...draft }); }}>
         <p className="font-semibold">New program</p>
         <input className={field} aria-label="New program name" placeholder="Name" value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} />
         <input className={field} aria-label="New program code" placeholder="Program code" value={draft.code} onChange={(event) => setDraft({ ...draft, code: event.target.value })} />
         <input className={field} aria-label="Extra text-in codes" placeholder="Extra text-in codes, comma separated" value={draft.aliases} onChange={(event) => setDraft({ ...draft, aliases: event.target.value })} />
         <button className="h-11 rounded-xl bg-white/10 px-4 text-sm font-semibold" type="submit">Add program</button>
-      </form>
+      </form>}
       <ul className="space-y-3">
         {data?.programs.map((program) => (
           <li key={program.id} className="rounded-2xl border border-white/10 p-4">
@@ -72,7 +72,7 @@ export function AdminOffice() {
               <span className="mt-1 block text-sm text-white/60">{program.staff.length} staff{program.hasClientCode ? " · client code set" : ""}</span>
             </button>
             {open?.id === program.id ? (
-              <ProgramEditor program={program} positions={data?.positions ?? []} staff={staff} setStaff={setStaff} clientCode={clientCode} setClientCode={setClientCode} act={act} />
+              <ProgramEditor lead={lead} program={program} positions={data?.positions ?? []} staff={staff} setStaff={setStaff} clientCode={clientCode} setClientCode={setClientCode} act={act} />
             ) : null}
           </li>
         ))}
@@ -82,6 +82,7 @@ export function AdminOffice() {
 }
 
 function ProgramEditor({
+  lead = false,
   program,
   positions,
   staff,
@@ -90,6 +91,7 @@ function ProgramEditor({
   setClientCode,
   act,
 }: {
+  lead?: boolean;
   program: Program;
   positions: Position[];
   staff: { id: string; name: string; phone: string; postCode: string };
@@ -104,13 +106,13 @@ function ProgramEditor({
   const [confirmRemove, setConfirmRemove] = useState(false);
   return (
     <div className="mt-4 space-y-4">
-      <form className="space-y-2" onSubmit={(event) => { event.preventDefault(); void act({ action: "update-program", id: program.id, name, code, aliases }); }}>
+      {lead ? null : <form className="space-y-2" onSubmit={(event) => { event.preventDefault(); void act({ action: "update-program", id: program.id, name, code, aliases }); }}>
         <input className={field} aria-label="Program name" value={name} onChange={(event) => setName(event.target.value)} />
         <input className={field} aria-label="Program code" value={code} onChange={(event) => setCode(event.target.value)} />
         <input className={field} aria-label="Extra text-in codes" value={aliases} onChange={(event) => setAliases(event.target.value)} />
         <button className="h-11 rounded-xl bg-white/10 px-4 text-sm font-semibold" type="submit">Save program</button>
-      </form>
-      <form className="space-y-2" onSubmit={(event) => { event.preventDefault(); void act({ action: "set-client-code", id: program.id, code: clientCode }); }}>
+      </form>}
+      {lead ? null : <form className="space-y-2" onSubmit={(event) => { event.preventDefault(); void act({ action: "set-client-code", id: program.id, code: clientCode }); }}>
         <p className="text-sm font-semibold">Client code</p>
         <input className={field} type="password" aria-label="Client code" placeholder={program.hasClientCode ? "Replace client code" : "Set client code"} value={clientCode} onChange={(event) => setClientCode(event.target.value)} />
         <div className="flex gap-2">
@@ -118,9 +120,9 @@ function ProgramEditor({
           {program.hasClientCode ? <button className="h-11 rounded-xl bg-white/10 px-4 text-sm font-semibold" type="button" onClick={() => void act({ action: "clear-client-code", id: program.id })}>Clear</button> : null}
         </div>
         <p className="text-xs text-white/50">If no client code is set, the program code opens the client view.</p>
-      </form>
+      </form>}
       <button className="h-11 rounded-xl bg-white/10 px-4 text-sm font-semibold" type="button" onClick={() => void act({ action: "reset-day-codes", programId: program.id })}>Reset day codes</button>
-      <GuestSetup programId={program.id} owner />
+      {lead ? null : <GuestSetup programId={program.id} owner />}
       <div>
         <p className="font-semibold">Staff</p>
         <ul className="mt-2 divide-y divide-white/10">
@@ -147,7 +149,7 @@ function ProgramEditor({
           <button className="h-11 rounded-xl bg-white/10 px-4 text-sm font-semibold" type="submit">{staff.id ? "Save staff" : "Add staff"}</button>
         </form>
       </div>
-      {confirmRemove ? (
+      {lead ? null : confirmRemove ? (
         <button className="h-11 rounded-xl bg-red-500/20 px-4 text-sm font-semibold text-red-200" type="button" onClick={() => void act({ action: "delete-program", id: program.id })}>Confirm remove</button>
       ) : (
         <button className="h-11 text-sm font-semibold text-red-300" type="button" onClick={() => setConfirmRemove(true)}>Remove program</button>
