@@ -7,12 +7,9 @@ import { field, onBtn } from "@/components/light/styles";
 import { OwnerHub } from "@/components/team/owner-hub";
 
 const CARDS = [
-  { id: "director", title: "Director", body: "Your day. Your post. The flights in front of you.", hint: "Day code", numeric: true },
-  { id: "driver", title: "Driver", body: "Your run, and nothing else.", hint: "Day code", numeric: true },
-  { id: "clipboard", title: "Clipboard", body: "The curb sheet.", hint: "Day code", numeric: true },
-  { id: "dispatch", title: "Dispatch", body: "The loading queue.", hint: "Day code", numeric: true },
-  { id: "admin", title: "Admin", body: "Owner and lead.", hint: "Admin code", numeric: false },
-  { id: "client", title: "Client", body: "A read-only look at the day.", hint: "Client code", numeric: false },
+  { id: "director", title: "Director", body: "My Day, your post, flights, and clipboard.", hint: "Day code", numeric: true },
+  { id: "dispatch", title: "Dispatch", body: "Loading, guest counts, and departures.", hint: "Day code", numeric: true },
+  { id: "driver", title: "Driver", body: "Your run and driver tools.", hint: "Day code", numeric: true },
 ] as const;
 
 type CardId = (typeof CARDS)[number]["id"];
@@ -100,9 +97,10 @@ export function TeamLogin() {
         {ready && gate && !card ? (
           <div className="mt-8">
             <div className="flex items-center justify-between">
-              <p className="text-sm text-white/70">{gate.scope === "all" ? "All programs" : gate.programName}</p>
+              <p className="text-sm text-white/70">{gate.scope === "all" ? "Choose your workspace" : gate.programName}</p>
               <button type="button" className="text-sm text-[#9ecbff]" onClick={() => void signOut()}>Sign out</button>
             </div>
+            <p className="mt-3 text-sm text-white/60">Choose your role, then enter the day code from your check-in text.</p>
             <div className="mt-3 grid gap-3">
               {CARDS.map((item) => (
                 <button key={item.id} type="button" className="flex min-h-24 flex-col justify-center rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-4 text-left" onClick={() => { setPicked(item.id); setCode(""); setError(""); }}>
@@ -117,6 +115,7 @@ export function TeamLogin() {
           <form className="mt-8 space-y-3" onSubmit={(event) => { event.preventDefault(); void submit("portal"); }}>
             <button type="button" className="text-sm text-[#9ecbff]" onClick={() => { setPicked(null); setCode(""); setError(""); }}>All desks</button>
             <h2 className="text-3xl font-semibold">{card.title}</h2>
+            <p className="text-sm text-white/70">Enter the day code from your check-in text to open your assigned program.</p>
             <label className="block text-sm" htmlFor="second-code">{card.hint}</label>
             <input
               id="second-code"

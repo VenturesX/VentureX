@@ -91,3 +91,9 @@ export async function ownerCodeMatches(code: string) {
   if (!envCode) return false;
   return sameSecret(code.trim(), envCode);
 }
+
+export async function staffCodeMatches(code: string) {
+  const envCode = process.env.STAFF_ACCESS_CODE || "";
+  if (!envCode) return false;
+  return sameSecret(code.trim(), envCode);
+}
