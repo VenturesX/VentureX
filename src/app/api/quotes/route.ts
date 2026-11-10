@@ -7,6 +7,8 @@ import { planQuote } from "@/lib/drive-time";
 import { applyPrice } from "@/lib/guidance";
 import { loadGuidance } from "@/lib/ops-settings";
 import { notifyOffice } from "@/lib/notify";
+import { quoteAlertKey, quoteDetailsSelect, quoteEmailText, type QuoteAlert } from "@/lib/quote-details";
+import { siteUrl } from "@/lib/brand";
 import {
   MANIFEST_MIME,
   REP_PRICE_KEY,
@@ -208,7 +210,7 @@ async function createQuote(
           manifestBytes: manifest?.bytes ?? null,
           status: "NEW",
         },
-        select: { id: true, reference: true },
+        select: quoteDetailsSelect,
       });
       try {
         await recordAudit({
@@ -225,17 +227,17 @@ async function createQuote(
       } catch (error) {
         console.error("quote audit failed", error);
       }
-      const where = data.marketCity ? `${data.market} (${data.marketCity})` : data.market;
-      await notifyOffice(
+      const delivery = await notifyOffice(
         `New quote ${row.reference}`,
-        [
-          `${data.contactName} · ${data.email} · ${data.phone}`,
-          data.company || "",
-          `${where} · ${data.startDate} · ${data.passengerCount} guests`,
-          `${data.pickup} to ${data.dropoff}`,
-          data.notes || "",
-        ].filter(Boolean).join("\n"),
+        `${quoteEmailText(row)}\n\nOpen your owner hub: ${siteUrl()}/team`,
       );
+      const alert: QuoteAlert = { state: delivery.sent ? "accepted" : delivery.missing ? "not_configured" : "failed", detail: delivery.detail, attemptedAt: new Date().toISOString() };
+      try {
+        const value = JSON.stringify(alert);
+        await db.appSetting.upsert({ where: { key: quoteAlertKey(row.id) }, create: { key: quoteAlertKey(row.id), value }, update: { value } });
+      } catch (error) {
+        console.error("quote email status could not be saved", error instanceof Error ? error.message : "Unknown error");
+      }
       return row;
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") continue;
