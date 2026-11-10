@@ -872,10 +872,14 @@ function flightStatusLabel(status: string, gate: string) {
   return "Scheduled";
 }
 
-export async function loadCrewDay(code: string) {
-  const person = await db.lightRoster.findFirst({
-    where: { dayCode: code.trim(), dayCodeDate: todayET(), checkedOutAt: null },
-  });
+// ownerProgramId is supplied only by a server route after verifying the admin session.
+async function dayActor(code: string, ownerProgramId?: string) {
+  if (ownerProgramId) return { programId: ownerProgramId, name: "Owner", postCode: "ALL", textAlerts: false, checkedInAt: new Date() };
+  return db.lightRoster.findFirst({ where: { dayCode: code.trim(), dayCodeDate: todayET(), checkedOutAt: null } });
+}
+
+export async function loadCrewDay(code: string, ownerProgramId?: string) {
+  const person = await dayActor(code, ownerProgramId);
   if (!person?.checkedInAt) return null;
   const [program, trips, flights, staff] = await Promise.all([
     db.lightProgram.findUnique({ where: { id: person.programId } }),
@@ -932,6 +936,7 @@ export async function loadCrewDay(code: string) {
     };
   }).sort((a, b) => a.sort.localeCompare(b.sort));
   return {
+    owner: Boolean(ownerProgramId),
     person: {
       name: person.name,
       postCode: person.postCode,
@@ -1009,10 +1014,16 @@ export async function loadCrewReport(code = "NBCU") {
   };
 }
 
-export async function runDesk(code: string, body: { action?: string; paxIds?: string[]; tripId?: string; count?: number; destination?: string; vehicle?: string }) {
-  const person = await db.lightRoster.findFirst({ where: { dayCode: code.trim(), dayCodeDate: todayET(), checkedOutAt: null } });
+export async function runDesk(code: string, body: { action?: string; paxIds?: string[]; tripId?: string; count?: number; destination?: string; vehicle?: string }, ownerProgramId?: string) {
+  const person = await dayActor(code, ownerProgramId);
   if (!person?.checkedInAt) return { error: "Check in first." };
-  const ids = body.paxIds ?? [];
+  const ids = [...new Set(body.paxIds ?? [])];
+  if (ids.length) {
+    const scoped = await db.lightPax.count({ where: { id: { in: ids }, trip: { programId: person.programId } } });
+    if (scoped !== ids.length) return { error: "Choose guests from the selected program." };
+  }
+  if (body.tripId && !(await db.lightTrip.findFirst({ where: { id: body.tripId, programId: person.programId }, select: { id: true } }))) return { error: "Choose a trip from the selected program." };
+  if (body.action === "count" && (!Number.isInteger(body.count) || body.count! < 0 || body.count! > 50000)) return { error: "Enter a guest count from 0 to 50,000." };
   const now = new Date();
   if (body.action === "check" && ids.length) {
     await db.lightPax.updateMany({ where: { id: { in: ids } }, data: { checkedIn: true, checkedInAt: now } });

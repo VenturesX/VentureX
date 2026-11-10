@@ -1,5 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { setOwnerSession } from "@/lib/owner-access";
+import { TRIP_COOKIE } from "@/lib/guest-session";
 import {
   findClientProgram,
   findCrewByDayCode,
@@ -51,6 +53,7 @@ export async function POST(request: Request) {
     const response = NextResponse.json({ ok: true });
     response.cookies.set(CREW_COOKIE, "", expiredCookie(request));
     response.cookies.set(PROGRAM_COOKIE, "", expiredCookie(request));
+    response.cookies.set(TRIP_COOKIE, "", expiredCookie(request));
     return response;
   }
 
@@ -61,10 +64,8 @@ export async function POST(request: Request) {
 
   if (step === "gate") {
     if (await ownerCodeMatches(code)) {
-      const token = await signGateToken({ scope: "all", programId: "", programName: "" });
-      const response = NextResponse.json({ ok: true, scope: "all", programName: "" });
-      response.cookies.set(PROGRAM_COOKIE, token, cookieOptions(request, new Date(endOfShiftUnix() * 1000)));
-      return response;
+      const response = NextResponse.json({ ok: true, scope: "all", programName: "", owner: true });
+      return setOwnerSession(response, request);
     }
     const program = await findProgramByAccessCode(code);
     if (!program) {

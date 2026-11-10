@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { APP_NAME } from "@/lib/brand";
 import { VentureMark } from "@/components/marketing/logo";
 import { field, onBtn } from "@/components/light/styles";
+import { OwnerHub } from "@/components/team/owner-hub";
 
 const CARDS = [
   { id: "director", title: "Director", body: "Your day. Your post. The flights in front of you.", hint: "Day code", numeric: true },
@@ -23,11 +24,13 @@ export function TeamLogin() {
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
+  const [owner, setOwner] = useState(false);
 
   useEffect(() => {
     void fetch("/api/team/session")
       .then((response) => response.json())
-      .then((json: { gate?: { scope: string; programName: string } | null }) => {
+      .then((json: { gate?: { scope: string; programName: string } | null; signedIn?: { kind?: string } | null }) => {
+        setOwner(json.signedIn?.kind === "admin");
         setGate(json.gate ?? null);
         setReady(true);
       })
@@ -43,12 +46,13 @@ export function TeamLogin() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ step, code, portal: picked }),
       });
-      const json = (await response.json()) as { error?: string; href?: string; programName?: string; scope?: string };
+      const json = (await response.json()) as { error?: string; href?: string; programName?: string; scope?: string; owner?: boolean };
       if (!response.ok) {
         setError(json.error || "That code didn't match.");
         return;
       }
       if (step === "gate") {
+        if (json.owner) { sessionStorage.removeItem("vd-day-code"); setOwner(true); }
         setGate({ scope: json.scope || "program", programName: json.programName || "" });
         setCode("");
         return;
@@ -76,6 +80,8 @@ export function TeamLogin() {
 
   const card = CARDS.find((item) => item.id === picked);
 
+  if (ready && owner) return <OwnerHub />;
+
   return (
     <div className="min-h-screen bg-[#090b10] text-white">
       <div className="mx-auto flex min-h-screen max-w-lg flex-col px-5 py-10">
@@ -86,7 +92,7 @@ export function TeamLogin() {
         {ready && !gate ? (
           <form className="mt-8 space-y-3" onSubmit={(event) => { event.preventDefault(); void submit("gate"); }}>
             <label className="block text-sm" htmlFor="entry-code">Enter your code</label>
-            <input id="entry-code" className={field} autoComplete="off" aria-label="Code" value={code} onChange={(event) => setCode(event.target.value)} />
+            <input id="entry-code" type="password" className={field} autoComplete="off" aria-label="Code" value={code} onChange={(event) => setCode(event.target.value)} />
             <button className={`${onBtn} w-full`} type="submit" disabled={pending || code.trim().length < 2}>Continue</button>
             {error ? <p className="text-sm text-red-300">{error}</p> : null}
           </form>
