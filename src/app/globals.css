@@ -172,6 +172,14 @@
   min-height: 100dvh;
 }
 
+/* Public homepage only. Restores the production shell (Geist, #090b10, original radii) without changing shared tokens elsewhere. */
+.vd-marketing-classic {
+  --radius: 0.75rem;
+  background-color: #090b10;
+  color: #ffffff;
+  font-family: var(--font-marketing), ui-sans-serif, system-ui, sans-serif;
+}
+
 .vd-press {
   transition: transform 160ms ease, background-color 160ms ease, opacity 160ms ease;
 }

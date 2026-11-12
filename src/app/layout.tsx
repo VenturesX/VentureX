@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Inter } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { OwnerLock } from "@/components/team/owner-lock";
 import { ServiceWorkerRegister } from "@/components/sw-register";
@@ -8,6 +8,11 @@ import "./globals.css";
 
 const inter = Inter({
   variable: "--font-sans",
+  subsets: ["latin"],
+});
+
+const geistSans = Geist({
+  variable: "--font-marketing",
   subsets: ["latin"],
 });
 
@@ -57,7 +62,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`dark ${inter.variable} ${geistMono.variable} h-full`}
+      className={`dark ${inter.variable} ${geistSans.variable} ${geistMono.variable} h-full`}
     >
       <body className="min-h-full flex flex-col bg-black">
         {children}
