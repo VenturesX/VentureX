@@ -1,7 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Bus, Home, MessageCircle, UserRound } from "lucide-react";
 import { QuickAnswers } from "@/components/marketing/quick-answers";
+import { Accordion } from "@/components/premium/accordion";
+import { PhotoCard } from "@/components/premium/photo-card";
+import { PillNav } from "@/components/premium/pill-nav";
+import { RideBar } from "@/components/premium/ride-bar";
+import { ADD_RIDES, ORLANDO_PICKS } from "@/components/premium/rides";
+import { ScreenSkeleton } from "@/components/premium/skeleton";
+import { SwipeCard, SwipeRow } from "@/components/premium/swipe-row";
 
 const CATEGORIES = [
   ["PICKUP", "Pickup spot"],
@@ -39,6 +47,8 @@ export function TripBoard({ token }: { token: string }) {
   const [pending, setPending] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [later, setLater] = useState(false);
+  const [ride, setRide] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -115,7 +125,7 @@ export function TripBoard({ token }: { token: string }) {
     }
   }
 
-  if (!board) return <p className="mx-auto max-w-xl px-5 py-10 text-sm text-white/70">Opening your trip…</p>;
+  if (!board) return <ScreenSkeleton />;
   if (board.error || (board.gate === undefined && !board.faqs)) {
     return (
       <div className="mx-auto max-w-xl px-5 py-10">
@@ -157,10 +167,43 @@ export function TripBoard({ token }: { token: string }) {
 
   return (
     <div className="mx-auto max-w-xl px-5 py-8">
-      <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#1E90FF]">Your trip</p>
-      <h1 className="mt-2 text-4xl font-semibold tracking-tight">{board.eventName || "Your trip"}</h1>
+      <div className="space-y-5 pb-24">
+      <RideBar
+        laterOpen={later}
+        onLater={() => setLater((open) => !open)}
+        onOpen={() => document.getElementById("next-bus")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+      />
+      {later ? (
+        <Accordion title={ride ? `Later · ${ride}` : "Book a later transfer"} open={later} onOpenChange={setLater}>
+          <p>Pick the extra move. It drops into the question below so your event team still gets it.</p>
+          <div className="mt-3 flex gap-2 overflow-x-auto">
+            {ADD_RIDES.map((item) => (
+              <button key={item.id} type="button" className={`h-11 shrink-0 rounded-full px-4 text-sm font-semibold ${ride === item.title ? "bg-white text-black" : "bg-black text-white ring-1 ring-white/15"}`} onClick={() => { setRide(item.title); setCategory("OTHER"); setMessage(`Later transfer: ${item.title}. `); }}>
+                {item.title}
+              </button>
+            ))}
+          </div>
+        </Accordion>
+      ) : null}
+      <SwipeRow title="Your trips">
+        <SwipeCard kicker="Arrival" title={board.nextBus?.name || board.schedule?.[0]?.name || "Arrival"} time={board.nextBus ? when(board.nextBus.scheduledAt) : board.schedule?.[0] ? when(board.schedule[0].scheduledAt) : "—"} status={board.nextBus?.destination || "Not posted"} />
+        <SwipeCard kicker="Hotel" title={middleStop(board.schedule)?.name || "Hotel"} time={middleStop(board.schedule) ? when(middleStop(board.schedule)!.scheduledAt) : "—"} status={middleStop(board.schedule)?.status || "Not posted"} tone="green" />
+        <SwipeCard kicker="Departure" title={board.schedule?.at(-1)?.name || "Departure"} time={board.schedule?.length ? when(board.schedule[board.schedule.length - 1].scheduledAt) : "—"} status={board.schedule?.at(-1)?.status || "Not posted"} tone="amber" />
+      </SwipeRow>
+      <SwipeRow title="Add a ride">
+        {ADD_RIDES.map((item) => (
+          <SwipeCard key={item.id} kicker="Extra transfer" title={item.title} time={item.time} status={ride === item.title ? "Selected" : "Request"} tone={ride === item.title ? "green" : "accent"} onClick={() => { setRide(item.title); setLater(true); setCategory("OTHER"); setMessage(`Later transfer: ${item.title}. `); }} />
+        ))}
+      </SwipeRow>
+      <SwipeRow title="Orlando picks">
+        {ORLANDO_PICKS.map((pick) => (
+          <PhotoCard key={pick.title} {...pick} onClick={() => { setRide(pick.title); setLater(true); setCategory("OTHER"); setMessage(`Later transfer: ${pick.title}. `); }} />
+        ))}
+      </SwipeRow>
+      <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#4da3ff]">Your trip</p>
+      <h1 id="next-bus" className="mt-2 text-4xl font-bold tracking-tight">{board.eventName || "Your trip"}</h1>
       {board.nextBus ? (
-        <article id="next-bus" className="mt-5 rounded-2xl border border-[#1E90FF] p-4">
+        <article className="mt-5 rounded-card bg-vd-card p-4 ring-1 ring-white/10">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#1E90FF]">Next bus</p>
           <h2 className="mt-1 text-xl font-semibold">{board.nextBus.name}</h2>
           <p className="mt-1 text-sm text-white/80">{when(board.nextBus.scheduledAt)}</p>
@@ -228,12 +271,27 @@ export function TripBoard({ token }: { token: string }) {
         <input id="guest-name" value={name} onChange={(event) => setName(event.target.value)} className="h-12 w-full rounded-xl border border-white/15 bg-black px-3 text-base outline-none focus:border-[#1E90FF]" />
         {error ? <p className="text-sm text-rose-200">{error}</p> : null}
         {notice ? <p className="text-sm text-white">{notice}</p> : null}
-        <button type="submit" disabled={pending} className="h-12 w-full rounded-lg bg-[#1E90FF] text-base font-semibold text-white disabled:opacity-60">
+        <button type="submit" disabled={pending} className="h-12 w-full rounded-full bg-white text-base font-bold text-black disabled:opacity-60">
           {pending ? "Sending…" : "Send question"}
         </button>
       </form>
+      </div>
+      <PillNav
+        label="Guest"
+        items={[
+          { id: "home", label: "Home", icon: <Home />, onSelect: () => window.scrollTo({ top: 0, behavior: "smooth" }) },
+          { id: "trip", label: "My Trip", icon: <Bus />, onSelect: () => document.getElementById("next-bus")?.scrollIntoView({ behavior: "smooth", block: "start" }) },
+          { id: "text", label: "Text Us", icon: <MessageCircle />, href: board.tel ? `tel:${board.tel}` : "/contact" },
+          { id: "account", label: "Account", icon: <UserRound />, onSelect: () => document.getElementById("guest-question")?.scrollIntoView({ behavior: "smooth", block: "center" }) },
+        ]}
+      />
     </div>
   );
+}
+
+function middleStop(schedule: Stop[] | undefined) {
+  if (!schedule?.length) return undefined;
+  return schedule[Math.min(schedule.length - 1, Math.floor(schedule.length / 2))];
 }
 
 function when(iso: string) {

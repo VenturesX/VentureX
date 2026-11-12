@@ -104,12 +104,12 @@ export function TeamLogin() {
   if (ready && owner) return <OwnerHub />;
 
   return (
-    <div className="min-h-screen bg-[#090b10] text-white">
+    <div className="min-h-screen bg-black text-white">
       <div className="mx-auto flex min-h-screen max-w-lg flex-col px-5 py-10">
         <VentureMark className="size-12" />
         <h1 className="mt-6 text-4xl font-semibold tracking-tight">Team Login</h1>
         <p className="mt-2 text-sm text-white/70">Powered by {APP_NAME}, the tools for our crew.</p>
-        {!ready ? <p className="mt-8 text-sm text-white/60">Opening…</p> : null}
+        {!ready ? <div className="mt-8 space-y-3" role="status" aria-label="Opening"><div className="vd-skeleton h-12 w-full" /><div className="vd-skeleton h-12 w-full" /><p className="sr-only">Opening…</p></div> : null}
         {ready && !gate && !client ? (
           <form className="mt-8 space-y-3" onSubmit={(event) => { event.preventDefault(); void submit("gate"); }}>
             <label className="block text-sm" htmlFor="entry-code">Enter your code</label>
@@ -139,7 +139,7 @@ export function TeamLogin() {
             <p className="mt-3 text-sm text-white/60">Choose your role, then enter the day code from your check-in text.</p>
             <div className="mt-3 grid gap-3">
               {CARDS.map((item) => (
-                <button key={item.id} type="button" className="flex min-h-24 flex-col justify-center rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-4 text-left" onClick={() => { setPicked(item.id); setCode(""); setError(""); }}>
+                <button key={item.id} type="button" className="vd-press flex min-h-24 flex-col justify-center rounded-tile bg-[#161618] px-5 py-4 text-left ring-1 ring-white/10" onClick={() => { setPicked(item.id); setCode(""); setError(""); }}>
                   <span className="text-2xl font-semibold">{item.title}</span>
                   <span className="mt-1 text-sm text-white/70">{item.body}</span>
                 </button>

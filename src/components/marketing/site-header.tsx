@@ -13,7 +13,7 @@ const LINKS = [
 ];
 
 const quoteButtonClass =
-  "inline-flex shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-[#1E90FF] to-[#8B5CF6] px-4 text-sm font-semibold text-white";
+  "vd-press inline-flex shrink-0 items-center justify-center rounded-full bg-white px-4 text-sm font-bold text-black";
 
 export function SiteHeader() {
   const pathname = usePathname();
@@ -34,18 +34,21 @@ export function SiteHeader() {
     };
   }, [open]);
 
-  const tripBar = open ? null : (
-    <div className="fixed inset-x-0 bottom-0 z-30 border-t border-white/10 bg-[#090b10]/95 px-4 py-3 backdrop-blur md:hidden">
-      <p className="text-center text-xs text-white/60">Already traveling with us?<span className="mt-0.5 block text-[#9ecbff]">24-hour trip support</span></p>
-      <Link href="/trip" className="mt-2 flex h-12 items-center justify-center rounded-full bg-white text-sm font-semibold text-black">
-        Open my trip
-      </Link>
+  const onTrip = pathname === "/trip" || pathname.startsWith("/t/") || pathname === "/traveling";
+  const tripBar = open || onTrip ? null : (
+    <div className="fixed inset-x-3 bottom-3 z-30 md:hidden">
+      <div className="rounded-full bg-[#141414]/95 px-4 py-3 shadow-[0_12px_40px_rgba(0,0,0,0.55)] ring-1 ring-white/10 backdrop-blur">
+        <p className="text-center text-xs text-vd-muted">Already traveling with us?<span className="mt-0.5 block text-[#4da3ff]">24-hour trip support</span></p>
+        <Link href="/trip" className="vd-press mt-2 flex h-12 items-center justify-center rounded-full bg-white text-sm font-bold text-black">
+          Open my trip
+        </Link>
+      </div>
     </div>
   );
 
   return (
     <>
-    <header className="sticky top-0 z-40 border-b border-white/10 bg-[#090b10]/90 backdrop-blur">
+    <header className="sticky top-0 z-40 border-b border-white/10 bg-black/90 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4">
         <Link href="/" className="flex min-w-0 items-center gap-2.5" aria-label="Venture Directors home">
           <VentureMark className="size-9 shrink-0" />
@@ -64,7 +67,7 @@ export function SiteHeader() {
             <Link href="/trip" className="inline-flex h-10 items-center rounded-full border border-white/20 px-4 text-sm font-semibold text-white">
               Open my trip
             </Link>
-            <span className="text-[10px] leading-3 text-[#9ecbff]">24-hour trip support</span>
+            <span className="text-[10px] leading-3 text-[#4da3ff]">24-hour trip support</span>
           </div>
         </div>
         <Link href="/quote" className={`${quoteButtonClass} ml-auto h-10 px-3 sm:px-4 md:ml-3`}>
@@ -83,7 +86,7 @@ export function SiteHeader() {
         </button>
       </div>
       {open ? (
-        <div id="site-menu" className="border-t border-white/10 bg-[#090b10] px-5 py-2 md:hidden">
+        <div id="site-menu" className="border-t border-white/10 bg-black px-5 py-2 md:hidden">
           <nav className="grid" aria-label="Mobile">
             {LINKS.map((link) => (
               <Link key={link.href} href={link.href} className="border-b border-white/10 py-3 text-lg" onClick={() => setOpenPath(null)}>
@@ -98,7 +101,7 @@ export function SiteHeader() {
             </Link>
             <Link href="/trip" className="py-3 text-lg" onClick={() => setOpenPath(null)}>
               Open my trip
-              <span className="mt-1 block text-xs text-[#9ecbff]">24-hour trip support</span>
+              <span className="mt-1 block text-xs text-[#4da3ff]">24-hour trip support</span>
             </Link>
           </nav>
         </div>
@@ -125,7 +128,7 @@ export function SiteFooter() {
         </div>
         <p className="text-xs text-white/45">Powered by {APP_NAME}</p>
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
-          <Link href="/quote" className="font-semibold text-[#9ecbff]">Get a Quote</Link>
+          <Link href="/quote" className="font-semibold text-[#4da3ff]">Get a Quote</Link>
           <Link href="/contact" className="text-white/80">Contact</Link>
           <Link href="/trip" className="text-white/80">Open my trip</Link>
         </div>

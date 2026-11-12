@@ -3,6 +3,9 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { field, onBtn } from "@/components/light/styles";
+import { DeskGrid } from "@/components/premium/desk-grid";
+import { HeroCard } from "@/components/premium/hero-card";
+import { ProgressRing } from "@/components/premium/progress-ring";
 import { CrewBar } from "@/components/team/crew-bar";
 
 type Party = { id: string; vehicle: string; notes: string; carSeats: number; boosters: number; count: number; names: string[]; cells: string[] };
@@ -68,6 +71,9 @@ function MyDay({ day, code, onChange }: { day: Day; code: string; onChange: (day
   const [post, setPost] = useState(day.person.postCode);
   const mine = day.lines.filter((line) => line.mine);
   const shown = tab === "All" ? day.lines : tab === "Posts" ? day.lines.filter((line) => line.postCodes.some((item) => item === post || (post === "B2" && item === "B_LOW") || (post === "B1" && item === "B_HIGH") || (post === "B_LOW" && item === "B2") || (post === "B_HIGH" && item === "B1"))) : mine;
+  const guestTotal = day.lines.reduce((sum, line) => sum + line.parties.reduce((partySum, party) => partySum + party.count, 0), 0);
+  const guestDone = day.lines.reduce((sum, line) => sum + (/sent|board|depart|picked|complete|loaded/i.test(line.status) ? line.parties.reduce((partySum, party) => partySum + party.count, 0) : 0), 0);
+  const sample = guestTotal === 0;
 
   async function save(body: { postCode?: string; textAlerts?: boolean }) {
     const response = await fetch("/api/team/day", {
@@ -79,13 +85,16 @@ function MyDay({ day, code, onChange }: { day: Day; code: string; onChange: (day
   }
 
   return (
-    <div className="mx-auto max-w-lg px-4 pb-24 pt-6 text-white" data-testid="my-day">
-      {day.owner ? <Link href="/team" className="mb-3 inline-block min-h-11 text-sm text-[#9ecbff]">← Owner hub</Link> : day.wide ? <Link href="/team/admin?setup=1" className="mb-3 inline-block min-h-11 text-sm text-[#9ecbff]">Staff and itinerary</Link> : null}
-      <h1 className="text-3xl font-semibold">{day.person.name}</h1>
-      <p className="text-sm text-white/70">{day.program.name} · {day.person.postLabel}</p>
+    <div className="mx-auto max-w-lg space-y-4 px-4 pb-28 pt-6 text-white" data-testid="my-day">
+      {day.owner ? <Link href="/team" className="inline-block min-h-11 text-sm font-semibold text-[#4da3ff]">← Owner hub</Link> : day.wide ? <Link href="/team/admin?setup=1" className="inline-block min-h-11 text-sm font-semibold text-[#4da3ff]">Staff and itinerary</Link> : null}
+      <HeroCard kicker={day.program.name} title={day.person.postLabel || "Today's post"} line={`${day.person.name} · Today's shift`} />
+      <DeskGrid hrefFor={(key) => ({ manifest: "/team/clipboard", flights: "/team/director", dispatch: "/team/dispatch", clipboard: "/team/clipboard", shuttle: "/clipboard", drive: "/drive" }[key])} />
+      <ProgressRing done={sample ? 38 : guestDone} total={sample ? 52 : guestTotal} label="guests picked up" sample={sample} />
+      <h2 className="text-2xl font-bold">{day.person.name}</h2>
+      <p className="text-sm text-vd-muted">{day.program.name} · {day.person.postLabel}</p>
       <div className="mt-4 grid grid-cols-4 gap-1">
         {TABS.map((item) => (
-          <button key={item} type="button" className={`h-11 rounded-xl text-sm font-semibold ${tab === item ? "bg-gradient-to-r from-[#1E90FF] to-[#8B5CF6]" : "bg-white/10"}`} onClick={() => setTab(item)}>
+          <button key={item} type="button" className={`h-11 rounded-full text-sm font-semibold ${tab === item ? "bg-white text-black" : "bg-[#1c1c1e] text-vd-muted"}`} onClick={() => setTab(item)}>
             {item === "Mine" ? "My Day" : item}
           </button>
         ))}

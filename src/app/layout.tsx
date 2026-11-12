@@ -1,12 +1,12 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter, Geist_Mono } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { OwnerLock } from "@/components/team/owner-lock";
 import { ServiceWorkerRegister } from "@/components/sw-register";
 import { APP_NAME, COMPANY_NAME, SITE_DESCRIPTION, TAGLINE, siteUrl } from "@/lib/brand";
 import "./globals.css";
 
-const geistSans = Geist({
+const inter = Inter({
   variable: "--font-sans",
   subsets: ["latin"],
 });
@@ -47,7 +47,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#090b10",
+  themeColor: "#000000",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -57,9 +57,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`dark ${geistSans.variable} ${geistMono.variable} h-full`}
+      className={`dark ${inter.variable} ${geistMono.variable} h-full`}
     >
-      <body className="min-h-full flex flex-col bg-[#090b10]">
+      <body className="min-h-full flex flex-col bg-black">
         {children}
         <OwnerLock />
         <Toaster theme="dark" />

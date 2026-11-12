@@ -1,19 +1,30 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { field, onBtn } from "@/components/light/styles";
+import { Home, KeyRound, LayoutDashboard, LogOut, Radio, Ticket } from "lucide-react";
+import { field } from "@/components/light/styles";
+import { Accordion } from "@/components/premium/accordion";
+import { DeskGrid, type DeskKey } from "@/components/premium/desk-grid";
+import { HeroCard } from "@/components/premium/hero-card";
+import { ListRow } from "@/components/premium/list-row";
+import { PillNav } from "@/components/premium/pill-nav";
+import { ProgressRing } from "@/components/premium/progress-ring";
+import { ScreenSkeleton } from "@/components/premium/skeleton";
 
 type Program = { id: string; name: string; code: string; status: string; _count: { trips: number; roster: number } };
-const DESKS = [
+const MORE = [
   ["admin", "Admin desk", "Reports, quotes, and program setup."],
-  ["dispatch", "Dispatch", "Guest counts, loading, and departures."],
-  ["director", "Director", "Flights, posts, and staff for this program."],
-  ["clipboard", "Airport clipboard", "Flight lines and guest check-in."],
-  ["shuttle", "Shuttle clipboard", "The existing shuttle planning board."],
-  ["driver", "Driver", "The existing driver workspace."],
   ["guest", "Open My Trip", "Preview this program as a general guest."],
   ["setup", "Manage programs & codes", "Program, client, group, and guest codes."],
 ] as const;
+const OPEN: Record<DeskKey, string> = {
+  manifest: "clipboard",
+  flights: "director",
+  dispatch: "dispatch",
+  clipboard: "clipboard",
+  shuttle: "shuttle",
+  drive: "driver",
+};
 
 export function OwnerHub() {
   const [programs, setPrograms] = useState<Program[]>([]);
@@ -21,6 +32,8 @@ export function OwnerHub() {
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
+  const [panel, setPanel] = useState<"home" | "more">("home");
+  const [pickup, setPickup] = useState<{ done: number; total: number; sample: boolean } | null>(null);
   useEffect(() => {
     let active = true;
     async function load() {
@@ -45,6 +58,22 @@ export function OwnerHub() {
     return () => { active = false; window.removeEventListener("vd-owner-unlocked", again); };
   }, []);
 
+  useEffect(() => {
+    const program = programs.find((item) => item.id === selected);
+    if (!program) return;
+    let active = true;
+    void fetch("/api/team/report").then(async (response) => {
+      if (!response.ok) throw new Error("report");
+      const data = await response.json() as { program?: { code?: string }; moved?: { pax?: number }; sheet?: { count?: number }[] };
+      const total = (data.sheet ?? []).reduce((sum, row) => sum + Number(row.count || 0), 0);
+      const done = Number(data.moved?.pax || 0);
+      if (!active) return;
+      if (data.program?.code === program.code && total > 0) setPickup({ done: Math.min(done, total), total, sample: false });
+      else setPickup({ done: 38, total: 52, sample: true });
+    }).catch(() => { if (active) setPickup({ done: 38, total: 52, sample: true }); });
+    return () => { active = false; };
+  }, [programs, selected]);
+
   async function open(desk: string) {
     setPending(true);
     setError("");
@@ -67,26 +96,55 @@ export function OwnerHub() {
     else setError("Could not sign out. Try again.");
   }
   const program = programs.find((item) => item.id === selected);
+  const today = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", weekday: "short", month: "short", day: "numeric" }).format(new Date());
+  if (!loaded) return <ScreenSkeleton />;
   return (
-    <div className="mx-auto max-w-3xl space-y-6 px-5 py-10 text-white" data-testid="owner-hub">
-      <header className="flex items-start justify-between gap-4">
-        <div><p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#9ecbff]">Venture Directors</p><h1 className="mt-2 text-4xl font-semibold">Owner hub</h1><p className="mt-3 text-sm text-white/70">One login. Choose a program, then open your workspace.</p></div>
-        <button type="button" onClick={() => void signOut()} className="min-h-11 shrink-0 text-sm text-[#9ecbff]">Sign out</button>
-      </header>
-      {error ? <p role="alert" className="text-sm text-red-300">{error}</p> : null}
-      {!loaded ? <p role="status">Loading your programs…</p> : null}
-      {loaded && programs.length ? <section className="space-y-3 rounded-2xl border border-[#1E90FF]/30 bg-[#1E90FF]/5 p-5">
+    <div className="mx-auto max-w-lg space-y-4 px-4 pb-28 pt-6 text-white" data-testid="owner-hub">
+      <HeroCard kicker="Owner" title={program?.name || "Owner hub"} line={program ? `${program.status} · ${today}` : "Choose a program"}>
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-sm text-vd-muted">One login. Choose a program, then open your workspace.</p>
+          <button type="button" onClick={() => void signOut()} className="inline-flex min-h-11 shrink-0 items-center gap-1 text-sm font-semibold text-[#4da3ff]">
+            <LogOut className="size-4" aria-hidden="true" /> Sign out
+          </button>
+        </div>
+      </HeroCard>
+      {error ? <p role="alert" className="text-sm text-[#ffb4b0]">{error}</p> : null}
+      {programs.length ? <section className="space-y-3 rounded-card bg-vd-card p-4 ring-1 ring-white/10">
         <label htmlFor="owner-program" className="block text-sm font-semibold">Program</label>
         <select id="owner-program" value={selected} disabled={pending} onChange={(event) => { setSelected(event.target.value); sessionStorage.setItem("vd-owner-program", event.target.value); }} className={field}>
           {programs.map((item) => <option key={item.id} value={item.id}>{item.name} · {item.code}</option>)}
         </select>
-        {program ? <><p className="text-sm text-white/70">{program._count.trips} trips · {program._count.roster} staff · {program.status}</p><p className="text-sm">Guest program number: <strong className="text-lg tracking-wider text-[#9ecbff]">{program.code}</strong></p><p className="text-xs text-white/60">Guests enter this program number in Open My Trip. Personal text codes unlock their own ride.</p></> : null}
-      </section> : loaded && !error ? <div className="rounded-2xl border border-white/10 p-5"><p>No programs yet.</p><button type="button" className={`${onBtn} mt-4 px-4`} onClick={() => void open("setup")} disabled={pending}>Add your first program</button></div> : null}
-      {program ? <nav aria-label="Owner workspaces" className="grid gap-3 sm:grid-cols-2">
-        {DESKS.map(([desk, title, description]) => <button key={desk} type="button" disabled={pending} onClick={() => void open(desk)} className="min-h-28 rounded-2xl border border-white/10 bg-white/[0.03] p-5 text-left hover:border-[#1E90FF]/60 disabled:opacity-50"><span className="text-lg font-semibold">{title}</span><span className="mt-2 block text-sm text-white/65">{description}</span></button>)}
-      </nav> : null}
-      <details className="rounded-2xl border border-white/10 p-5 text-sm leading-relaxed text-white/75"><summary className="cursor-pointer font-semibold text-white">How to change your codes</summary><p className="mt-3">The owner code is OWNER_HUB_CODE in Vercel. While that is set, the older owner code does not open this hub. The staff code never opens it. The hub locks after 15 minutes without using the desk, and the session ends at midnight Eastern. Signing back in keeps the program you had open.</p><p className="mt-3">Use Manage programs &amp; codes to change program and client codes, reset staff day codes, and manage group or guest text codes. Keep your owner code private.</p></details>
-      <p className="text-xs text-white/50">Driver and shuttle clipboard are shared workspaces with their own selectors. Airport desks use the program selected above. Changing programs here changes the active owner program across browser tabs.</p>
+        {program ? <><p className="text-sm text-vd-muted">{program._count.trips} trips · {program._count.roster} staff · {program.status}</p><p className="text-sm">Guest program number: <strong className="text-lg tracking-wider text-[#4da3ff]">{program.code}</strong></p><p className="text-xs text-vd-muted">Guests enter this program number in Open My Trip. Personal text codes unlock their own ride.</p></> : null}
+      </section> : !error ? <div className="rounded-card bg-vd-card p-5 ring-1 ring-white/10"><p>No programs yet.</p><button type="button" className="mt-4 h-11 rounded-full bg-white px-4 text-sm font-bold text-black" onClick={() => void open("setup")} disabled={pending}>Add your first program</button></div> : null}
+      {program && panel === "home" ? (
+        <>
+          <DeskGrid disabled={pending} onOpen={(key) => void open(OPEN[key])} />
+          {pickup ? <ProgressRing done={pickup.done} total={pickup.total} label="guests picked up" sample={pickup.sample} /> : <div className="vd-skeleton h-24 w-full" role="status" aria-label="Loading counts" />}
+        </>
+      ) : null}
+      {program && panel === "more" ? (
+        <section className="overflow-hidden rounded-card bg-vd-card ring-1 ring-white/10">
+          <h2 className="px-4 pt-4 text-lg font-bold">More</h2>
+          {MORE.map(([desk, title, description]) => (
+            <ListRow key={desk} icon={desk === "guest" ? <Ticket className="size-5" /> : desk === "admin" ? <LayoutDashboard className="size-5" /> : <KeyRound className="size-5" />} title={title} subtitle={description} onClick={() => void open(desk)} disabled={pending} />
+          ))}
+          <ListRow icon={<LogOut className="size-5" />} title="Sign out" subtitle="End this owner session" onClick={() => void signOut()} />
+        </section>
+      ) : null}
+      <Accordion title="How to change your codes">
+        <p>The owner code is OWNER_HUB_CODE in Vercel. While that is set, the older owner code does not open this hub. The staff code never opens it. The hub locks after 15 minutes without using the desk, and the session ends at midnight Eastern. Signing back in keeps the program you had open.</p>
+        <p className="mt-3">Use Manage programs &amp; codes to change program and client codes, reset staff day codes, and manage group or guest text codes. Keep your owner code private.</p>
+      </Accordion>
+      <p className="text-xs text-vd-muted">Driver and shuttle clipboard are shared workspaces with their own selectors. Airport desks use the program selected above. Changing programs here changes the active owner program across browser tabs.</p>
+      <PillNav
+        label="Owner"
+        items={[
+          { id: "home", label: "Home", icon: <Home />, active: panel === "home", onSelect: () => setPanel("home") },
+          { id: "dispatch", label: "Dispatch", icon: <Radio />, onSelect: () => void open("dispatch") },
+          { id: "trip", label: "My Trip", icon: <Ticket />, onSelect: () => void open("guest") },
+          { id: "more", label: "More", icon: <KeyRound />, active: panel === "more", onSelect: () => setPanel("more") },
+        ]}
+      />
     </div>
   );
 }

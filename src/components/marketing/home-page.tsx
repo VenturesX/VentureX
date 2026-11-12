@@ -62,9 +62,9 @@ export function MarketingHome() {
         <div className="relative mx-auto flex min-h-[520px] max-w-6xl items-center px-5 py-16 sm:min-h-[620px] sm:py-24">
           <div className="max-w-xl">
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#9ecbff]">Venture Directors</p>
-            <h1 className="mt-3 text-[2.15rem] font-semibold leading-[1.05] tracking-[-0.03em] sm:text-6xl">
+            <h1 className="mt-3 text-[2.35rem] font-bold leading-[1.02] tracking-[-0.04em] sm:text-6xl">
               <span className="block text-white">Group Transportation,</span>
-              <span className="mt-1 inline-block bg-gradient-to-r from-[#1E90FF] to-[#8B5CF6] bg-clip-text text-transparent">Handled.</span>
+              <span className="mt-1 inline-block text-[#4da3ff]">Handled.</span>
             </h1>
             <p className="mt-5 max-w-md text-base leading-relaxed text-white/85">{HERO_SUB}</p>
             <p className="mt-4 max-w-lg text-base leading-relaxed text-white/75">
@@ -73,7 +73,7 @@ export function MarketingHome() {
             <div className="mt-8">
               <Link
                 href="/quote"
-                className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#1E90FF] to-[#8B5CF6] px-6 text-base font-semibold text-white shadow-[0_10px_30px_rgba(30,144,255,0.35)]"
+                className="vd-press inline-flex h-12 items-center justify-center gap-2 rounded-full bg-white px-6 text-base font-bold text-black"
               >
                 Get a Quote
                 <ArrowRight className="size-4" />
@@ -83,21 +83,21 @@ export function MarketingHome() {
         </div>
       </section>
 
-      <section className="border-y border-[#1E90FF]/20 bg-[#1E90FF]/[0.04]" aria-labelledby="live-counts">
+      <section className="border-y border-white/10 bg-[#0a0a0a]" aria-labelledby="live-counts">
         <div className="mx-auto grid max-w-6xl gap-8 px-5 py-12 md:grid-cols-2 md:items-center">
           <div>
-            <h2 id="live-counts" className="text-3xl font-semibold tracking-tight">Live passenger counts</h2>
+            <h2 id="live-counts" className="text-3xl font-bold tracking-tight">Live passenger counts</h2>
             <p className="mt-4 text-sm leading-relaxed text-white/80">
               Follow guest status as our crew updates it: who is expected, checked in, boarded, and departed throughout the program.
             </p>
           </div>
-          <div className="rounded-2xl border border-white/10 bg-black/30 p-6">
-            <ChartNoAxesCombined className="size-6 text-[#1E90FF]" aria-hidden="true" />
-            <h3 className="mt-4 text-lg font-semibold">One shared view for your team.</h3>
+          <div className="rounded-tile bg-[#161618] p-6 ring-1 ring-white/10">
+            <ChartNoAxesCombined className="size-6 text-[#4da3ff]" aria-hidden="true" />
+            <h3 className="mt-4 text-lg font-bold">One shared view for your team.</h3>
             <p className="mt-2 text-sm leading-relaxed text-white/75">
               From airport arrivals to event shuttles, clear updates from our crew help planners coordinate the next move.
             </p>
-            <Link href="/quote" className="mt-5 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-[#9ecbff]">
+            <Link href="/quote" className="mt-5 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-[#4da3ff]">
               Plan your program <ArrowRight className="size-4" aria-hidden="true" />
             </Link>
           </div>
@@ -105,20 +105,20 @@ export function MarketingHome() {
       </section>
 
       <section id="services" className="mx-auto max-w-6xl scroll-mt-24 px-5 py-16">
-        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#1E90FF]">Services</p>
-        <h2 className="mt-2 max-w-xl text-3xl font-semibold tracking-tight">What we run</h2>
+        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#4da3ff]">Services</p>
+        <h2 className="mt-2 max-w-xl text-3xl font-bold tracking-tight">What we run</h2>
         <div className="mt-8 grid gap-4 sm:grid-cols-2">
           {SERVICES.map((service) => (
-            <article key={service.title} className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-              <div className="grid size-10 place-items-center rounded-full bg-[#1E90FF]/15 text-[#1E90FF]">
+            <article key={service.title} className="rounded-tile bg-[#161618] p-5 ring-1 ring-white/10">
+              <div className="grid size-11 place-items-center rounded-2xl bg-[#4da3ff]/15 text-[#4da3ff]">
                 <service.icon className="size-5" />
               </div>
-              <h3 className="mt-4 text-lg font-semibold">{service.title}</h3>
+              <h3 className="mt-4 text-lg font-bold">{service.title}</h3>
               <p className="mt-2 text-sm leading-relaxed text-white/75">{service.body}</p>
             </article>
           ))}
-          <article className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-            <h3 className="text-lg font-semibold">…and more</h3>
+          <article className="rounded-tile bg-[#161618] p-5 ring-1 ring-white/10">
+            <h3 className="text-lg font-bold">…and more</h3>
             <p className="mt-2 text-sm leading-relaxed text-white/75">
               If the group needs to move, ask. We will tell you straight whether we can run it.
             </p>
@@ -128,16 +128,16 @@ export function MarketingHome() {
 
       <section className="border-y border-white/10 bg-white/[0.02]" aria-labelledby="safety">
         <div className="mx-auto max-w-6xl px-5 py-16">
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#1E90FF]">Safety</p>
-          <h2 id="safety" className="mt-2 max-w-3xl text-3xl font-semibold tracking-tight">Safety is our first priority.</h2>
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#4da3ff]">Safety</p>
+          <h2 id="safety" className="mt-2 max-w-3xl text-3xl font-bold tracking-tight">Safety is our first priority.</h2>
           <p className="mt-4 max-w-3xl text-sm leading-relaxed text-white/80">
             Every operator we bring in is vetted, licensed, and insured. Every Venture Director on the ground is experienced and trained.
           </p>
           <ul className="mt-8 grid gap-3 md:grid-cols-3">
             {TRUST.map((item) => (
-              <li key={item.title} className="rounded-2xl border border-white/10 p-5">
-                <item.icon className="size-5 text-[#1E90FF]" />
-                <h3 className="mt-3 text-lg font-semibold">{item.title}</h3>
+              <li key={item.title} className="rounded-tile bg-[#161618] p-5 ring-1 ring-white/10">
+                <item.icon className="size-5 text-[#30d158]" />
+                <h3 className="mt-3 text-lg font-bold">{item.title}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-white/75">{item.body}</p>
               </li>
             ))}
@@ -147,8 +147,8 @@ export function MarketingHome() {
 
       <section id="about" className="mx-auto grid max-w-6xl scroll-mt-24 gap-8 px-5 py-16 md:grid-cols-2">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#1E90FF]">Who we work with</p>
-          <h2 className="mt-2 text-3xl font-semibold tracking-tight">Your DMC transportation partner.</h2>
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#4da3ff]">Who we work with</p>
+          <h2 className="mt-2 text-3xl font-bold tracking-tight">Your DMC transportation partner.</h2>
           <p className="mt-4 text-sm leading-relaxed text-white/75">
             We work alongside Orlando&apos;s destination management companies as an extension of your team, supporting your client relationships and the guest experience you promise.
           </p>
@@ -156,8 +156,8 @@ export function MarketingHome() {
             From transportation planning and airport meet-and-greets to on-site dispatch, we help your team stay connected throughout the program. We work alongside trusted, licensed and insured transportation operators.
           </p>
         </div>
-        <div className="rounded-2xl border border-white/10 p-5">
-          <h3 className="text-lg font-semibold">A partnership built around your program.</h3>
+        <div className="rounded-tile bg-[#161618] p-5 ring-1 ring-white/10">
+          <h3 className="text-lg font-bold">A partnership built around your program.</h3>
           <p className="mt-2 text-sm leading-relaxed text-white/75">
             You bring the client relationship and program vision. We bring transportation coordination, a crew on the ground, and visibility into each move.
           </p>
@@ -165,11 +165,11 @@ export function MarketingHome() {
       </section>
 
       <section className="px-5 pb-4" aria-labelledby="nationwide">
-        <div className="mx-auto max-w-6xl rounded-3xl border border-white/10 px-6 py-10">
-          <h2 id="nationwide" className="text-3xl font-semibold tracking-tight">Orlando roots. Florida connections.</h2>
+        <div className="mx-auto max-w-6xl rounded-tile bg-[#161618] px-6 py-10 ring-1 ring-white/10">
+          <h2 id="nationwide" className="text-3xl font-bold tracking-tight">Orlando roots. Florida connections.</h2>
           <Link
             href="/quote?market=other"
-            className="mt-6 inline-flex h-12 items-center rounded-full bg-white px-5 text-sm font-semibold text-black"
+            className="vd-press mt-6 inline-flex h-12 items-center rounded-full bg-white px-5 text-sm font-bold text-black"
           >
             Ask about your city
           </Link>
@@ -177,13 +177,13 @@ export function MarketingHome() {
       </section>
 
       <section id="how" className="mx-auto max-w-6xl scroll-mt-24 px-5 py-16">
-        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#1E90FF]">How it works</p>
-        <h2 className="mt-2 text-3xl font-semibold tracking-tight">From the request to the curb</h2>
+        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#4da3ff]">How it works</p>
+        <h2 className="mt-2 text-3xl font-bold tracking-tight">From the request to the curb</h2>
         <ol className="mt-8 grid gap-4 md:grid-cols-4">
           {STEPS.map((step, index) => (
-            <li key={step.title} className="rounded-2xl border border-white/10 p-5">
-              <div className="text-sm font-semibold tracking-[0.16em] text-[#1E90FF]">{String(index + 1).padStart(2, "0")}</div>
-              <h3 className="mt-3 text-lg font-semibold">{step.title}</h3>
+            <li key={step.title} className="rounded-tile bg-[#161618] p-5 ring-1 ring-white/10">
+              <div className="text-sm font-bold tabular-nums tracking-[0.16em] text-[#4da3ff]">{String(index + 1).padStart(2, "0")}</div>
+              <h3 className="mt-3 text-lg font-bold">{step.title}</h3>
               <p className="mt-2 text-sm leading-relaxed text-white/70">{step.body}</p>
             </li>
           ))}
@@ -191,14 +191,14 @@ export function MarketingHome() {
       </section>
 
       <section className="px-5 pb-16">
-        <div className="mx-auto max-w-6xl rounded-3xl border border-[#1E90FF]/35 bg-gradient-to-br from-[#1E90FF]/15 to-[#8B5CF6]/10 px-6 py-12">
-          <h2 className="text-3xl font-semibold tracking-tight">Ready when your group is.</h2>
+        <div className="mx-auto max-w-6xl rounded-tile bg-[#161618] px-6 py-12 ring-1 ring-white/10">
+          <h2 className="text-3xl font-bold tracking-tight">Ready when your group is.</h2>
           <p className="mt-3 max-w-xl text-sm leading-relaxed text-white/75">
             Send the dates and the stops. We confirm the price before anything is reserved.
           </p>
           <Link
             href="/quote"
-            className="mt-6 inline-flex h-12 items-center gap-2 rounded-full bg-gradient-to-r from-[#1E90FF] to-[#8B5CF6] px-6 text-base font-semibold text-white"
+            className="vd-press mt-6 inline-flex h-12 items-center gap-2 rounded-full bg-white px-6 text-base font-bold text-black"
           >
             Get a Quote
             <ArrowRight className="size-4" />

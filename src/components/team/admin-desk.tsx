@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { TextSim } from "@/components/light/text-sim";
+import { HeroCard } from "@/components/premium/hero-card";
+import { ProgressRing } from "@/components/premium/progress-ring";
 import { AdminOffice } from "@/components/team/admin-office";
 import { AdminQuotes } from "@/components/team/admin-quotes";
 import { GuestSetup } from "@/components/team/guest-setup";
@@ -84,10 +86,13 @@ export function AdminDesk() {
           </select>
         )}
       </div>
-      <header>
-        <p className="text-xs uppercase tracking-[0.16em] text-[#9ecbff] print:text-black">{level}</p>
-        <h1 className="text-3xl font-semibold">{report?.program.name ?? "Program"}</h1>
-      </header>
+      <HeroCard kicker={level} title={report?.program.name ?? "Program"} line="Today's shift">
+        {report ? (() => {
+          const manifest = report.sheet.reduce((sum, row) => sum + row.count, 0);
+          const sample = manifest === 0 && report.moved.pax === 0;
+          return <ProgressRing done={sample ? 38 : report.moved.pax} total={sample ? 52 : Math.max(manifest, report.moved.pax)} label="guests picked up" sample={sample} />;
+        })() : null}
+      </HeroCard>
       {level === "Lead" ? <Link href="/team/director" className="inline-flex min-h-11 items-center text-sm font-semibold text-[#9ecbff]">Open the day, staff board, and clipboard</Link> : null}
       {level === "Owner" ? (
         <div className="flex gap-2 print:hidden">
