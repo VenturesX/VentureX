@@ -2,16 +2,14 @@
 
 import { useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Bus, Home, MessageCircle, UserRound } from "lucide-react";
+import { Bus, FerrisWheel, Home, Hotel, Landmark, MessageCircle, Plane, UtensilsCrossed, UserRound } from "lucide-react";
 import { COMPANY_PHONE, COMPANY_PHONE_TEL } from "@/lib/brand";
 import { useWalk } from "@/lib/experience/store";
 import { Accordion } from "@/components/premium/accordion";
-import { PhotoCard } from "@/components/premium/photo-card";
 import { PillNav } from "@/components/premium/pill-nav";
-import { ProgressRing } from "@/components/premium/progress-ring";
 import { RideBar } from "@/components/premium/ride-bar";
 import { ADD_RIDES, ORLANDO_PICKS } from "@/components/premium/rides";
-import { SwipeCard, SwipeRow } from "@/components/premium/swipe-row";
+import { Tile } from "@/components/premium/tile";
 
 const HOTELS = [
   ["Residence Inn SeaWorld", "Main entrance. Donna is on the curb. Headway 15–20 min."],
@@ -47,12 +45,11 @@ export function GuestApp() {
       <div className="mx-auto w-full max-w-lg space-y-4 px-4 py-4 text-white" data-testid="client-dashboard">
         <h1 className="text-3xl font-bold tracking-tight">IACP 2026 Orlando</h1>
         <p className="text-sm text-vd-muted">VIP client command. Code 831519.</p>
-        <ProgressRing done={142} total={180} label="guests registered" />
         <div className="grid grid-cols-2 gap-3">
-          <Stat label="Moved" value="554" />
-          <Stat label="Registered" value="142 / 180" />
+          <Tile icon={<Bus className="size-5" />} label="Live map" hint="Route 3 between the hotels" />
+          <Tile icon={<Plane className="size-5" />} label="Arrivals" hint="Flights the crew is meeting" />
         </div>
-        <p className="rounded-card bg-vd-card p-4 text-sm ring-1 ring-white/10">Live map: Route 3 buses between Residence Inn and OCCC West. Hotel counts update as curb staff send each bus.</p>
+        <p className="rounded-card bg-vd-card p-4 text-sm ring-1 ring-white/10">Live map: Route 3 buses between Residence Inn and OCCC West. Hotel notes update as curb staff send each bus.</p>
         <button type="button" className="h-12 w-full rounded-full bg-white text-sm font-bold text-black">Executive summary</button>
       </div>
     );
@@ -79,21 +76,30 @@ export function GuestApp() {
       ) : null}
       {view === "home" ? (
         <>
-          <SwipeRow title="Your trips">
-            <SwipeCard kicker="Arrival" title="Next bus" time="6 min" status="ETA" tone="accent" onClick={() => setView("trip")} />
-            <SwipeCard kicker="Hotel" title={HOTELS[hotel][0]} time="Board" status="X marks the spot" tone="green" onClick={() => setView("trip")} />
-            <SwipeCard kicker="Departure" title="OCCC West" time="Loop" status="End of the run" tone="amber" onClick={() => { setHotel(4); setView("trip"); }} />
-          </SwipeRow>
-          <SwipeRow title="Add a ride">
-            {ADD_RIDES.map((item) => (
-              <SwipeCard key={item.id} kicker="Extra transfer" title={item.title} time={item.time} status={ride === item.title ? "Selected" : "Request"} tone={ride === item.title ? "green" : "accent"} onClick={() => chooseRide(item.title)} />
-            ))}
-          </SwipeRow>
-          <SwipeRow title="Orlando picks">
-            {ORLANDO_PICKS.map((pick) => (
-              <PhotoCard key={pick.title} {...pick} onClick={() => chooseRide(pick.title)} />
-            ))}
-          </SwipeRow>
+          <section className="space-y-3">
+            <h2 className="text-xl font-bold">Your trips</h2>
+            <div className="grid grid-cols-2 gap-3">
+              <Tile icon={<Plane className="size-5" />} label="Next bus" hint="On the loop" onClick={() => setView("trip")} />
+              <Tile icon={<Hotel className="size-5" />} label={HOTELS[hotel][0]} hint="Where to board" tone="green" onClick={() => setView("trip")} />
+              <Tile icon={<Bus className="size-5" />} label="OCCC West" hint="End of the run" tone="amber" onClick={() => { setHotel(4); setView("trip"); }} />
+            </div>
+          </section>
+          <section className="space-y-3">
+            <h2 className="text-xl font-bold">Add a ride</h2>
+            <div className="grid grid-cols-2 gap-3">
+              {ADD_RIDES.map((item) => (
+                <Tile key={item.id} icon={/dinner/i.test(item.title) ? <UtensilsCrossed className="size-5" /> : <FerrisWheel className="size-5" />} label={item.title} hint={ride === item.title ? "Selected" : "Request"} tone={ride === item.title ? "green" : "accent"} onClick={() => chooseRide(item.title)} />
+              ))}
+            </div>
+          </section>
+          <section className="space-y-3">
+            <h2 className="text-xl font-bold">Orlando picks</h2>
+            <div className="grid grid-cols-2 gap-3">
+              {ORLANDO_PICKS.map((pick) => (
+                <Tile key={pick.title} icon={<Landmark className="size-5" />} label={pick.title} hint={pick.subtitle} onClick={() => chooseRide(pick.title)} />
+              ))}
+            </div>
+          </section>
         </>
       ) : null}
       {view === "trip" ? (
@@ -120,7 +126,8 @@ export function GuestApp() {
               {hold === "none" ? <button type="button" className={on} onClick={() => setHold("held")}>Hold seat on next bus</button> : null}
               {hold === "held" ? (
                 <>
-                  <p className="text-center text-5xl font-bold tabular-nums">{seconds}s</p>
+                  <p className="text-center text-base font-semibold">Seat held. Check in at the curb.</p>
+                  <p className="sr-only">{seconds} seconds remaining</p>
                   <p className="text-center text-sm text-vd-muted">Check in at the curb at least 3 minutes before the bus leaves, or the seat goes to standby.</p>
                   <button type="button" className={on} onClick={() => { setHold("curb"); setSeconds(0); }}>I&apos;m at the curb</button>
                 </>
@@ -171,9 +178,6 @@ export function GuestApp() {
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
-  return <div className="rounded-card bg-vd-card p-4 ring-1 ring-white/10"><p className="text-[10px] uppercase tracking-[0.14em] text-[#4da3ff]">{label}</p><p className="text-2xl font-bold tabular-nums">{value}</p></div>;
-}
 function Locked() {
   return <p className="rounded-card bg-vd-card p-4 text-sm text-vd-muted ring-1 ring-white/10">This feature is locked for this program.</p>;
 }

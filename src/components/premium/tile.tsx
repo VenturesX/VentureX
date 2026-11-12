@@ -29,7 +29,7 @@ export function Tile({
   disabled?: boolean;
 }) {
   const className = cn(
-    "vd-press flex aspect-square min-h-24 flex-col items-start justify-between rounded-tile bg-vd-elevated p-3 text-left ring-1 ring-white/10",
+    "vd-press flex aspect-square min-h-0 w-full min-w-0 flex-col items-start justify-between overflow-hidden rounded-tile bg-vd-elevated p-3 text-left ring-1 ring-white/10",
     "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4da3ff]",
     disabled && "pointer-events-none opacity-50",
   );
@@ -38,9 +38,9 @@ export function Tile({
       <span className={cn("grid size-10 place-items-center rounded-2xl", TONES[tone])} aria-hidden="true">
         {icon}
       </span>
-      <span>
-        <span className="block text-sm font-bold leading-tight text-white">{label}</span>
-        {hint ? <span className="mt-0.5 block text-[11px] leading-tight text-vd-muted">{hint}</span> : null}
+      <span className="min-w-0">
+        <span className="block break-words text-[13px] font-bold leading-tight text-white">{label}</span>
+        {hint ? <span className="mt-0.5 line-clamp-2 block break-words text-[11px] leading-tight text-vd-muted">{hint}</span> : null}
       </span>
     </>
   );

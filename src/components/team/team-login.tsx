@@ -14,7 +14,7 @@ const CARDS = [
 ] as const;
 
 type CardId = (typeof CARDS)[number]["id"];
-type ProgramChoice = { id: string; name: string };
+type ProgramChoice = { id: string; name: string; dayCode?: string };
 
 export function TeamLogin() {
   const [ready, setReady] = useState(false);
@@ -39,14 +39,14 @@ export function TeamLogin() {
       .catch(() => setReady(true));
   }, []);
 
-  async function submit(step: "gate" | "portal" | "client" | "program") {
+  async function submit(step: "gate" | "portal" | "client" | "program", nextProgramId = programId) {
     setPending(true);
     setError("");
     try {
       const response = await fetch("/api/team/unlock", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ step, code, portal: picked, programId }),
+        body: JSON.stringify({ step, code, portal: picked, programId: nextProgramId }),
       });
       const json = (await response.json()) as {
         error?: string;
@@ -57,6 +57,7 @@ export function TeamLogin() {
         staff?: boolean;
         chooseProgram?: boolean;
         programs?: ProgramChoice[];
+        dayCode?: string;
       };
       if (!response.ok) {
         setError(json.error || "That code didn't match.");
@@ -77,7 +78,8 @@ export function TeamLogin() {
         setProgramId(list[0]?.id || "");
         return;
       }
-      if (step === "portal") sessionStorage.setItem("vd-day-code", code);
+      const saved = json.dayCode || (step === "portal" ? code : "");
+      if (saved) sessionStorage.setItem("vd-day-code", saved);
       window.location.assign(json.href || "/team");
     } catch {
       setError("The request didn't go through. Try again.");
@@ -151,7 +153,7 @@ export function TeamLogin() {
           <form className="mt-8 space-y-3" onSubmit={(event) => { event.preventDefault(); void submit("portal"); }}>
             <button type="button" className="text-sm text-[#9ecbff]" onClick={() => { setPicked(null); setCode(""); setError(""); }}>All desks</button>
             <h2 className="text-3xl font-semibold">{card.title}</h2>
-            <p className="text-sm text-white/70">Enter the day code from your check-in text. The master day code also works after this sign-in.</p>
+            <p className="text-sm text-white/70">Enter the day code from your check-in text. It opens that program.</p>
             <label className="block text-sm" htmlFor="second-code">{card.hint}</label>
             <input id="second-code" className={field} type="password" autoComplete="off" aria-label={card.hint} value={code} onChange={(event) => setCode(event.target.value)} />
             <button className={`${onBtn} w-full`} type="submit" disabled={pending || code.trim().length < 2}>Open</button>
@@ -159,16 +161,17 @@ export function TeamLogin() {
           </form>
         ) : null}
         {ready && programs ? (
-          <form className="mt-8 space-y-3" onSubmit={(event) => { event.preventDefault(); void submit("program"); }}>
-            <h2 className="text-3xl font-semibold">{card?.title || "Program"}</h2>
-            <p className="text-sm text-white/70">Choose the program for this shift. DEMO sits next to the live samples.</p>
-            <label className="block text-sm" htmlFor="program-choice">Program</label>
-            <select id="program-choice" className={field} value={programId} onChange={(event) => setProgramId(event.target.value)}>
-              {programs.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
-            </select>
-            <button className={`${onBtn} w-full`} type="submit" disabled={pending || !programId}>Open</button>
+          <div className="mt-8 space-y-3" data-testid="split-shift">
+            <h2 className="text-3xl font-semibold">Two shifts today</h2>
+            <p className="text-sm text-white/70">You have two programs today. Open the one you are on.</p>
+            {programs.map((item) => (
+              <button key={item.id} type="button" disabled={pending} className="vd-press flex min-h-24 w-full flex-col justify-center rounded-tile bg-[#161618] px-5 py-4 text-left ring-1 ring-white/10" onClick={() => void submit("program", item.id)}>
+                <span className="text-2xl font-semibold">{item.name}</span>
+                <span className="mt-1 text-sm text-white/70">Open this program</span>
+              </button>
+            ))}
             {error ? <p className="text-sm text-red-300">{error}</p> : null}
-          </form>
+          </div>
         ) : null}
       </div>
     </div>

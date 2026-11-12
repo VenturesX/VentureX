@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Plane } from "lucide-react";
 import { displayFlight } from "@/lib/light/posts";
 import { ScreenSkeleton } from "@/components/premium/skeleton";
-import { SwipeCard, SwipeRow } from "@/components/premium/swipe-row";
+import { Tile } from "@/components/premium/tile";
 
 type Client = {
   name: string;
@@ -45,13 +46,16 @@ export function ClientView({ code }: { code: string }) {
       <h1 className="text-3xl font-bold tracking-tight">{data.name}</h1>
       <p className="text-sm text-vd-muted">{data.hotels}</p>
       {data.trips.length ? (
-        <SwipeRow title="Your trips">
-          {data.trips.map((trip) => (
-            <SwipeCard key={trip.id} kicker="Arrival" title={displayFlight(trip.flightCode)} time={trip.etaLabel || trip.stage} status={trip.stage} tone={trip.stage === "SENT" ? "green" : "accent"} />
-          ))}
-        </SwipeRow>
+        <section className="space-y-3">
+          <h2 className="text-xl font-bold">Your trips</h2>
+          <div className="grid grid-cols-2 gap-3">
+            {data.trips.map((trip) => (
+              <Tile key={trip.id} icon={<Plane className="size-5" />} label={displayFlight(trip.flightCode)} hint={trip.stage} tone={trip.stage === "SENT" ? "green" : "accent"} />
+            ))}
+          </div>
+        </section>
       ) : null}
-      {data.showLateAlerts && data.late.flights > 0 ? <p className="rounded-xl border border-red-500 px-3 py-2 text-sm">{data.late.flights} flights past close</p> : null}
+      {data.showLateAlerts && data.late.flights > 0 ? <p className="rounded-xl border border-[#ff6961] px-3 py-2 text-sm text-[#ffb4b0]">Some flights are past close.</p> : null}
       {data.showLiveFlights ? (
         <ul className="space-y-1 text-sm">
           {data.flights.map((flight) => <li key={flight.flightCode}>{displayFlight(flight.flightCode)} · {flight.status}{flight.gate ? ` · Gate ${flight.gate}` : ""}</li>)}
@@ -62,7 +66,7 @@ export function ClientView({ code }: { code: string }) {
           <p className="font-semibold">{displayFlight(trip.flightCode)} · {trip.stage}</p>
           <p>{trip.vehicleLabel}{trip.driverName ? ` · ${trip.driverName}` : ""}{trip.etaLabel ? ` · ETA ${trip.etaLabel}` : ""}</p>
           {trip.sentAt ? <p>Sent {new Date(trip.sentAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}</p> : null}
-          {data.showHotelConfirm && trip.receivedAt ? <p>Received {trip.receivedCount} of {trip.expected}</p> : null}
+          {data.showHotelConfirm && trip.receivedAt ? <p>Hotel confirmed</p> : null}
           <ol className="mt-1 list-decimal pl-5">{trip.names.map((name) => <li key={name}>{name}</li>)}</ol>
         </article>
       ))}

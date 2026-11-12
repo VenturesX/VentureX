@@ -54,17 +54,76 @@ export async function findProgramByAccessCode(code: string) {
 }
 
 export async function findCrewByDayCode(programId: string | null, code: string) {
+  const shifts = await shiftsForDayCode(code, programId);
+  if (shifts.length !== 1) return null;
+  return db.lightRoster.findFirst({ where: { id: shifts[0].rosterId } });
+}
+
+export type DayShift = {
+  rosterId: string;
+  programId: string;
+  programName: string;
+  name: string;
+  phone: string;
+  dayCode: string;
+};
+
+// A person can hold two roster rows (same phone) on the same day, each with its own day code and program.
+export function collectShifts(direct: DayShift[], siblings: DayShift[]): DayShift[] {
+  const phones = new Set(direct.map((row) => row.phone).filter(Boolean));
+  const pool = siblings.filter((row) => phones.has(row.phone));
+  const source = pool.length ? pool : direct;
+  const seen = new Set<string>();
+  const shifts: DayShift[] = [];
+  for (const row of source) {
+    if (seen.has(row.programId)) continue;
+    seen.add(row.programId);
+    shifts.push(row);
+  }
+  return shifts;
+}
+
+export async function shiftsForDayCode(code: string, programId: string | null = null): Promise<DayShift[]> {
   const dayCode = code.trim();
-  if (!dayCode) return null;
-  return db.lightRoster.findFirst({
+  if (!dayCode) return [];
+  const today = todayET();
+  const directRows = await db.lightRoster.findMany({
     where: {
       ...(programId ? { programId } : {}),
       dayCode,
-      dayCodeDate: todayET(),
+      dayCodeDate: today,
       checkedOutAt: null,
       checkedInAt: { not: null },
     },
+    include: { program: { select: { id: true, name: true } } },
   });
+  const direct = directRows.map(toShift);
+  if (!direct.length) return [];
+  const phones = [...new Set(direct.map((row) => row.phone).filter(Boolean))];
+  const siblingRows = phones.length
+    ? await db.lightRoster.findMany({
+        where: {
+          phone: { in: phones },
+          dayCodeDate: today,
+          dayCode: { not: "" },
+          checkedOutAt: null,
+          checkedInAt: { not: null },
+        },
+        include: { program: { select: { id: true, name: true } } },
+      })
+    : [];
+  return collectShifts(direct, siblingRows.map(toShift));
+}
+
+function toShift(row: { id: string; programId: string; name: string; phone: string; dayCode: string; program: { id: string; name: string } }): DayShift {
+  return {
+    rosterId: row.id,
+    programId: row.program.id,
+    programName: row.program.name,
+    name: row.name,
+    phone: row.phone,
+    dayCode: row.dayCode,
+  };
 }
 
 export async function findClientProgram(programId: string | null, code: string) {

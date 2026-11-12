@@ -17,14 +17,17 @@ export function DeskGrid({
   hrefFor,
   onOpen,
   disabled,
+  includeDrive = false,
 }: {
   hrefFor?: (key: DeskKey) => string | undefined;
   onOpen?: (key: DeskKey) => void;
   disabled?: boolean;
+  includeDrive?: boolean;
 }) {
+  const tiles = includeDrive ? TILES : TILES.filter((tile) => tile.key !== "drive");
   return (
     <div className="grid grid-cols-3 gap-3">
-      {TILES.map((tile) => (
+      {tiles.map((tile) => (
         <Tile
           key={tile.key}
           icon={<tile.icon className="size-5" />}

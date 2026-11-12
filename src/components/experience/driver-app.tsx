@@ -43,6 +43,7 @@ export function DriverApp() {
         line={live ? `${bus} · Next ${next[0]}` : "IACP Route 3 · Shift starts when GPS is on"}
       />
       <DeskGrid
+        includeDrive
         hrefFor={(key) => (key === "drive" ? undefined : HREFS[key])}
         onOpen={(key) => { if (key === "drive") setTab("gps"); }}
       />

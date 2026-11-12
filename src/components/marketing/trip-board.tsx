@@ -1,15 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Bus, Home, MessageCircle, UserRound } from "lucide-react";
+import { Bus, FerrisWheel, Home, Hotel, Landmark, MessageCircle, Plane, UserRound } from "lucide-react";
 import { QuickAnswers } from "@/components/marketing/quick-answers";
 import { Accordion } from "@/components/premium/accordion";
-import { PhotoCard } from "@/components/premium/photo-card";
 import { PillNav } from "@/components/premium/pill-nav";
 import { RideBar } from "@/components/premium/ride-bar";
 import { ADD_RIDES, ORLANDO_PICKS } from "@/components/premium/rides";
 import { ScreenSkeleton } from "@/components/premium/skeleton";
-import { SwipeCard, SwipeRow } from "@/components/premium/swipe-row";
+import { Tile } from "@/components/premium/tile";
 
 const CATEGORIES = [
   ["PICKUP", "Pickup spot"],
@@ -185,21 +184,30 @@ export function TripBoard({ token }: { token: string }) {
           </div>
         </Accordion>
       ) : null}
-      <SwipeRow title="Your trips">
-        <SwipeCard kicker="Arrival" title={board.nextBus?.name || board.schedule?.[0]?.name || "Arrival"} time={board.nextBus ? when(board.nextBus.scheduledAt) : board.schedule?.[0] ? when(board.schedule[0].scheduledAt) : "—"} status={board.nextBus?.destination || "Not posted"} />
-        <SwipeCard kicker="Hotel" title={middleStop(board.schedule)?.name || "Hotel"} time={middleStop(board.schedule) ? when(middleStop(board.schedule)!.scheduledAt) : "—"} status={middleStop(board.schedule)?.status || "Not posted"} tone="green" />
-        <SwipeCard kicker="Departure" title={board.schedule?.at(-1)?.name || "Departure"} time={board.schedule?.length ? when(board.schedule[board.schedule.length - 1].scheduledAt) : "—"} status={board.schedule?.at(-1)?.status || "Not posted"} tone="amber" />
-      </SwipeRow>
-      <SwipeRow title="Add a ride">
-        {ADD_RIDES.map((item) => (
-          <SwipeCard key={item.id} kicker="Extra transfer" title={item.title} time={item.time} status={ride === item.title ? "Selected" : "Request"} tone={ride === item.title ? "green" : "accent"} onClick={() => { setRide(item.title); setLater(true); setCategory("OTHER"); setMessage(`Later transfer: ${item.title}. `); }} />
-        ))}
-      </SwipeRow>
-      <SwipeRow title="Orlando picks">
-        {ORLANDO_PICKS.map((pick) => (
-          <PhotoCard key={pick.title} {...pick} onClick={() => { setRide(pick.title); setLater(true); setCategory("OTHER"); setMessage(`Later transfer: ${pick.title}. `); }} />
-        ))}
-      </SwipeRow>
+      <section className="space-y-3">
+        <h2 className="text-xl font-bold">Your trips</h2>
+        <div className="grid grid-cols-2 gap-3">
+          <Tile icon={<Plane className="size-5" />} label={board.nextBus?.name || board.schedule?.[0]?.name || "Arrival"} hint={board.nextBus?.destination || "Not posted"} />
+          <Tile icon={<Hotel className="size-5" />} label={middleStop(board.schedule)?.name || "Hotel"} hint={middleStop(board.schedule)?.status || "Not posted"} tone="green" />
+          <Tile icon={<Bus className="size-5" />} label={board.schedule?.at(-1)?.name || "Departure"} hint={board.schedule?.at(-1)?.status || "Not posted"} tone="amber" />
+        </div>
+      </section>
+      <section className="space-y-3">
+        <h2 className="text-xl font-bold">Add a ride</h2>
+        <div className="grid grid-cols-2 gap-3">
+          {ADD_RIDES.map((item) => (
+            <Tile key={item.id} icon={<FerrisWheel className="size-5" />} label={item.title} hint={ride === item.title ? "Selected" : "Request"} tone={ride === item.title ? "green" : "accent"} onClick={() => { setRide(item.title); setLater(true); setCategory("OTHER"); setMessage(`Later transfer: ${item.title}. `); }} />
+          ))}
+        </div>
+      </section>
+      <section className="space-y-3">
+        <h2 className="text-xl font-bold">Orlando picks</h2>
+        <div className="grid grid-cols-2 gap-3">
+          {ORLANDO_PICKS.map((pick) => (
+            <Tile key={pick.title} icon={<Landmark className="size-5" />} label={pick.title} hint={pick.subtitle} onClick={() => { setRide(pick.title); setLater(true); setCategory("OTHER"); setMessage(`Later transfer: ${pick.title}. `); }} />
+          ))}
+        </div>
+      </section>
       <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#4da3ff]">Your trip</p>
       <h1 id="next-bus" className="mt-2 text-4xl font-bold tracking-tight">{board.eventName || "Your trip"}</h1>
       {board.nextBus ? (

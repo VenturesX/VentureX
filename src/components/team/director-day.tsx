@@ -9,7 +9,7 @@ import { ProgressRing } from "@/components/premium/progress-ring";
 import { CrewBar } from "@/components/team/crew-bar";
 
 type Party = { id: string; vehicle: string; notes: string; carSeats: number; boosters: number; count: number; names: string[]; cells: string[] };
-type Line = { flightCode: string; time: string; airline: string; flight: string; status: string; postCodes: string[]; mine: boolean; parties: Party[] };
+type Line = { flightCode: string; time: string; sort?: string; airline: string; flight: string; status: string; postCodes: string[]; mine: boolean; parties: Party[] };
 type Day = {
   owner?: boolean;
   wide?: boolean;
@@ -66,14 +66,45 @@ export function DirectorGate() {
   return <MyDay day={day} code={code} onChange={setDay} />;
 }
 
+function sideFromPost(post: string): "B1" | "B2" | "C" | null {
+  if (post === "B_HIGH" || post === "B1") return "B1";
+  if (post === "B_LOW" || post === "B2") return "B2";
+  if (post === "C") return "C";
+  return null;
+}
+
+function onSide(line: Line, side: "B1" | "B2" | "C") {
+  return line.postCodes.some((code) => {
+    if (side === "B1") return code === "B_HIGH" || code === "B1";
+    if (side === "B2") return code === "B_LOW" || code === "B2";
+    return code === "C";
+  });
+}
+
+function flightOpen(line: Line) {
+  return !/sent|depart|complete|cancel/i.test(line.status);
+}
+
 function MyDay({ day, code, onChange }: { day: Day; code: string; onChange: (day: Day) => void }) {
   const [tab, setTab] = useState<(typeof TABS)[number]>("Mine");
   const [post, setPost] = useState(day.person.postCode);
+  const assignedSide = sideFromPost(day.person.postCode);
+  const [pickedSide, setPickedSide] = useState<"B1" | "B2" | "C" | null>(() => {
+    if (typeof window === "undefined") return null;
+    const saved = sessionStorage.getItem("vd-airport-side");
+    return saved === "B1" || saved === "B2" || saved === "C" ? saved : null;
+  });
+  const side = assignedSide ?? pickedSide;
   const mine = day.lines.filter((line) => line.mine);
   const shown = tab === "All" ? day.lines : tab === "Posts" ? day.lines.filter((line) => line.postCodes.some((item) => item === post || (post === "B2" && item === "B_LOW") || (post === "B1" && item === "B_HIGH") || (post === "B_LOW" && item === "B2") || (post === "B_HIGH" && item === "B1"))) : mine;
+  const airport = day.lines.some((line) => /\d/.test(line.flight));
   const guestTotal = day.lines.reduce((sum, line) => sum + line.parties.reduce((partySum, party) => partySum + party.count, 0), 0);
   const guestDone = day.lines.reduce((sum, line) => sum + (/sent|board|depart|picked|complete|loaded/i.test(line.status) ? line.parties.reduce((partySum, party) => partySum + party.count, 0) : 0), 0);
-  const sample = guestTotal === 0;
+  const sideLines = side ? day.lines.filter((line) => onSide(line, side)) : [];
+  const sideLeft = sideLines.filter(flightOpen);
+  const allLeft = day.lines.filter(flightOpen);
+  const nextFlight = [...sideLeft].sort((a, b) => (a.sort || a.time).localeCompare(b.sort || b.time))[0] ?? null;
+  const nextCount = nextFlight ? nextFlight.parties.reduce((sum, party) => sum + party.count, 0) : 0;
 
   async function save(body: { postCode?: string; textAlerts?: boolean }) {
     const response = await fetch("/api/team/day", {
@@ -85,14 +116,40 @@ function MyDay({ day, code, onChange }: { day: Day; code: string; onChange: (day
   }
 
   return (
-    <div className="mx-auto max-w-lg space-y-4 px-4 pb-28 pt-6 text-white" data-testid="my-day">
+    <div className="mx-auto max-w-lg space-y-4 overflow-x-hidden px-4 pb-28 pt-6 text-white" data-testid="my-day">
       {day.owner ? <Link href="/team" className="inline-block min-h-11 text-sm font-semibold text-[#4da3ff]">← Owner hub</Link> : day.wide ? <Link href="/team/admin?setup=1" className="inline-block min-h-11 text-sm font-semibold text-[#4da3ff]">Staff and itinerary</Link> : null}
-      <HeroCard kicker={day.program.name} title={day.person.postLabel || "Today's post"} line={`${day.person.name} · Today's shift`} />
+      <HeroCard kicker={day.program.name} title={side ? `${day.person.postLabel || "Today's post"} · ${side}` : (day.person.postLabel || "Today's post")} line={`${day.person.name} · Today's shift`} />
       <DeskGrid hrefFor={(key) => ({ manifest: "/team/clipboard", flights: "/team/director", dispatch: "/team/dispatch", clipboard: "/team/clipboard", shuttle: "/clipboard", drive: "/drive" }[key])} />
-      <ProgressRing done={sample ? 38 : guestDone} total={sample ? 52 : guestTotal} label="guests picked up" sample={sample} />
-      <h2 className="text-2xl font-bold">{day.person.name}</h2>
-      <p className="text-sm text-vd-muted">{day.program.name} · {day.person.postLabel}</p>
-      <div className="mt-4 grid grid-cols-4 gap-1">
+      {airport && !side ? (
+        <section className="space-y-3">
+          <h2 className="text-lg font-bold">Your side</h2>
+          <p className="text-sm text-vd-muted">Pick B1, B2, or C once. This phone remembers it.</p>
+          <div className="grid grid-cols-3 gap-3">
+            {(["B1", "B2", "C"] as const).map((item) => (
+              <button key={item} type="button" className="vd-press flex min-h-24 items-center justify-center rounded-tile bg-vd-elevated text-2xl font-bold ring-1 ring-white/10" onClick={() => { sessionStorage.setItem("vd-airport-side", item); setPickedSide(item); }}>{item}</button>
+            ))}
+          </div>
+        </section>
+      ) : null}
+      {airport && side ? (
+        <>
+          <section className="rounded-tile bg-vd-elevated p-5 ring-1 ring-white/10" data-testid="next-flight">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#4da3ff]">Next flight · {side}</p>
+            {nextFlight ? (
+              <>
+                <h2 className="mt-2 break-words text-3xl font-bold tracking-tight">{nextFlight.airline} {nextFlight.flight}</h2>
+                <p className="mt-2 text-base text-vd-muted">{nextFlight.time} · {nextCount} {nextCount === 1 ? "guest" : "guests"}</p>
+              </>
+            ) : <p className="mt-2 text-lg font-semibold">No flights left on {side}.</p>}
+          </section>
+          <div className="grid grid-cols-1 gap-3 min-[380px]:grid-cols-2">
+            <ProgressRing compact done={sideLeft.length} total={Math.max(sideLines.length, sideLeft.length)} label={`flights left on ${side}`} />
+            <ProgressRing compact done={allLeft.length} total={Math.max(day.lines.length, allLeft.length)} label="flights left overall" />
+          </div>
+        </>
+      ) : null}
+      {!airport ? <ProgressRing done={guestDone} total={Math.max(guestTotal, guestDone)} label="guests picked up" /> : null}
+      <div className="grid grid-cols-4 gap-1">
         {TABS.map((item) => (
           <button key={item} type="button" className={`h-11 rounded-full text-sm font-semibold ${tab === item ? "bg-white text-black" : "bg-[#1c1c1e] text-vd-muted"}`} onClick={() => setTab(item)}>
             {item === "Mine" ? "My Day" : item}
@@ -133,11 +190,11 @@ function MyDay({ day, code, onChange }: { day: Day; code: string; onChange: (day
               const count = line.parties.reduce((sum, party) => sum + party.count, 0);
               return (
                 <li key={line.flightCode}>
-                  <Link href={`/team/clipboard?flight=${line.flightCode}`} className="flex min-h-14 items-baseline gap-3 py-3 text-lg font-semibold">
-                    <span className="w-24 shrink-0">{line.time}</span>
-                    <span className="flex-1">{line.airline} {line.flight}</span>
-                    <span className="text-base font-medium text-white/80">{line.status}</span>
-                    <span className="w-8 text-right">{count}</span>
+                  <Link href={`/team/clipboard?flight=${line.flightCode}`} className="flex min-h-14 min-w-0 items-center gap-2 py-3">
+                    <span className="w-16 shrink-0 text-sm font-semibold">{line.time}</span>
+                    <span className="min-w-0 flex-1 truncate text-base font-semibold">{line.airline} {line.flight}</span>
+                    <span className="shrink-0 text-xs text-vd-muted">{line.status}</span>
+                    <span className="w-6 shrink-0 text-right text-sm">{count}</span>
                   </Link>
                 </li>
               );

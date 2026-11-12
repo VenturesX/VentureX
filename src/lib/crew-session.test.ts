@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { masterDayMatches, ownerCodeMatches, staffCodeMatches } from "@/lib/crew-access";
+import { collectShifts, masterDayMatches, ownerCodeMatches, staffCodeMatches, type DayShift } from "@/lib/crew-access";
 import { OWNER_IDLE_SECONDS, endOfShiftUnix, ownerIsIdle, readCrewPayload, readCrewToken, roleAllows, signCrewToken } from "@/lib/crew-session";
 import { demoPhones, DEMO_NAME, DEMO_TRIPS } from "@/lib/light/demo-program";
 import { programSendsAllowed } from "@/lib/light/outbound";
@@ -39,6 +39,16 @@ describe("team lock and quote mail", () => {
       if (hub === undefined) delete process.env.OWNER_HUB_CODE; else process.env.OWNER_HUB_CODE = hub;
       if (legacy === undefined) delete process.env.OWNER_ACCESS_CODE; else process.env.OWNER_ACCESS_CODE = legacy;
     }
+  });
+
+  it("offers both programs when one person has two day codes today", () => {
+    const airport: DayShift = { rosterId: "a", programId: "airport", programName: "Airport move", name: "Marissa", phone: "+14075550133", dayCode: "4821" };
+    const shuttle: DayShift = { rosterId: "b", programId: "shuttle", programName: "Shuttle loop", name: "Marissa", phone: "+14075550133", dayCode: "7731" };
+    const other: DayShift = { rosterId: "c", programId: "other", programName: "Someone else", name: "Aaron", phone: "+14075550111", dayCode: "4821" };
+    const split = collectShifts([airport], [airport, shuttle, other]);
+    assert.deepEqual(split.map((row) => row.programId), ["airport", "shuttle"]);
+    const single = collectShifts([airport], [airport]);
+    assert.equal(single.length, 1);
   });
 
   it("rejects the master day code unless it is configured", async () => {

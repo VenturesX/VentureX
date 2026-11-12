@@ -19,7 +19,7 @@ export function PillNav({ label, items }: { label: string; items: PillItem[] }) 
       <div className="mx-auto flex w-full max-w-md items-stretch rounded-full bg-[#141414]/95 p-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.55)] ring-1 ring-white/10 backdrop-blur">
         {items.map((item) => {
           const className = cn(
-            "vd-press flex min-h-12 flex-1 flex-col items-center justify-center gap-0.5 rounded-full px-1 text-[11px] font-semibold",
+            "vd-press flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-full px-0.5 text-[10px] font-semibold leading-tight",
             item.active ? "bg-white text-black" : "text-vd-muted",
           );
           const body = (

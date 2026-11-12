@@ -2,17 +2,16 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Bus, Home, MessageCircle, UserRound } from "lucide-react";
+import { Bus, FerrisWheel, Home, Hotel, Landmark, MessageCircle, Plane, UtensilsCrossed, UserRound } from "lucide-react";
 import { COMPANY_EMAIL, COMPANY_PHONE, COMPANY_PHONE_TEL } from "@/lib/brand";
 import { tripRedirectHref } from "@/lib/trip-redirect";
 import { field, onBtn } from "@/components/light/styles";
 import { Accordion } from "@/components/premium/accordion";
-import { PhotoCard } from "@/components/premium/photo-card";
 import { PillNav } from "@/components/premium/pill-nav";
 import { RideBar } from "@/components/premium/ride-bar";
 import { ADD_RIDES, ORLANDO_PICKS } from "@/components/premium/rides";
 import { ScreenSkeleton } from "@/components/premium/skeleton";
-import { SwipeCard, SwipeRow } from "@/components/premium/swipe-row";
+import { Tile } from "@/components/premium/tile";
 
 type Item = {
   id: string;
@@ -142,21 +141,30 @@ export function GuestTrip() {
 
       {view === "home" ? (
         <>
-          <SwipeRow title="Your trips">
-            {cards.map((card) => (
-              <SwipeCard key={card.kicker} {...card} onClick={() => setView("trip")} />
-            ))}
-          </SwipeRow>
-          <SwipeRow title="Add a ride">
-            {ADD_RIDES.map((item) => (
-              <SwipeCard key={item.id} kicker="Extra transfer" title={item.title} time={item.time} status={ride === item.title ? "Selected" : item.status} tone={ride === item.title ? "green" : "accent"} onClick={() => chooseRide(item.title)} />
-            ))}
-          </SwipeRow>
-          <SwipeRow title="Orlando picks">
-            {ORLANDO_PICKS.map((pick) => (
-              <PhotoCard key={pick.title} {...pick} onClick={() => chooseRide(pick.title)} />
-            ))}
-          </SwipeRow>
+          <section className="space-y-3">
+            <h2 className="text-xl font-bold">Your trips</h2>
+            <div className="grid grid-cols-2 gap-3">
+              {cards.map((card) => (
+                <Tile key={card.kicker} icon={tripIcon(card.kicker)} label={card.title} hint={card.status} tone={card.tone === "muted" ? "accent" : card.tone} onClick={() => setView("trip")} />
+              ))}
+            </div>
+          </section>
+          <section className="space-y-3">
+            <h2 className="text-xl font-bold">Add a ride</h2>
+            <div className="grid grid-cols-2 gap-3">
+              {ADD_RIDES.map((item) => (
+                <Tile key={item.id} icon={rideIcon(item.title)} label={item.title} hint={ride === item.title ? "Selected" : "Request"} tone={ride === item.title ? "green" : "accent"} onClick={() => chooseRide(item.title)} />
+              ))}
+            </div>
+          </section>
+          <section className="space-y-3">
+            <h2 className="text-xl font-bold">Orlando picks</h2>
+            <div className="grid grid-cols-2 gap-3">
+              {ORLANDO_PICKS.map((pick) => (
+                <Tile key={pick.title} icon={<Landmark className="size-5" />} label={pick.title} hint={pick.subtitle} onClick={() => chooseRide(pick.title)} />
+              ))}
+            </div>
+          </section>
         </>
       ) : null}
 
@@ -227,6 +235,18 @@ export function GuestTrip() {
       />
     </div>
   );
+}
+
+function tripIcon(kicker: string) {
+  if (kicker === "Hotel") return <Hotel className="size-5" />;
+  if (kicker === "Departure") return <Bus className="size-5" />;
+  return <Plane className="size-5" />;
+}
+
+function rideIcon(title: string) {
+  if (/dinner/i.test(title)) return <UtensilsCrossed className="size-5" />;
+  if (/park|gala/i.test(title)) return <FerrisWheel className="size-5" />;
+  return <Plane className="size-5" />;
 }
 
 function tripCards(trip: Trip) {
