@@ -19,6 +19,7 @@ export function Tile({
   href,
   onClick,
   disabled,
+  shape = "square",
 }: {
   icon: ReactNode;
   label: string;
@@ -27,9 +28,11 @@ export function Tile({
   href?: string;
   onClick?: () => void;
   disabled?: boolean;
+  shape?: "square" | "row";
 }) {
   const className = cn(
-    "vd-press flex aspect-square min-h-0 w-full min-w-0 flex-col items-start justify-between overflow-hidden rounded-tile bg-vd-elevated p-3 text-left ring-1 ring-white/10",
+    "vd-press flex min-h-0 w-full min-w-0 overflow-hidden rounded-tile bg-vd-elevated text-left ring-1 ring-white/10",
+    shape === "row" ? "min-h-24 flex-row items-center gap-4 p-4" : "aspect-square flex-col items-start justify-between p-3",
     "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4da3ff]",
     disabled && "pointer-events-none opacity-50",
   );
@@ -39,8 +42,8 @@ export function Tile({
         {icon}
       </span>
       <span className="min-w-0">
-        <span className="block break-words text-[13px] font-bold leading-tight text-white">{label}</span>
-        {hint ? <span className="mt-0.5 line-clamp-2 block break-words text-[11px] leading-tight text-vd-muted">{hint}</span> : null}
+        <span className={cn("block break-words font-bold leading-tight text-white", shape === "row" ? "text-lg" : "text-[13px]")}>{label}</span>
+        {hint ? <span className={cn("mt-0.5 line-clamp-2 block break-words leading-tight text-vd-muted", shape === "row" ? "text-sm" : "text-[11px]")}>{hint}</span> : null}
       </span>
     </>
   );

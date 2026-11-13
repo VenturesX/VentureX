@@ -21,13 +21,13 @@ export function VentureMark({ className }: { className?: string }) {
   );
 }
 
-export function Wordmark({ compact = false }: { compact?: boolean }) {
+export function Wordmark({ compact = false, large = false }: { compact?: boolean; large?: boolean }) {
+  const venture = large ? "block text-[20px] tracking-[0.14em]" : compact ? "block text-[12px] tracking-[0.22em]" : "block text-[15px] tracking-[0.24em]";
+  const directors = large ? "mt-0.5 block text-[13px] tracking-[0.22em] text-white" : compact ? "mt-0.5 block text-[8px] tracking-[0.34em] text-white" : "mt-1 block text-[10px] tracking-[0.36em] text-white";
   return (
     <span className="font-semibold uppercase leading-none text-white">
-      <span className={compact ? "block text-[12px] tracking-[0.22em]" : "block text-[15px] tracking-[0.24em]"}>VENTURE</span>
-      <span className={compact ? "mt-0.5 block text-[8px] tracking-[0.34em] text-white" : "mt-1 block text-[10px] tracking-[0.36em] text-white"}>
-        DIRECTORS
-      </span>
+      <span className={venture}>VENTURE</span>
+      <span className={directors}>DIRECTORS</span>
     </span>
   );
 }

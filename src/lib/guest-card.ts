@@ -88,9 +88,10 @@ export function buildGuestCard(input: {
   windowClose: string;
   moves: CardMove[];
   contact: string;
+  asOf?: { day: string; minutes: number };
 }): GuestCard {
   const zone = input.timeZone || "America/New_York";
-  const here = zonedParts(input.now, zone);
+  const here = input.asOf ?? zonedParts(input.now, zone);
   const visible = input.moves.filter((item) => item.guestVisible !== false && !item.kind.match(/personal/i));
   const pickup = visible.find((item) => item.spot.trim())?.spot.trim() || "";
   const closeMinutes = /^\d{1,2}:\d{2}$/.test(input.windowClose.trim()) ? parseClockLabel(input.windowClose.trim()) : null;

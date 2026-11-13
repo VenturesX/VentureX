@@ -3,18 +3,18 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { field, onBtn } from "@/components/light/styles";
-import { DeskGrid } from "@/components/premium/desk-grid";
+import { Bus, CalendarDays, Gauge } from "lucide-react";
 import { HeroCard } from "@/components/premium/hero-card";
-import { ProgressRing } from "@/components/premium/progress-ring";
+import { Tile } from "@/components/premium/tile";
 import { CrewBar } from "@/components/team/crew-bar";
 
 type Party = { id: string; vehicle: string; notes: string; carSeats: number; boosters: number; count: number; names: string[]; cells: string[] };
-type Line = { flightCode: string; time: string; sort?: string; airline: string; flight: string; status: string; postCodes: string[]; mine: boolean; parties: Party[] };
+type Line = { flightCode: string; time: string; sort?: string; airline: string; flight: string; status: string; postCodes: string[]; mine: boolean; parties: Party[]; leg?: string };
 type Day = {
   owner?: boolean;
   wide?: boolean;
   person: { name: string; postCode: string; postLabel: string; textAlerts: boolean; wide: boolean };
-  program: { code: string; name: string; timezone?: string; windowClose?: string };
+  program: { code: string; name: string; timezone?: string; windowClose?: string; city?: string; jobKind?: string; demoDate?: string; demoTime?: string };
   count?: { kind: "airport" | "shuttle"; moved: number; total: number; label: string };
   shuttle?: { movedIn: number; movedOut: number; finalCount: number };
   flightsMet?: number;
@@ -23,9 +23,8 @@ type Day = {
   positions: { code: string; label: string }[];
   lines: Line[];
   staff: { name: string; post: string; in: boolean }[];
+  sheet?: { kind: string; title: string; time: string; summary: string; detail: string; spot: string; route: string }[];
 };
-
-const TABS = ["Mine", "All", "Posts", "Staff"] as const;
 
 export function DirectorGate() {
   const [code, setCode] = useState("");
@@ -138,147 +137,163 @@ function ShuttleDesk({ day, code, onChange }: { day: Day; code: string; onChange
   );
 }
 
-function sideFromPost(post: string): "B1" | "B2" | "C" | null {
-  if (post === "B_HIGH" || post === "B1") return "B1";
-  if (post === "B_LOW" || post === "B2") return "B2";
-  if (post === "C") return "C";
-  return null;
+function routeKey(value: string) {
+  return value.match(/route\s+\d+/i)?.[0].toLowerCase() || "";
 }
 
-function onSide(line: Line, side: "B1" | "B2" | "C") {
-  return line.postCodes.some((code) => {
-    if (side === "B1") return code === "B_HIGH" || code === "B1";
-    if (side === "B2") return code === "B_LOW" || code === "B2";
-    return code === "C";
-  });
+function flightTitle(line: Line) {
+  const number = line.flight.replace(/^[A-Za-z]+\s+/, "");
+  return line.airline && number ? `${line.airline} ${number}` : `${line.airline} ${line.flight}`.trim();
 }
 
-function flightOpen(line: Line) {
-  return !/sent|depart|complete|cancel/i.test(line.status);
+function nextFlightFor(day: Day) {
+  const mark = day.program.demoTime || "";
+  const arrivals = day.lines.filter((line) => line.leg !== "depart");
+  const ordered = [...(arrivals.length ? arrivals : day.lines)].sort((a, b) => (a.sort || a.time).localeCompare(b.sort || b.time));
+  return ordered.find((line) => mark && (line.sort || "") >= mark) || ordered[0] || null;
 }
 
 function MyDay({ day, code, onChange }: { day: Day; code: string; onChange: (day: Day) => void }) {
-  const [tab, setTab] = useState<(typeof TABS)[number]>("Mine");
-  const [post, setPost] = useState(day.person.postCode);
-  const assignedSide = sideFromPost(day.person.postCode);
-  const [pickedSide, setPickedSide] = useState<"B1" | "B2" | "C" | null>(() => {
-    if (typeof window === "undefined") return null;
-    const saved = sessionStorage.getItem("vd-airport-side");
-    return saved === "B1" || saved === "B2" || saved === "C" ? saved : null;
-  });
-  const side = assignedSide ?? pickedSide;
-  const mine = day.lines.filter((line) => line.mine);
-  const shown = tab === "All" ? day.lines : tab === "Posts" ? day.lines.filter((line) => line.postCodes.some((item) => item === post || (post === "B2" && item === "B_LOW") || (post === "B1" && item === "B_HIGH") || (post === "B_LOW" && item === "B2") || (post === "B_HIGH" && item === "B1"))) : mine;
-  const airport = day.lines.some((line) => /\d/.test(line.flight));
-  const guestTotal = day.lines.reduce((sum, line) => sum + line.parties.reduce((partySum, party) => partySum + party.count, 0), 0);
-  const guestDone = day.lines.reduce((sum, line) => sum + (/sent|board|depart|picked|complete|loaded/i.test(line.status) ? line.parties.reduce((partySum, party) => partySum + party.count, 0) : 0), 0);
-  const sideLines = side ? day.lines.filter((line) => onSide(line, side)) : [];
-  const sideLeft = sideLines.filter(flightOpen);
-  const allLeft = day.lines.filter(flightOpen);
-  const nextFlight = [...sideLeft].sort((a, b) => (a.sort || a.time).localeCompare(b.sort || b.time))[0] ?? null;
+  const [screen, setScreen] = useState<"home" | "day" | "info" | "flights">("home");
+  const sheet = day.sheet || [];
+  const me = sheet.find((item) => item.kind === "STAFF" && item.title === day.person.name);
+  const lead = sheet.find((item) => item.kind === "STAFF" && /lead/i.test(`${item.spot} ${item.route}`));
+  const mineKey = routeKey(me?.route || "");
+  const partner = sheet.find((item) => item.kind === "STAFF" && item.title !== day.person.name && mineKey && routeKey(item.route) === mineKey);
+  const kind = day.program.jobKind || (day.lines.length ? "AIRPORT" : "SHUTTLE");
+  const nextFlight = nextFlightFor(day);
   const nextCount = nextFlight ? nextFlight.parties.reduce((sum, party) => sum + party.count, 0) : 0;
 
-  async function save(body: { postCode?: string; textAlerts?: boolean }) {
-    const response = await fetch("/api/team/day", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code, ...body }),
-    });
-    if (response.ok) onChange((await response.json()) as Day);
+  if (screen === "home") {
+    return (
+      <div className="mx-auto max-w-lg space-y-4 px-4 pb-28 pt-6 text-white" data-testid="staff-home">
+        {day.owner ? <Link href="/team" className="inline-block min-h-11 text-sm font-semibold text-[#4da3ff]">← Owner hub</Link> : null}
+        <HeroCard kicker={day.program.name} title={day.person.name} line={me ? `${me.spot} · ${me.time}` : "Today's shift"} />
+        <div className="grid grid-cols-1 gap-3">
+          <Tile shape="row" icon={<Bus className="size-5" />} label="My Day" hint="Your post, the count, and the next move" onClick={() => setScreen("day")} />
+          <Tile shape="row" icon={<CalendarDays className="size-5" />} label="Day Info" hint="Hours, notes, and who is working" tone="green" onClick={() => setScreen("info")} />
+          <Tile shape="row" icon={<Gauge className="size-5" />} label="Guest-O-Meter" hint="The rings for this program" tone="amber" href="/team/meter" />
+        </div>
+        <CrewBar owner={day.owner} code={code} person={day.person} positions={day.positions} onDay={(next) => onChange(next as Day)} />
+      </div>
+    );
   }
 
   return (
-    <div className="mx-auto max-w-lg space-y-4 overflow-x-hidden px-4 pb-28 pt-6 text-white" data-testid="my-day">
-      {day.owner ? <Link href="/team" className="inline-block min-h-11 text-sm font-semibold text-[#4da3ff]">← Owner hub</Link> : day.wide ? <Link href="/team/admin?setup=1" className="inline-block min-h-11 text-sm font-semibold text-[#4da3ff]">Staff and itinerary</Link> : null}
-      <GuestCount day={day} />
-      <ShuttleDesk day={day} code={code} onChange={onChange} />
-      <HeroCard kicker={day.program.name} title={side ? `${day.person.postLabel || "Today's post"} · ${side}` : (day.person.postLabel || "Today's post")} line={`${day.person.name} · Today's shift`} />
-      <Link href="/team/meter" className="flex min-h-14 items-center justify-between rounded-tile bg-vd-elevated px-4 text-base font-bold ring-1 ring-white/10">Guest-O-Meter<span aria-hidden="true">›</span></Link>
-      <DeskGrid hrefFor={(key) => ({ manifest: "/team/clipboard", flights: "/team/director", dispatch: "/team/dispatch", clipboard: "/team/clipboard", shuttle: "/clipboard", drive: "/drive" }[key])} />
-      {airport && !side ? (
-        <section className="space-y-3">
-          <h2 className="text-lg font-bold">Your side</h2>
-          <p className="text-sm text-vd-muted">Pick B1, B2, or C once. This phone remembers it.</p>
-          <div className="grid grid-cols-3 gap-3">
-            {(["B1", "B2", "C"] as const).map((item) => (
-              <button key={item} type="button" className="vd-press flex min-h-24 items-center justify-center rounded-tile bg-vd-elevated text-2xl font-bold ring-1 ring-white/10" onClick={() => { sessionStorage.setItem("vd-airport-side", item); setPickedSide(item); }}>{item}</button>
-            ))}
-          </div>
-        </section>
-      ) : null}
-      {airport && side ? (
+    <div className="mx-auto max-w-lg space-y-4 overflow-x-hidden px-4 pb-28 pt-6 text-white" data-testid={screen === "info" ? "day-info" : "my-day"}>
+      <button type="button" className="text-sm font-semibold text-[#4da3ff]" onClick={() => setScreen(screen === "flights" ? "day" : "home")}>{screen === "flights" ? "Back to My Day" : "Back to home"}</button>
+      {screen === "info" ? <DayInfo day={day} /> : null}
+      {screen === "flights" ? <FlightList lines={day.lines} /> : null}
+      {screen === "day" ? (
         <>
-          <section className="rounded-tile bg-vd-elevated p-5 ring-1 ring-white/10" data-testid="next-flight">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#4da3ff]">Next flight · {side}</p>
-            {nextFlight ? (
-              <>
-                <h2 className="mt-2 break-words text-3xl font-bold tracking-tight">{nextFlight.airline} {nextFlight.flight}</h2>
-                <p className="mt-2 text-base text-vd-muted">{nextFlight.time} · {nextCount} {nextCount === 1 ? "guest" : "guests"}</p>
-              </>
-            ) : <p className="mt-2 text-lg font-semibold">No flights left on {side}.</p>}
+          <section className="rounded-tile bg-vd-elevated p-5 ring-1 ring-white/10">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#4da3ff]">{day.program.name}</p>
+            <h1 className="mt-2 text-3xl font-bold">{me?.route || day.person.postLabel || "Today's post"}</h1>
+            <p className="mt-2 text-sm text-vd-muted">{me?.time || "Shift on the sheet"} · {me?.spot || day.person.name}</p>
+            <p className="mt-1 text-sm text-vd-muted">{me?.summary ? `${me.summary}` : ""}{partner ? ` · Partner ${partner.title}` : ""}{lead && lead.title !== day.person.name ? ` · Lead ${lead.title}` : ""}</p>
           </section>
-          <div className="grid grid-cols-1 gap-3 min-[380px]:grid-cols-2">
-            <ProgressRing compact done={sideLeft.length} total={Math.max(sideLines.length, sideLeft.length)} label={`flights left on ${side}`} />
-            <ProgressRing compact done={allLeft.length} total={Math.max(day.lines.length, allLeft.length)} label="flights left overall" />
-          </div>
+          {kind === "AIRPORT" ? (
+            <>
+              <section className="rounded-tile bg-vd-elevated p-5 ring-1 ring-white/10" data-testid="next-flight">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#4da3ff]">Your next flight</p>
+                {nextFlight ? (
+                  <>
+                    <h2 className="mt-2 text-3xl font-bold">{flightTitle(nextFlight)}</h2>
+                    <p className="mt-2 text-vd-muted">{nextFlight.time} · {nextCount} {nextCount === 1 ? "guest" : "guests"} · {nextFlight.parties[0]?.vehicle}</p>
+                    <p className="mt-2 text-sm">{nextFlight.parties.flatMap((party) => party.names).filter(Boolean).join(", ")}</p>
+                  </>
+                ) : <p className="mt-2">No flights posted.</p>}
+              </section>
+              <button type="button" className="flex min-h-14 w-full items-center justify-between rounded-tile bg-vd-card px-4 text-base font-bold ring-1 ring-white/10" onClick={() => setScreen("flights")}>All of today&apos;s flights <span aria-hidden="true">›</span></button>
+              <ShuttleDesk day={day} code={code} onChange={onChange} />
+            </>
+          ) : null}
+          {kind === "SHUTTLE" ? (
+            <>
+              <GuestCount day={day} />
+              <ShuttleDesk day={day} code={code} onChange={onChange} />
+            </>
+          ) : null}
+          {kind === "EVENT" ? <EventTimeline day={day} /> : null}
         </>
       ) : null}
-      {!airport ? <ProgressRing done={guestDone} total={Math.max(guestTotal, guestDone)} label="guests picked up" /> : null}
-      <div className="grid grid-cols-4 gap-1">
-        {TABS.map((item) => (
-          <button key={item} type="button" className={`h-11 rounded-full text-sm font-semibold ${tab === item ? "bg-white text-black" : "bg-[#1c1c1e] text-vd-muted"}`} onClick={() => setTab(item)}>
-            {item === "Mine" ? "My Day" : item}
-          </button>
-        ))}
-      </div>
-      {!day.wide ? <><label className="mt-3 block text-sm">Switch position
-        <select className={`${field} mt-1`} value={day.person.postCode} onChange={(event) => void save({ postCode: event.target.value })}>
-          {day.positions.map((item) => <option key={item.code} value={item.code}>{item.label}</option>)}
-        </select>
-      </label>
-      <button type="button" className="mt-2 min-h-11 text-sm font-semibold text-[#9ecbff]" onClick={() => void save({ textAlerts: !day.person.textAlerts })}>
-        Text alerts {day.person.textAlerts ? "on" : "off"}
-      </button>
-      </> : null}
-      {tab === "Staff" ? (
-        <ul className="mt-4 divide-y divide-white/10">
-          {day.staff.map((person) => (
-            <li key={person.name} className="flex min-h-14 items-center justify-between text-lg">
-              <span>{person.name}</span>
-              <span className="text-base text-white/70">{person.post}{person.in ? " · In" : ""}</span>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <>
-          {tab === "Posts" ? (
-            <div className="mt-3 flex flex-wrap gap-1">
-              {day.positions.map((item) => (
-                <button key={item.code} type="button" className={`h-10 rounded-full px-3 text-sm ${post === item.code ? "bg-white text-black" : "bg-white/10"}`} onClick={() => setPost(item.code)}>
-                  {item.label}
-                </button>
-              ))}
-            </div>
-          ) : null}
-          <ul className="mt-2 divide-y divide-white/10" data-testid="flight-lines">
-            {shown.map((line) => {
-              const count = line.parties.reduce((sum, party) => sum + party.count, 0);
-              return (
-                <li key={line.flightCode}>
-                  <Link href={`/team/clipboard?flight=${line.flightCode}`} className="flex min-h-14 min-w-0 items-center gap-2 py-3">
-                    <span className="w-16 shrink-0 text-sm font-semibold">{line.time}</span>
-                    <span className="min-w-0 flex-1 truncate text-base font-semibold">{line.airline} {line.flight}</span>
-                    <span className="shrink-0 text-xs text-vd-muted">{line.status}</span>
-                    <span className="w-6 shrink-0 text-right text-sm">{count}</span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-          {shown.length === 0 ? <p className="mt-6 text-base text-white/70">No flights on this post.</p> : null}
-        </>
-      )}
       <CrewBar owner={day.owner} code={code} person={day.person} positions={day.positions} onDay={(next) => onChange(next as Day)} />
+    </div>
+  );
+}
+
+function FlightList({ lines }: { lines: Line[] }) {
+  return (
+    <div>
+      <h1 className="text-3xl font-bold">Today&apos;s flights</h1>
+      <ul className="mt-3 divide-y divide-white/10" data-testid="flight-lines">
+        {lines.map((line) => {
+          const count = line.parties.reduce((sum, party) => sum + party.count, 0);
+          return (
+            <li key={line.flightCode}>
+              <Link href={`/team/clipboard?flight=${line.flightCode}`} className="flex min-h-14 items-center gap-2 py-3">
+                <span className="w-16 shrink-0 text-sm font-semibold">{line.time}</span>
+                <span className="min-w-0 flex-1 text-base font-semibold">{flightTitle(line)}</span>
+                <span className="text-sm text-vd-muted">{count}</span>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
+function EventTimeline({ day }: { day: Day }) {
+  const rows = (day.sheet || []).filter((item) => item.kind === "WAVE" || item.kind === "NOTE");
+  return (
+    <div className="space-y-3" data-testid="event-timeline">
+      <h2 className="text-2xl font-bold">Timeline</h2>
+      {rows.map((item) => (
+        <article key={`${item.kind}-${item.title}`} className="rounded-tile bg-vd-card p-4 ring-1 ring-white/10">
+          <p className="text-sm font-semibold text-[#4da3ff]">{item.time}</p>
+          <p className="text-lg font-bold">{item.title}</p>
+          <p className="text-sm text-vd-muted">{item.summary}</p>
+          {item.detail ? <p className="mt-2 text-sm">{item.detail}</p> : null}
+        </article>
+      ))}
+    </div>
+  );
+}
+
+function DayInfo({ day }: { day: Day }) {
+  const sheet = day.sheet || [];
+  const notes = sheet.filter((item) => item.kind === "NOTE");
+  const routes = sheet.filter((item) => item.kind === "ROUTE");
+  const waves = sheet.filter((item) => item.kind === "WAVE");
+  const people = sheet.filter((item) => item.kind === "STAFF");
+  return (
+    <div className="space-y-4">
+      <h1 className="text-3xl font-bold">Day Info</h1>
+      <p className="text-sm text-vd-muted">{day.program.name}{day.program.city ? ` · ${day.program.city}` : ""}</p>
+      {notes.map((item) => (
+        <article key={item.title} className="rounded-tile bg-vd-elevated p-4 ring-1 ring-white/10">
+          <p className="font-bold">{item.title}</p>
+          <p className="mt-2 text-sm text-vd-muted">{item.summary}</p>
+          {item.detail ? <p className="mt-2 text-sm">{item.detail}</p> : null}
+        </article>
+      ))}
+      {routes[0]?.detail ? <article className="rounded-tile bg-vd-card p-4 text-sm ring-1 ring-white/10"><p className="font-bold">Shuttle hours</p><p className="mt-2 whitespace-pre-line text-vd-muted">{routes[0].detail}</p></article> : null}
+      {waves.map((item) => (
+        <article key={item.title} className="rounded-tile bg-vd-card p-4 ring-1 ring-white/10">
+          <p className="text-sm text-[#4da3ff]">{item.time}</p>
+          <p className="font-bold">{item.title}</p>
+          <p className="text-sm text-vd-muted">{item.summary}</p>
+        </article>
+      ))}
+      <ul className="divide-y divide-white/10">
+        {(people.length ? people : day.staff.map((person) => ({ title: person.name, route: person.post, time: "", spot: "", summary: "" }))).map((person) => (
+          <li key={person.title} className="py-3">
+            <p className="text-lg font-semibold">{person.title}</p>
+            <p className="text-sm text-vd-muted">{person.route}{person.time ? ` · ${person.time}` : ""}{person.spot ? ` · ${person.spot}` : ""}{person.summary ? ` · ${person.summary}` : ""}</p>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

@@ -9,6 +9,7 @@ import { signLightToken, readLightToken } from "@/lib/light/token";
 import { getFlightProvider } from "@/lib/providers/flights";
 import { programSendsAllowed } from "@/lib/light/outbound";
 import { buildGuestCard, shareGuestLine } from "@/lib/guest-card";
+import { programAsOf } from "@/lib/guest-portal";
 import { COMPANY_PHONE } from "@/lib/brand";
 import { getSmsProvider } from "@/lib/providers/sms";
 
@@ -17,13 +18,14 @@ const IN_MICRO = 7000;
 
 type ProgramRecord = NonNullable<Awaited<ReturnType<typeof programByCode>>>;
 
-async function guestShare(programId: string, name: string, timeZone: string, serviceDate: string, windowClose: string) {
-  const items = await db.lightScheduleItem.findMany({ where: { programId, paxId: "" } });
+async function guestShare(program: { id: string; name: string; timezone: string; serviceDate: string; windowClose: string; demoDate: string; demoTime: string }) {
+  const items = await db.lightScheduleItem.findMany({ where: { programId: program.id, paxId: "" } });
   const card = buildGuestCard({
     now: new Date(),
-    timeZone,
-    serviceDate,
-    windowClose,
+    timeZone: program.timezone,
+    serviceDate: program.serviceDate,
+    windowClose: program.windowClose,
+    asOf: programAsOf(program),
     contact: COMPANY_PHONE,
     moves: items.map((item) => ({
       kind: item.kind,
@@ -35,7 +37,7 @@ async function guestShare(programId: string, name: string, timeZone: string, ser
       guestVisible: item.guestVisible,
     })),
   });
-  return shareGuestLine(name, card, COMPANY_PHONE);
+  return shareGuestLine(program.name, card, COMPANY_PHONE);
 }
 
 async function programByCode(code: string) {
@@ -475,7 +477,7 @@ export async function handleText(phoneRaw: string, text: string, origin: string,
     if (named) {
       const crew = await db.lightRoster.findFirst({ where: { phone, programId: named.id } });
       if (!crew) {
-        const shared = await guestShare(named.id, named.name, named.timezone, named.serviceDate, named.windowClose);
+        const shared = await guestShare(named);
         await db.lightMessage.create({ data: { programId: named.id, direction: "IN", phone, body: trimmed, costMicro: IN_MICRO, status: "guest-code" } });
         await db.lightMessage.create({ data: { programId: named.id, direction: "OUT", phone, body: shared, costMicro: OUT_MICRO, status: "logged" } });
         return { reply: shared, programCode: named.code };
@@ -924,11 +926,12 @@ async function dayActor(code: string, ownerProgramId?: string, actorName = "Owne
 export async function loadCrewDay(code: string, ownerProgramId?: string, actorName = "Owner", asOwner = true) {
   const person = await dayActor(code, ownerProgramId, actorName);
   if (!person?.checkedInAt) return null;
-  const [program, trips, flights, staff] = await Promise.all([
+  const [program, trips, flights, staff, sheetItems] = await Promise.all([
     db.lightProgram.findUnique({ where: { id: person.programId } }),
     db.lightTrip.findMany({ where: { programId: person.programId }, include: { passengers: { orderBy: { sortOrder: "asc" } } } }),
     db.lightFlight.findMany({ where: { programId: person.programId } }),
     db.lightRoster.findMany({ where: { programId: person.programId }, orderBy: { name: "asc" } }),
+    db.lightScheduleItem.findMany({ where: { programId: person.programId }, orderBy: { sortKey: "asc" } }),
   ]);
   if (!program) return null;
   const byFlight = new Map<string, typeof trips>();
@@ -966,6 +969,7 @@ export async function loadCrewDay(code: string, ownerProgramId?: string, actorNa
         carSeats: party.carSeats,
         boosters: party.boosters,
       }))),
+      leg: /depart/i.test(parties[0]?.notes || "") ? "depart" : "arrival",
       parties: parties.map((party) => ({
         id: party.id,
         vehicle: party.vehicleLabel,
@@ -999,10 +1003,10 @@ export async function loadCrewDay(code: string, ownerProgramId?: string, actorNa
       textAlerts: person.textAlerts,
       wide: seesAll(person.postCode),
     },
-    program: { code: program.code, name: program.name, timezone: program.timezone, windowClose: program.windowClose },
+    program: { code: program.code, name: program.name, timezone: program.timezone, windowClose: program.windowClose, city: program.city, jobKind: program.jobKind, demoDate: program.demoDate, demoTime: program.demoTime },
     count: airport
       ? { kind: "airport" as const, moved: checked + loopPax, total: passengers.length, label: "Guests" }
-      : { kind: "shuttle" as const, moved, total: Math.max(passengers.length, moved), label: "Moved" },
+      : { kind: "shuttle" as const, moved, total: Math.max(passengers.length, moved), label: "Guests" },
     shuttle: {
       movedIn: loopIn,
       movedOut,
@@ -1013,7 +1017,16 @@ export async function loadCrewDay(code: string, ownerProgramId?: string, actorNa
     vehicles,
     positions: POSITIONS.map((item) => ({ code: item.code, label: item.label })),
     lines,
-    staff: staff.map((row) => ({ name: row.name, post: postLabel(row.postCode || row.expectedPost), in: Boolean(row.checkedInAt && !row.checkedOutAt) })),
+    staff: staff.map((row) => ({ name: row.name, post: row.postCode || postLabel(row.expectedPost), in: Boolean(row.checkedInAt && !row.checkedOutAt) })),
+    sheet: sheetItems.filter((item) => item.kind === "NOTE" || item.kind === "STAFF" || item.kind === "WAVE" || item.kind === "ROUTE").map((item) => ({
+      kind: item.kind,
+      title: item.title,
+      time: item.timeLabel,
+      summary: item.summary,
+      detail: item.detail,
+      spot: item.spot,
+      route: item.route,
+    })),
   };
 }
 

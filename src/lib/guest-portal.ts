@@ -5,7 +5,7 @@ import { openCode, sealCode } from "@/lib/guest-seal";
 import { itemVisible, type TripSession } from "@/lib/guest-session";
 import { todayET } from "@/lib/light/checkin";
 import { displayFlight } from "@/lib/light/posts";
-import { buildGuestCard } from "@/lib/guest-card";
+import { buildGuestCard, parseClockLabel } from "@/lib/guest-card";
 import { COMPANY_PHONE } from "@/lib/brand";
 import { DEMO_GUEST_PASSES, DEMO_MANAGER_CODE, DEMO_VIP_CODE } from "@/lib/light/demo-portal";
 
@@ -84,6 +84,41 @@ export async function applyExtraCode(session: TripSession, code: string) {
   return { ok: false as const };
 }
 
+export function programAsOf(program: { demoDate: string; demoTime: string }) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(program.demoDate || "")) return undefined;
+  const minutes = parseClockLabel(program.demoTime || "");
+  return { day: program.demoDate, minutes: minutes ?? 12 * 60 };
+}
+
+function portalFrom(items: Array<{ id: string; title: string; kind: string; timeLabel: string; summary: string; detail: string; spot: string; route: string; frequency: string; flightCode: string }>) {
+  const map = (kind: string) => items.filter((item) => item.kind === kind).map((item) => ({
+    id: item.id,
+    title: item.title,
+    time: item.timeLabel,
+    summary: item.summary,
+    detail: item.detail,
+    spot: item.spot,
+    route: item.route,
+    frequency: item.frequency,
+    flight: item.flightCode,
+  }));
+  const flights = map("FLIGHT");
+  const routes = map("ROUTE");
+  const waves = map("WAVE");
+  const departs = map("DEPART");
+  return {
+    flights,
+    hotels: map("HOTEL"),
+    routes,
+    waves,
+    departs,
+    today: map("TODAY"),
+    hasArrival: flights.length > 0,
+    hasTransport: routes.length + waves.length > 0,
+    hasDeparture: departs.length > 0,
+  };
+}
+
 function flightWord(status: string, gate: string) {
   if (status === "LANDED" && gate) return `At gate ${gate}`;
   if (status === "LANDED") return "Landed";
@@ -107,6 +142,7 @@ export async function loadVisibleTrip(session: TripSession) {
     serviceDate: program.serviceDate,
     windowClose: program.windowClose,
     contact: COMPANY_PHONE,
+    asOf: programAsOf(program),
     moves: items.filter((item) => !item.paxId && (item.groups.length === 0 || item.groups.some((row) => row.group.kind === "EVERYONE"))).map((item) => ({
       kind: item.kind,
       timeLabel: item.timeLabel,
@@ -126,7 +162,8 @@ export async function loadVisibleTrip(session: TripSession) {
     session,
   ));
   return {
-    program: { name: program.name, timezone: program.timezone },
+    program: { name: program.name, timezone: program.timezone, city: program.city || "Orlando" },
+    portal: portalFrom(items.filter((item) => item.guestVisible !== false && !item.paxId)),
     card,
     updatedAt: new Date().toISOString(),
     guest: person ? `${person.firstName} ${person.lastName}`.trim() : "",

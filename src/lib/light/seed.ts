@@ -6,6 +6,7 @@ import { airlineOf, NBCU_FLIGHTS, NBCU_REVISION, NBCU_TRIPS } from "@/lib/light/
 import { hashAccessCodes } from "@/lib/crew-access";
 import { ensureDemoAirport } from "@/lib/light/demo-program";
 import { ensureGuestPortal } from "@/lib/guest-portal";
+import { ensureSamplePrograms } from "@/lib/light/sample-programs";
 
 async function ensureAccessHashes(db: PrismaClient) {
   const programs = await db.lightProgram.findMany({ select: { id: true, code: true, aliases: true, accessCodeHash: true } });
@@ -33,6 +34,7 @@ export async function ensureLightDemo(db: PrismaClient) {
       await ensureAccessHashes(db);
       await ensureGuestPortal(db);
       await ensureDemoAirport(db);
+      await ensureSamplePrograms(db);
       return existing.id;
     }
     if (existing) await db.lightProgram.delete({ where: { id: existing.id } });
@@ -166,6 +168,7 @@ export async function ensureLightDemo(db: PrismaClient) {
     await ensureAccessHashes(db);
     await ensureGuestPortal(db);
     await ensureDemoAirport(db);
+    await ensureSamplePrograms(db);
     return program.id;
   } catch (error) {
     console.warn("Light demo seed skipped:", error instanceof Error ? error.message : error);
