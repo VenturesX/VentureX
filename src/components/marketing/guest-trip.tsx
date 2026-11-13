@@ -2,14 +2,12 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Bus, FerrisWheel, Home, Hotel, Landmark, MessageCircle, Plane, UtensilsCrossed, UserRound } from "lucide-react";
+import { Bus, Home, Hotel, MessageCircle, Plane, UserRound } from "lucide-react";
 import { COMPANY_EMAIL, COMPANY_PHONE, COMPANY_PHONE_TEL } from "@/lib/brand";
 import { tripRedirectHref } from "@/lib/trip-redirect";
 import { field, onBtn } from "@/components/light/styles";
 import { Accordion } from "@/components/premium/accordion";
 import { PillNav } from "@/components/premium/pill-nav";
-import { RideBar } from "@/components/premium/ride-bar";
-import { ADD_RIDES, ORLANDO_PICKS } from "@/components/premium/rides";
 import { ScreenSkeleton } from "@/components/premium/skeleton";
 import { Tile } from "@/components/premium/tile";
 
@@ -27,11 +25,14 @@ type Item = {
   status: string;
   personal: boolean;
 };
+type TripCard = { phase: string; line: string; note: string; pickup: string };
 type Trip = {
   signedIn: boolean;
   ownerPreview?: boolean;
   program?: { name: string };
   guest?: string;
+  card?: TripCard;
+  updatedAt?: string;
   mine?: { flight: string; time: string; vehicle: string; spot: string; status: string } | null;
   items?: Item[];
 };
@@ -46,8 +47,7 @@ export function GuestTrip() {
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
   const [view, setView] = useState<View>("home");
-  const [later, setLater] = useState(false);
-  const [ride, setRide] = useState<string | null>(null);
+  const [welcome, setWelcome] = useState("");
 
   async function refresh() {
     const response = await fetch("/api/trip");
@@ -56,7 +56,8 @@ export function GuestTrip() {
 
   useEffect(() => {
     const timer = window.setTimeout(() => { void refresh(); }, 0);
-    return () => window.clearTimeout(timer);
+    const pulse = window.setInterval(() => { void refresh(); }, 60_000);
+    return () => { window.clearTimeout(timer); window.clearInterval(pulse); };
   }, []);
 
   async function submit(step: "open" | "code") {
@@ -68,19 +69,16 @@ export function GuestTrip() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ step, code }),
       });
-      const json = (await response.json()) as { error?: string; href?: string };
+      const json = (await response.json()) as { error?: string; href?: string; welcome?: string };
       if (!response.ok) {
-        setError(json.error || "That code didn't match.");
+        setError(json.error || "That code didn't match. Check your welcome message or ask the team at your arrival area.");
         return;
       }
       setCode("");
       const next = tripRedirectHref(json.href);
       if (next) { window.location.assign(next); return; }
+      if (json.welcome) setWelcome(json.welcome);
       await refresh();
-      if (step === "code") {
-        setTab("My Trip");
-        setView("trip");
-      }
       if (step === "open") setView("home");
     } catch {
       setError("The request didn't go through. Try again.");
@@ -94,13 +92,13 @@ export function GuestTrip() {
   if (!trip.signedIn) {
     return (
       <div className="mx-auto max-w-lg px-4 py-10">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#4da3ff]">Guests</p>
-        <h1 className="mt-2 text-4xl font-bold tracking-tight">Your trip, live</h1>
-        <p className="mt-3 text-sm leading-relaxed text-vd-muted">Enter the program number from your text. No account to create.</p>
-        <form className="mt-8 space-y-3 rounded-card bg-vd-card p-4 ring-1 ring-white/10" onSubmit={(event) => { event.preventDefault(); void submit("open"); }}>
-          <label className="text-sm font-medium" htmlFor="program-number">Program number</label>
-          <input id="program-number" className={`${field} text-center text-2xl font-bold tracking-[0.2em]`} autoComplete="off" aria-label="Program number" value={code} onChange={(event) => setCode(event.target.value)} />
-          <button className={`${onBtn} h-12 w-full`} type="submit" disabled={pending || code.trim().length < 2}>Open the program</button>
+        <h1 className="text-4xl font-bold tracking-tight">Your trip starts here.</h1>
+        <p className="mt-3 text-lg text-white">Enter your trip code.</p>
+        <p className="mt-2 text-sm text-vd-muted">It&apos;s in your welcome message or on the sign.</p>
+        <form className="mt-8 space-y-3" onSubmit={(event) => { event.preventDefault(); void submit("open"); }}>
+          <label className="sr-only" htmlFor="trip-code">Trip code</label>
+          <input id="trip-code" className={`${field} text-center text-3xl font-bold tracking-[0.18em]`} autoComplete="off" aria-label="Trip code" value={code} onChange={(event) => setCode(event.target.value)} />
+          <button className={`${onBtn} h-14 w-full text-base`} type="submit" disabled={pending || code.trim().length < 2}>Open my trip</button>
           {error ? <p className="text-sm text-[#ffb4b0]">{error}</p> : null}
         </form>
       </div>
@@ -111,36 +109,22 @@ export function GuestTrip() {
   const shuttles = items.filter((item) => item.kind === "SHUTTLE");
   const schedule = items.filter((item) => item.kind !== "SHUTTLE");
   const cards = tripCards(trip);
-
-  function chooseRide(title: string) {
-    setRide(title);
-    setLater(true);
-  }
+  const spot = trip.card?.pickup || cards.find((card) => card.kicker === "Hotel")?.title || "";
 
   return (
     <div className="mx-auto max-w-lg space-y-5 px-4 pb-28 pt-5" data-testid="guest-trip">
-      {trip.ownerPreview ? <div className="rounded-card bg-vd-card p-3 text-sm ring-1 ring-white/10"><Link href="/team" className="font-semibold text-[#4da3ff]">← Owner hub</Link><p className="mt-2 text-vd-muted">General guest preview. Personal rides still require the guest&apos;s text code.</p></div> : null}
-      <RideBar onOpen={() => setView("trip")} onLater={() => setLater((open) => !open)} laterOpen={later} />
-      {later ? (
-        <Accordion title={ride ? `Later · ${ride}` : "Book a later transfer"} open={later} onOpenChange={setLater}>
-          <p>Pick a ride, then add the text code from your message so it stays on your program.</p>
-          <div className="mt-3 flex gap-2 overflow-x-auto">
-            {ADD_RIDES.map((item) => (
-              <button key={item.id} type="button" className={`h-11 shrink-0 rounded-full px-4 text-sm font-semibold ${ride === item.title ? "bg-white text-black" : "bg-black text-white ring-1 ring-white/15"}`} onClick={() => setRide(item.title)}>
-                {item.title}
-              </button>
-            ))}
-          </div>
-          <form className="mt-3 flex gap-2" onSubmit={(event) => { event.preventDefault(); void submit("code"); }}>
-            <input className={field} type="password" aria-label="Text code" placeholder="Text code" value={code} onChange={(event) => setCode(event.target.value)} />
-            <button className={`${onBtn} shrink-0 px-4`} type="submit" disabled={pending || code.trim().length < 2}>Add</button>
-          </form>
-          {error ? <p className="mt-2 text-sm text-[#ffb4b0]">{error}</p> : null}
-        </Accordion>
+      {welcome ? (
+        <button type="button" className="w-full rounded-tile bg-vd-elevated p-5 text-left ring-1 ring-white/10" onClick={() => setWelcome("")}>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#4da3ff]">Welcome</p>
+          <p className="mt-2 text-2xl font-bold">Welcome to {welcome}.</p>
+          <p className="mt-2 text-vd-muted">Your Orlando trip starts here.</p>
+        </button>
       ) : null}
+      {trip.ownerPreview ? <div className="rounded-card bg-vd-card p-3 text-sm ring-1 ring-white/10"><Link href="/team" className="font-semibold text-[#4da3ff]">← Owner hub</Link><p className="mt-2 text-vd-muted">General guest preview.</p></div> : null}
 
       {view === "home" ? (
         <>
+          <FirstCard card={trip.card} updatedAt={trip.updatedAt} />
           <section className="space-y-3">
             <h2 className="text-xl font-bold">Your trips</h2>
             <div className="grid grid-cols-2 gap-3">
@@ -149,22 +133,7 @@ export function GuestTrip() {
               ))}
             </div>
           </section>
-          <section className="space-y-3">
-            <h2 className="text-xl font-bold">Add a ride</h2>
-            <div className="grid grid-cols-2 gap-3">
-              {ADD_RIDES.map((item) => (
-                <Tile key={item.id} icon={rideIcon(item.title)} label={item.title} hint={ride === item.title ? "Selected" : "Request"} tone={ride === item.title ? "green" : "accent"} onClick={() => chooseRide(item.title)} />
-              ))}
-            </div>
-          </section>
-          <section className="space-y-3">
-            <h2 className="text-xl font-bold">Orlando picks</h2>
-            <div className="grid grid-cols-2 gap-3">
-              {ORLANDO_PICKS.map((pick) => (
-                <Tile key={pick.title} icon={<Landmark className="size-5" />} label={pick.title} hint={pick.subtitle} onClick={() => chooseRide(pick.title)} />
-              ))}
-            </div>
-          </section>
+          <HelpLadder spot={spot} />
         </>
       ) : null}
 
@@ -172,12 +141,7 @@ export function GuestTrip() {
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#4da3ff]">{trip.program?.name}</p>
           <h1 className="mt-2 text-3xl font-bold tracking-tight">Your trip, live</h1>
-          <p className="mt-2 text-sm text-vd-muted">{trip.guest ? `Hello, ${trip.guest}.` : "General moves are open. Add your text code for your own ride."}</p>
-          <form className="mt-4 flex gap-2" onSubmit={(event) => { event.preventDefault(); void submit("code"); }}>
-            <input className={field} type="password" aria-label="Text code" placeholder="Text code, optional" value={code} onChange={(event) => setCode(event.target.value)} />
-            <button className={`${onBtn} shrink-0 px-4`} type="submit" disabled={pending || code.trim().length < 2}>Add</button>
-          </form>
-          {error ? <p className="mt-2 text-sm text-[#ffb4b0]">{error}</p> : null}
+          <p className="mt-2 text-sm text-vd-muted">{trip.guest ? `Hello, ${trip.guest}.` : "Shared moves for this trip."}</p>
           <div className="mt-5 grid grid-cols-4 gap-1">
             {TABS.map((item) => (
               <button key={item} type="button" className={`h-11 rounded-full text-xs font-semibold ${tab === item ? "bg-white text-black" : "bg-vd-elevated text-vd-muted"}`} onClick={() => setTab(item)}>
@@ -196,7 +160,7 @@ export function GuestTrip() {
                   {trip.mine.spot ? <p className="mt-3 text-sm font-medium text-white">{spotLine(trip.mine.spot)}</p> : null}
                 </article>
               ) : (
-                <p className="text-sm text-vd-muted">Enter the text code from your message to unlock your flight, pickup, and ride.</p>
+                <p className="text-sm text-vd-muted">Shared arrivals and the shuttle card are on Home.</p>
               )}
               <ItemList items={items.filter((item) => item.personal)} empty="" />
             </div>
@@ -220,7 +184,7 @@ export function GuestTrip() {
           <h1 className="text-3xl font-bold tracking-tight">Account</h1>
           <p className="text-sm text-vd-muted">{trip.program?.name}</p>
           <p className="text-lg font-semibold">{trip.guest || "General guest"}</p>
-          <p className="text-sm text-vd-muted">No app account. Your text code unlocks your own ride.</p>
+          <p className="text-sm text-vd-muted">No app account. Your trip code is enough.</p>
         </div>
       ) : null}
 
@@ -237,15 +201,40 @@ export function GuestTrip() {
   );
 }
 
+function FirstCard({ card, updatedAt }: { card?: TripCard; updatedAt?: string }) {
+  const when = updatedAt ? new Date(updatedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/New_York" }) : "";
+  const spot = card?.pickup || "";
+  const maps = spot ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(spot)}` : "";
+  return (
+    <section className="rounded-tile bg-vd-elevated p-5 ring-1 ring-white/10" data-testid="guest-card">
+      <p className="text-lg font-semibold leading-snug">{card?.line || "Pickup details are with the team at your arrival area."}</p>
+      {card?.note ? <p className="mt-2 text-sm text-vd-muted">{card.note}</p> : null}
+      {spot ? <p className="mt-3 text-sm">Pickup: {spot}</p> : null}
+      {maps ? <a className="mt-4 inline-flex h-12 items-center rounded-full bg-white px-5 text-sm font-bold text-black" href={maps}>Directions</a> : null}
+      {when ? <p className="mt-3 text-xs text-vd-muted">Updated {when}</p> : null}
+    </section>
+  );
+}
+
+function HelpLadder({ spot }: { spot: string }) {
+  const sms = COMPANY_PHONE_TEL.replace(/[^\d+]/g, "");
+  return (
+    <section className="space-y-3">
+      <h2 className="text-xl font-bold">Help</h2>
+      <Accordion title="Where do I wait?">{spot ? <p>Wait at {spot}.</p> : <p>Wait at the signed stop from your welcome message.</p>}</Accordion>
+      <Accordion title="What time?"><p>Use the card above. Times may vary, and boarding depends on space.</p></Accordion>
+      <Accordion title="Lost item?"><p>Tell the on-duty team. They will look with the crew from that run.</p></Accordion>
+      <Accordion title="Who do I ask?"><p>The Venture team at your arrival area.</p></Accordion>
+      <a className="flex h-12 items-center justify-center rounded-full bg-white text-sm font-bold text-black" href={`sms:${sms}`}>Text the on-duty team</a>
+      <a className="flex h-12 items-center justify-center rounded-full text-sm font-semibold text-white ring-1 ring-white/15" href={`tel:${COMPANY_PHONE_TEL}`}>Call {COMPANY_PHONE}</a>
+      <p className="text-sm text-vd-muted">Need a lead? Ask for one on that same line.</p>
+    </section>
+  );
+}
+
 function tripIcon(kicker: string) {
   if (kicker === "Hotel") return <Hotel className="size-5" />;
   if (kicker === "Departure") return <Bus className="size-5" />;
-  return <Plane className="size-5" />;
-}
-
-function rideIcon(title: string) {
-  if (/dinner/i.test(title)) return <UtensilsCrossed className="size-5" />;
-  if (/park|gala/i.test(title)) return <FerrisWheel className="size-5" />;
   return <Plane className="size-5" />;
 }
 

@@ -5,6 +5,8 @@ import { openCode, sealCode } from "@/lib/guest-seal";
 import { itemVisible, type TripSession } from "@/lib/guest-session";
 import { todayET } from "@/lib/light/checkin";
 import { displayFlight } from "@/lib/light/posts";
+import { buildGuestCard } from "@/lib/guest-card";
+import { COMPANY_PHONE } from "@/lib/brand";
 import { DEMO_GUEST_PASSES, DEMO_MANAGER_CODE, DEMO_VIP_CODE } from "@/lib/light/demo-portal";
 
 const WINDOW_MS = 15 * 60 * 1000;
@@ -99,7 +101,23 @@ export async function loadVisibleTrip(session: TripSession) {
     session.paxId ? db.lightPax.findUnique({ where: { id: session.paxId }, include: { trip: true } }) : Promise.resolve(null),
   ]);
   if (!program) return null;
-  const visible = items.filter((item) => itemVisible(
+  const card = buildGuestCard({
+    now: new Date(),
+    timeZone: program.timezone,
+    serviceDate: program.serviceDate,
+    windowClose: program.windowClose,
+    contact: COMPANY_PHONE,
+    moves: items.filter((item) => !item.paxId && (item.groups.length === 0 || item.groups.some((row) => row.group.kind === "EVERYONE"))).map((item) => ({
+      kind: item.kind,
+      timeLabel: item.timeLabel,
+      sortKey: item.sortKey,
+      spot: item.spot,
+      title: item.title,
+      frequency: item.frequency,
+      guestVisible: item.guestVisible,
+    })),
+  });
+  const visible = items.filter((item) => item.guestVisible !== false).filter((item) => itemVisible(
     {
       paxId: item.paxId,
       everyone: item.groups.some((row) => row.group.kind === "EVERYONE"),
@@ -108,7 +126,9 @@ export async function loadVisibleTrip(session: TripSession) {
     session,
   ));
   return {
-    program: { name: program.name },
+    program: { name: program.name, timezone: program.timezone },
+    card,
+    updatedAt: new Date().toISOString(),
     guest: person ? `${person.firstName} ${person.lastName}`.trim() : "",
     mine: person ? {
       flight: displayFlight(person.trip.flightCode),
@@ -184,6 +204,7 @@ export async function guestOffice(programId: string) {
       flightCode: item.flightCode,
       paxId: item.paxId,
       groupIds: item.groups.map((row) => row.groupId),
+      guestVisible: item.guestVisible,
     })),
     guests: guests.map((guest) => ({
       id: guest.id,

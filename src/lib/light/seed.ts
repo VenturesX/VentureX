@@ -23,6 +23,13 @@ export async function ensureLightDemo(db: PrismaClient) {
   try {
     const existing = await db.lightProgram.findUnique({ where: { code: "NBCU" } });
     if (existing?.seedRevision === NBCU_REVISION) {
+      const aliases = [...new Set([...existing.aliases.split(",").map((item) => item.trim()).filter(Boolean), "NBCU26"])];
+      if (aliases.join(",") !== existing.aliases) {
+        await db.lightProgram.update({
+          where: { id: existing.id },
+          data: { aliases: aliases.join(","), accessCodeHash: await hashAccessCodes([existing.code, ...aliases], true) },
+        });
+      }
       await ensureAccessHashes(db);
       await ensureGuestPortal(db);
       await ensureDemoAirport(db);
@@ -34,7 +41,7 @@ export async function ensureLightDemo(db: PrismaClient) {
       data: {
         name: "NBCU Family Weekend",
         code: "NBCU",
-        aliases: "6011,4110",
+        aliases: "6011,4110,NBCU26",
         clientName: "NBCU",
         hotels: "Loews Portofino Bay Hotel",
         pmName: "Katrina Byerwalters",

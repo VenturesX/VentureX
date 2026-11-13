@@ -822,9 +822,10 @@ model LightScheduleItem {
   spot       String           @default("")
   route      String           @default("")
   frequency  String           @default("")
-  flightCode String           @default("")
-  paxId      String           @default("")
-  groups     LightItemGroup[]
+  flightCode   String           @default("")
+  paxId        String           @default("")
+  guestVisible Boolean          @default(true)
+  groups       LightItemGroup[]
 
   @@index([programId])
 }

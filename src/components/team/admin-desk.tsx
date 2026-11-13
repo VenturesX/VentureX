@@ -23,6 +23,7 @@ export function AdminDesk() {
   const [level, setLevel] = useState<(typeof LEVELS)[number] | "">("");
   const [locked, setLocked] = useState(false);
   const [guestProgram, setGuestProgram] = useState("");
+  const [ownerProgram, setOwnerProgram] = useState("");
   const [panel, setPanel] = useState<"desk" | "quotes" | "setup">("desk");
   const [report, setReport] = useState<Report | null>(null);
 
@@ -30,6 +31,7 @@ export function AdminDesk() {
     if (new URLSearchParams(window.location.search).get("setup") === "1") setPanel("setup");
     void fetch("/api/team/session").then(async (response) => {
       const json = (await response.json()) as { signedIn?: { kind?: string; programId?: string; clientManagesGroups?: boolean } };
+      if (json.signedIn?.programId) setOwnerProgram(json.signedIn.programId);
       if (json.signedIn?.clientManagesGroups && json.signedIn.programId) setGuestProgram(json.signedIn.programId);
       if (json.signedIn?.kind === "client") {
         setLevel("Client");
@@ -107,7 +109,7 @@ export function AdminDesk() {
         </div>
       ) : null}
       {panel === "quotes" && level === "Owner" ? <AdminQuotes /> : null}
-      {panel === "setup" && level === "Owner" ? <AdminOffice /> : null}
+      {panel === "setup" && level === "Owner" ? <><AdminOffice />{ownerProgram ? <GuestSetup programId={ownerProgram} owner /> : null}</> : null}
       {level === "Lead" ? <><AdminOffice lead />{guestProgram ? <GuestSetup programId={guestProgram} owner={false} /> : null}</> : null}
       {level === "Client" && guestProgram ? <GuestSetup programId={guestProgram} owner={false} /> : null}
       {panel === "desk" || level === "Client" ? <>

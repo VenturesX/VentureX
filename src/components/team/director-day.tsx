@@ -14,7 +14,12 @@ type Day = {
   owner?: boolean;
   wide?: boolean;
   person: { name: string; postCode: string; postLabel: string; textAlerts: boolean; wide: boolean };
-  program: { code: string; name: string };
+  program: { code: string; name: string; timezone?: string; windowClose?: string };
+  count?: { kind: "airport" | "shuttle"; moved: number; total: number; label: string };
+  shuttle?: { movedIn: number; movedOut: number; finalCount: number };
+  flightsMet?: number;
+  lastSent?: { id: string; vehicle: string; sentAt: string; pax: number } | null;
+  vehicles?: string[];
   positions: { code: string; label: string }[];
   lines: Line[];
   staff: { name: string; post: string; in: boolean }[];
@@ -64,6 +69,73 @@ export function DirectorGate() {
   }
 
   return <MyDay day={day} code={code} onChange={setDay} />;
+}
+
+function GuestCount({ day }: { day: Day }) {
+  const moved = day.count?.moved ?? 0;
+  const total = day.count?.total ?? 0;
+  return (
+    <section className="rounded-tile bg-vd-elevated px-5 py-6 text-center ring-1 ring-white/10" data-testid="guest-count">
+      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#4da3ff]">{day.count?.label || "Guests"}</p>
+      <p className="mt-2 text-6xl font-bold tabular-nums tracking-tight">{moved}<span className="text-3xl text-vd-muted">/{total}</span></p>
+    </section>
+  );
+}
+
+function ShuttleDesk({ day, code, onChange }: { day: Day; code: string; onChange: (day: Day) => void }) {
+  const [bus, setBus] = useState("");
+  const [pax, setPax] = useState("");
+  const [notice, setNotice] = useState("");
+  const [problem, setProblem] = useState("");
+  const airport = (day.count?.kind || "airport") === "airport";
+  const sent = day.lastSent;
+  const when = sent?.sentAt ? new Date(sent.sentAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: day.program.timezone || "America/New_York" }) : "";
+
+  async function save(body: { action: string; tripId?: string; count?: number; vehicle?: string }) {
+    setNotice("");
+    setProblem("");
+    const response = await fetch("/api/team/desk", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code, ...body }),
+    });
+    const json = (await response.json()) as Day & { error?: string };
+    if (!response.ok) {
+      setProblem(json.error || "Could not save that.");
+      return;
+    }
+    onChange(json);
+    setNotice("Saved");
+    setPax("");
+  }
+
+  return (
+    <section className="space-y-3" data-testid="shuttle-desk">
+      <article className="rounded-tile bg-vd-card p-4 ring-1 ring-white/10">
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#4da3ff]">Last shuttle sent</p>
+        {sent ? (
+          <>
+            <p className="mt-2 text-2xl font-bold">{sent.vehicle}</p>
+            <p className="text-sm text-vd-muted">{when} · {sent.pax} passengers</p>
+            <button type="button" className="mt-3 h-12 rounded-full bg-white px-4 text-sm font-bold text-black" onClick={() => void save({ action: "late", tripId: sent.id, count: 1 })}>+1 late runner</button>
+          </>
+        ) : <p className="mt-2 text-sm text-vd-muted">No shuttle sent yet.</p>}
+      </article>
+      <form className="space-y-3 rounded-tile bg-vd-card p-4 ring-1 ring-white/10" onSubmit={(event) => { event.preventDefault(); void save({ action: "send-loop", vehicle: bus, count: Number(pax) }); }}>
+        <p className="text-lg font-bold">{airport ? "Send an airport loop" : "Send shuttle"}</p>
+        <label className="block text-sm">Bus
+          <input className={`${field} mt-1`} list="bus-list" aria-label="Bus" value={bus} onChange={(event) => setBus(event.target.value)} placeholder="Bus or vehicle" />
+        </label>
+        <datalist id="bus-list">{(day.vehicles || []).map((item) => <option key={item} value={item} />)}</datalist>
+        <label className="block text-sm">Passengers
+          <input className={`${field} mt-1`} inputMode="numeric" aria-label="Passengers" value={pax} onChange={(event) => setPax(event.target.value.replace(/\D/g, "").slice(0, 4))} placeholder="0" />
+        </label>
+        <button className="h-14 w-full rounded-full bg-white text-base font-bold text-black" type="submit" disabled={!bus.trim() || pax === ""}>Send</button>
+        {notice ? <p className="text-sm font-semibold text-[#30d158]">{notice}</p> : null}
+        {problem ? <p className="text-sm text-[#ffb4b0]">{problem}</p> : null}
+      </form>
+    </section>
+  );
 }
 
 function sideFromPost(post: string): "B1" | "B2" | "C" | null {
@@ -118,7 +190,10 @@ function MyDay({ day, code, onChange }: { day: Day; code: string; onChange: (day
   return (
     <div className="mx-auto max-w-lg space-y-4 overflow-x-hidden px-4 pb-28 pt-6 text-white" data-testid="my-day">
       {day.owner ? <Link href="/team" className="inline-block min-h-11 text-sm font-semibold text-[#4da3ff]">← Owner hub</Link> : day.wide ? <Link href="/team/admin?setup=1" className="inline-block min-h-11 text-sm font-semibold text-[#4da3ff]">Staff and itinerary</Link> : null}
+      <GuestCount day={day} />
+      <ShuttleDesk day={day} code={code} onChange={onChange} />
       <HeroCard kicker={day.program.name} title={side ? `${day.person.postLabel || "Today's post"} · ${side}` : (day.person.postLabel || "Today's post")} line={`${day.person.name} · Today's shift`} />
+      <Link href="/team/meter" className="flex min-h-14 items-center justify-between rounded-tile bg-vd-elevated px-4 text-base font-bold ring-1 ring-white/10">Guest-O-Meter<span aria-hidden="true">›</span></Link>
       <DeskGrid hrefFor={(key) => ({ manifest: "/team/clipboard", flights: "/team/director", dispatch: "/team/dispatch", clipboard: "/team/clipboard", shuttle: "/clipboard", drive: "/drive" }[key])} />
       {airport && !side ? (
         <section className="space-y-3">

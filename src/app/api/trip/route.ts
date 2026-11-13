@@ -40,7 +40,7 @@ export async function POST(request: Request) {
   }
   const ip = clientIp(request);
   if (await tooManyGuestTries(ip)) {
-    return NextResponse.json({ error: "Too many tries. Wait a few minutes." }, { status: 429 });
+    return NextResponse.json({ error: "Let's pause for a moment. Try again in a few minutes, or ask the team nearby for help." }, { status: 429 });
   }
   const store = await cookies();
   const current = await readTripToken(store.get(TRIP_COOKIE)?.value || "");
@@ -55,10 +55,10 @@ export async function POST(request: Request) {
     const program = await findProgramByNumber(code);
     if (!program) {
       await noteGuestTry(ip);
-      return NextResponse.json({ error: "That program number didn't match." }, { status: 401 });
+      return NextResponse.json({ error: "That code didn't match. Check your welcome message or ask the team at your arrival area." }, { status: 401 });
     }
     const token = await signTripToken(await openProgramSession(program.id));
-    const response = NextResponse.json({ ok: true });
+    const response = NextResponse.json({ ok: true, welcome: program.name });
     response.cookies.set(TRIP_COOKIE, token, cookieOptions(request));
     return response;
   }

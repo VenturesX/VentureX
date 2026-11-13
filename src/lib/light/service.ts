@@ -8,12 +8,35 @@ import { addMinutes, clockLabel, isAfterWindow } from "@/lib/light/time";
 import { signLightToken, readLightToken } from "@/lib/light/token";
 import { getFlightProvider } from "@/lib/providers/flights";
 import { programSendsAllowed } from "@/lib/light/outbound";
+import { buildGuestCard, shareGuestLine } from "@/lib/guest-card";
+import { COMPANY_PHONE } from "@/lib/brand";
 import { getSmsProvider } from "@/lib/providers/sms";
 
 const OUT_MICRO = 8500;
 const IN_MICRO = 7000;
 
 type ProgramRecord = NonNullable<Awaited<ReturnType<typeof programByCode>>>;
+
+async function guestShare(programId: string, name: string, timeZone: string, serviceDate: string, windowClose: string) {
+  const items = await db.lightScheduleItem.findMany({ where: { programId, paxId: "" } });
+  const card = buildGuestCard({
+    now: new Date(),
+    timeZone,
+    serviceDate,
+    windowClose,
+    contact: COMPANY_PHONE,
+    moves: items.map((item) => ({
+      kind: item.kind,
+      timeLabel: item.timeLabel,
+      sortKey: item.sortKey,
+      spot: item.spot,
+      title: item.title,
+      frequency: item.frequency,
+      guestVisible: item.guestVisible,
+    })),
+  });
+  return shareGuestLine(name, card, COMPANY_PHONE);
+}
 
 async function programByCode(code: string) {
   const needle = code.trim().toUpperCase();
@@ -447,6 +470,18 @@ export async function handleText(phoneRaw: string, text: string, origin: string,
   const phone = normalizePhone(phoneRaw);
   const trimmed = text.trim();
   const intro = parseIntro(trimmed);
+  if (!intro && /^[A-Za-z0-9]{2,12}$/.test(trimmed)) {
+    const named = await programByCode(trimmed);
+    if (named) {
+      const crew = await db.lightRoster.findFirst({ where: { phone, programId: named.id } });
+      if (!crew) {
+        const shared = await guestShare(named.id, named.name, named.timezone, named.serviceDate, named.windowClose);
+        await db.lightMessage.create({ data: { programId: named.id, direction: "IN", phone, body: trimmed, costMicro: IN_MICRO, status: "guest-code" } });
+        await db.lightMessage.create({ data: { programId: named.id, direction: "OUT", phone, body: shared, costMicro: OUT_MICRO, status: "logged" } });
+        return { reply: shared, programCode: named.code };
+      }
+    }
+  }
   let program = intro ? await programByCode(intro.code) : await programByCode(trimmed.toUpperCase());
   const rosterHit = program
     ? null
@@ -942,7 +977,18 @@ export async function loadCrewDay(code: string, ownerProgramId?: string, actorNa
         cells: party.passengers.map((pax) => pax.cell).filter(Boolean),
       })),
     };
-  }).sort((a, b) => a.sort.localeCompare(b.sort));
+  }).filter((line) => /^[A-Z]{1,3}\d+$/i.test(line.flightCode.replace(/\s/g, ""))).sort((a, b) => a.sort.localeCompare(b.sort));
+  const passengers = trips.flatMap((trip) => trip.passengers);
+  const airport = lines.length > 0;
+  const checked = passengers.filter((pax) => pax.checkedIn || pax.stage === "SENT" || pax.stage === "SENT_DOWN" || pax.stage === "LOADING").length;
+  const loops = trips.filter((trip) => trip.flightCode === "LOOP" && trip.status === "SENT");
+  const loopPax = loops.reduce((sum, trip) => sum + (trip.reportedPax ?? 0), 0);
+  const sent = trips.filter((trip) => trip.status === "SENT");
+  const moved = sent.reduce((sum, trip) => sum + (trip.reportedPax ?? trip.passengers.length), 0);
+  const movedOut = loops.filter((trip) => /out|return|egress/i.test(`${trip.notes} ${trip.flags} ${trip.etaLabel}`)).reduce((sum, trip) => sum + (trip.reportedPax ?? 0), 0);
+  const loopIn = Math.max(0, loopPax - movedOut);
+  const last = [...trips].filter((trip) => trip.sentAt).sort((a, b) => (b.sentAt?.getTime() ?? 0) - (a.sentAt?.getTime() ?? 0))[0];
+  const vehicles = [...new Set(trips.map((trip) => trip.vehicleLabel).filter(Boolean))];
   return {
     owner: Boolean(ownerProgramId) && asOwner,
     wide: Boolean(ownerProgramId),
@@ -953,7 +999,18 @@ export async function loadCrewDay(code: string, ownerProgramId?: string, actorNa
       textAlerts: person.textAlerts,
       wide: seesAll(person.postCode),
     },
-    program: { code: program.code, name: program.name },
+    program: { code: program.code, name: program.name, timezone: program.timezone, windowClose: program.windowClose },
+    count: airport
+      ? { kind: "airport" as const, moved: checked + loopPax, total: passengers.length, label: "Guests" }
+      : { kind: "shuttle" as const, moved, total: Math.max(passengers.length, moved), label: "Moved" },
+    shuttle: {
+      movedIn: loopIn,
+      movedOut,
+      finalCount: loopPax,
+    },
+    flightsMet: lines.filter((line) => line.guests.length > 0 && line.guests.every((guest) => guest.checkedIn || guest.stage === "SENT")).length,
+    lastSent: last ? { id: last.id, vehicle: last.vehicleLabel || last.vehicleNumber || "Bus", sentAt: last.sentAt?.toISOString() ?? "", pax: last.reportedPax ?? last.passengers.length } : null,
+    vehicles,
     positions: POSITIONS.map((item) => ({ code: item.code, label: item.label })),
     lines,
     staff: staff.map((row) => ({ name: row.name, post: postLabel(row.postCode || row.expectedPost), in: Boolean(row.checkedInAt && !row.checkedOutAt) })),
@@ -1049,6 +1106,33 @@ export async function runDesk(code: string, body: { action?: string; paxIds?: st
   if (body.action === "load" && ids.length) {
     await db.lightPax.updateMany({ where: { id: { in: ids } }, data: { stage: "LOADING", stageAt: now, stageBy: person.name } });
     await log(person.programId, person.name, "loading", `${ids.length} in the hold`);
+  }
+  if (body.action === "send-loop") {
+    const count = body.count;
+    const vehicle = body.vehicle?.trim() || "";
+    if (!vehicle) return { error: "Pick a bus." };
+    if (!Number.isInteger(count) || count! < 0 || count! > 50000) return { error: "Enter a guest count from 0 to 50,000." };
+    await db.lightTrip.create({
+      data: {
+        programId: person.programId,
+        flightCode: "LOOP",
+        vehicleLabel: vehicle,
+        status: "SENT",
+        reportedPax: count,
+        sentAt: now,
+        scheduledTime: "",
+        notes: body.destination || "Loop",
+        sortOrder: 9000,
+      },
+    });
+    await log(person.programId, person.name, "send-loop", `${vehicle} · ${count}`);
+  }
+  if (body.action === "late" && body.tripId) {
+    const trip = await db.lightTrip.findFirst({ where: { id: body.tripId, programId: person.programId } });
+    if (!trip) return { error: "That shuttle was not found." };
+    const next = Math.max(0, (trip.reportedPax ?? 0) + (body.count ?? 1));
+    await db.lightTrip.update({ where: { id: trip.id }, data: { reportedPax: next } });
+    await log(person.programId, person.name, "late", `${trip.vehicleLabel} · ${next}`);
   }
   if (body.action === "send" && ids.length) {
     await db.lightPax.updateMany({ where: { id: { in: ids } }, data: { stage: "SENT", stageAt: now, stageBy: person.name } });
