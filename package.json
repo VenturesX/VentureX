@@ -8,7 +8,7 @@
     "build": "node scripts/prisma-adapt.mjs && prisma generate && (prisma db push --accept-data-loss --skip-generate || node -e \"console.warn('warn: prisma db push failed; continuing to next build')\") && (node scripts/maybe-seed.mjs || node -e \"console.warn('warn: database seed failed; continuing to next build')\") && next build",
     "start": "next start -p 43127",
     "lint": "eslint",
-    "test": "tsx --env-file=.env --test src/lib/guest-access.test.ts src/lib/guest-counts.test.ts src/lib/light/light.test.ts src/lib/light/checkin.test.ts src/lib/service-area.test.ts src/lib/crew-session.test.ts src/lib/guest-portal.test.ts src/lib/external-portals.test.ts",
+    "test": "tsx --env-file=.env --test src/lib/guest-access.test.ts src/lib/guest-counts.test.ts src/lib/light/light.test.ts src/lib/light/checkin.test.ts src/lib/service-area.test.ts src/lib/crew-session.test.ts src/lib/guest-portal.test.ts src/lib/guest-card.test.ts src/lib/external-portals.test.ts",
     "db:setup": "prisma generate && prisma db push && tsx prisma/seed.ts",
     "db:seed": "tsx prisma/seed.ts",
     "db:push": "prisma db push"

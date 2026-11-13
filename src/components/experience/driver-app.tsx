@@ -1,6 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { Bus, Home, Map, MoreHorizontal } from "lucide-react";
+import { DeskGrid, type DeskKey } from "@/components/premium/desk-grid";
+import { HeroCard } from "@/components/premium/hero-card";
+import { PillNav } from "@/components/premium/pill-nav";
+import { ProgressRing } from "@/components/premium/progress-ring";
 
 const STOPS = [
   ["Residence Inn SeaWorld", 28.405937, -81.475356, "Main entrance. Stage clear of the porte-cochere."],
@@ -9,6 +14,14 @@ const STOPS = [
   ["SpringHill Suites", 28.409047, -81.454184, "Near the main entrance, International Drive side."],
   ["OCCC West", 28.424724, -81.469196, "West Building bus loop. End of the hotel loop."],
 ];
+
+const HREFS: Partial<Record<DeskKey, string>> = {
+  manifest: "/clipboard",
+  flights: "/team/dispatch",
+  dispatch: "/team/dispatch",
+  clipboard: "/clipboard",
+  shuttle: "/shuttle",
+};
 
 export function DriverApp() {
   const [tab, setTab] = useState<"gps" | "board">("gps");
@@ -22,9 +35,20 @@ export function DriverApp() {
   const next = STOPS[(stop + 1) % STOPS.length];
   const maps = `https://www.google.com/maps/dir/?api=1&destination=${here[1]},${here[2]}&travelmode=driving`;
   return (
-    <div className="mx-auto w-full max-w-lg space-y-3 px-3 py-3 text-white" data-testid="driver-app">
-      {banner ? <p className="rounded-xl bg-amber-400 px-3 py-3 text-center text-lg font-semibold text-black" data-testid="driver-banner">{banner}</p> : null}
-      <div className="grid grid-cols-2 gap-1">
+    <div className="mx-auto w-full max-w-lg space-y-4 px-4 pb-28 pt-3 text-white" data-testid="driver-app">
+      {banner ? <p className="rounded-card bg-[#ff9f0a] px-3 py-3 text-center text-lg font-bold text-black" data-testid="driver-banner">{banner}</p> : null}
+      <HeroCard
+        kicker={live ? "On the run" : "Driver"}
+        title={live ? `Stop ${stop + 1}: ${here[0]}` : "Ready to roll"}
+        line={live ? `${bus} · Next ${next[0]}` : "IACP Route 3 · Shift starts when GPS is on"}
+      />
+      <DeskGrid
+        includeDrive
+        hrefFor={(key) => (key === "drive" ? undefined : HREFS[key])}
+        onOpen={(key) => { if (key === "drive") setTab("gps"); }}
+      />
+      <ProgressRing done={live ? stop : 0} total={STOPS.length} label="stops confirmed" />
+      <div className="grid grid-cols-2 gap-2">
         <button type="button" className={tab === "gps" ? on : off} onClick={() => setTab("gps")}>Street GPS</button>
         <button type="button" className={tab === "board" ? on : off} onClick={() => setTab("board")}>Elite load board</button>
       </div>
@@ -32,29 +56,29 @@ export function DriverApp() {
         <section className="space-y-3" data-testid="driver-gps">
           {!live ? (
             <>
-              <select value={bus} onChange={(event) => setBus(event.target.value)} aria-label="Bus puck" className="h-14 w-full rounded-2xl border border-white/15 bg-black px-3 text-lg">
+              <select value={bus} onChange={(event) => setBus(event.target.value)} aria-label="Bus puck" className="h-14 w-full rounded-2xl border border-white/10 bg-[#141414] px-3 text-lg">
                 <option>241 / R3-01</option>
                 <option>219 / R3-04</option>
                 <option>P3128 / R3-02</option>
               </select>
-              <button type="button" data-testid="start-run" className="h-16 w-full rounded-2xl bg-gradient-to-r from-[#1E90FF] to-[#8B5CF6] text-xl font-semibold" onClick={() => setLive(true)}>Start run (GPS on)</button>
+              <button type="button" data-testid="start-run" className="h-16 w-full rounded-full bg-white text-xl font-bold text-black" onClick={() => setLive(true)}>Start run (GPS on)</button>
             </>
           ) : (
             <>
-              <p className="text-sm text-[#9ecbff]">{bus}</p>
-              <h1 className="text-3xl font-semibold leading-tight">Stop {stop + 1}: {here[0]}</h1>
+              <p className="text-sm text-[#4da3ff]">{bus}</p>
+              <h2 className="text-3xl font-bold leading-tight">Stop {stop + 1}: {here[0]}</h2>
               <p className="text-lg leading-snug">Next: {next[0]}</p>
-              <p className="rounded-2xl bg-white p-4 text-xl font-semibold leading-snug text-black">{here[3]}</p>
-              <a href={maps} className="flex h-12 items-center justify-center rounded-xl bg-[#141820] text-sm font-semibold ring-1 ring-white/15">Open Google Maps to bus loop pin</a>
+              <p className="rounded-card bg-white p-4 text-xl font-bold leading-snug text-black">{here[3]}</p>
+              <a href={maps} className="flex h-12 items-center justify-center rounded-full bg-[#1c1c1e] text-sm font-semibold ring-1 ring-white/15">Open Google Maps to bus loop pin</a>
               <div className="grid grid-cols-4 gap-1">
                 <button type="button" className={off} onClick={() => setPax(0)}>0</button>
                 <button type="button" className={off} onClick={() => setPax(5)}>1–5</button>
                 <button type="button" className={off} onClick={() => setPax((value) => value + 1)}>+1</button>
                 <button type="button" className={off} onClick={() => setPax((value) => value + 5)}>+5</button>
               </div>
-              <p className="text-center text-4xl font-semibold tabular-nums" data-testid="driver-pax">{pax}</p>
-              <button type="button" data-testid="confirm-stop" className="h-14 w-full rounded-2xl bg-white text-lg font-semibold text-black" onClick={() => { setStop((value) => (value + 1) % STOPS.length); setPax(0); }}>Parked · confirm & continue</button>
-              <div className="grid grid-cols-2 gap-1">
+              <p className="text-center text-5xl font-bold tabular-nums" data-testid="driver-pax">{pax}</p>
+              <button type="button" data-testid="confirm-stop" className="h-14 w-full rounded-full bg-white text-lg font-bold text-black" onClick={() => { setStop((value) => (value + 1) % STOPS.length); setPax(0); }}>Parked · confirm & continue</button>
+              <div className="grid grid-cols-2 gap-2">
                 <button type="button" className={off} onClick={() => setBanner("ON BREAK: 9:30–11:00 AM")}>Break banner</button>
                 <button type="button" className={off} onClick={() => setBanner("RELEASED FROM ROUTE")}>Release banner</button>
               </div>
@@ -62,20 +86,29 @@ export function DriverApp() {
           )}
         </section>
       ) : (
-        <section className="space-y-2 rounded-2xl bg-[#0c0e12] p-3" data-testid="load-board">
-          <p className="text-[11px] uppercase tracking-[0.14em] text-[#9ecbff]">Elite Bus Company</p>
-          <h2 className="text-xl font-semibold">IACP Route 3 · 6 coaches</h2>
-          <p className="text-sm text-[#d5dbe6]">Orlando baseline. Offer closes in 18:00. Residence Inn loop to OCCC West, Mon 6:30 AM.</p>
+        <section className="space-y-2 rounded-card bg-vd-card p-4 ring-1 ring-white/10" data-testid="load-board">
+          <p className="text-[11px] uppercase tracking-[0.14em] text-[#4da3ff]">Elite Bus Company</p>
+          <h2 className="text-xl font-bold">IACP Route 3 · 6 coaches</h2>
+          <p className="text-sm text-vd-muted">Orlando baseline. Offer closes in 18:00. Residence Inn loop to OCCC West, Mon 6:30 AM.</p>
           <p className="text-sm">Status: {bid}</p>
           <button type="button" className={on} onClick={() => setBid("accepted")}>Accept contract (Elite priority)</button>
           <button type="button" className={off} onClick={() => setBid("passed")}>Pass to carrier pool</button>
-          <input aria-label="Coach number" placeholder="Coach # 9601" className="h-11 w-full rounded-xl border border-white/15 bg-black px-3" />
-          <input aria-label="Driver" placeholder="Driver name and cell" className="h-11 w-full rounded-xl border border-white/15 bg-black px-3" />
+          <input aria-label="Coach number" placeholder="Coach # 9601" className="h-12 w-full rounded-2xl border border-white/10 bg-[#141414] px-3" />
+          <input aria-label="Driver" placeholder="Driver name and cell" className="h-12 w-full rounded-2xl border border-white/10 bg-[#141414] px-3" />
         </section>
       )}
+      <PillNav
+        label="Driver"
+        items={[
+          { id: "home", label: "Home", icon: <Home />, active: tab === "gps", onSelect: () => setTab("gps") },
+          { id: "board", label: "Board", icon: <Map />, active: tab === "board", onSelect: () => setTab("board") },
+          { id: "shuttle", label: "Shuttle", icon: <Bus />, href: "/shuttle" },
+          { id: "more", label: "More", icon: <MoreHorizontal />, href: "/team" },
+        ]}
+      />
     </div>
   );
 }
 
-const on = "flex min-h-12 items-center justify-center rounded-xl bg-gradient-to-r from-[#1E90FF] to-[#8B5CF6] px-2 text-center text-sm font-semibold";
-const off = "flex min-h-11 items-center justify-center rounded-xl bg-[#141820] px-2 text-center text-sm font-semibold ring-1 ring-white/10";
+const on = "vd-press flex min-h-12 items-center justify-center rounded-full bg-white px-2 text-center text-sm font-bold text-black";
+const off = "vd-press flex min-h-11 items-center justify-center rounded-2xl bg-[#1c1c1e] px-2 text-center text-sm font-semibold ring-1 ring-white/10";

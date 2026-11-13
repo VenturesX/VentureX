@@ -89,6 +89,20 @@ async function run(kind: string, programId: string, body: Record<string, string>
     if (groupIds.length) await db.lightItemGroup.createMany({ data: groupIds.map((groupId) => ({ itemId: item.id, groupId })) });
     return "";
   }
+  if (body.action === "show-guests") {
+    const item = await db.lightScheduleItem.findFirst({ where: { id: body.id, programId } });
+    if (!item) return { error: "Choose a move." };
+    await db.lightScheduleItem.update({ where: { id: item.id }, data: { guestVisible: body.value === "yes" } });
+    return "";
+  }
+  if (body.action === "only-group") {
+    const item = await db.lightScheduleItem.findFirst({ where: { id: body.id, programId } });
+    if (!item) return { error: "Choose a move." };
+    const group = body.groupId ? await db.lightGroup.findFirst({ where: { id: body.groupId, programId } }) : null;
+    await db.lightItemGroup.deleteMany({ where: { itemId: item.id } });
+    if (group) await db.lightItemGroup.create({ data: { itemId: item.id, groupId: group.id } });
+    return "";
+  }
   if (body.action === "delete-item") {
     await db.lightScheduleItem.delete({ where: { id: body.id } });
     return "";

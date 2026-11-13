@@ -4,6 +4,9 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { field } from "@/components/light/styles";
+import { HeroCard } from "@/components/premium/hero-card";
+import { ProgressRing } from "@/components/premium/progress-ring";
+import { ScreenSkeleton } from "@/components/premium/skeleton";
 import { CrewBar } from "@/components/team/crew-bar";
 
 type Guest = {
@@ -110,15 +113,23 @@ export function FlightDesk({ mode }: { mode: "clipboard" | "dispatch" }) {
       </div>
     );
   }
-  if (!day) return <p className="p-6 text-white">Opening the day...</p>;
+  if (!day) return <ScreenSkeleton />;
+
+  const guests = day.lines.flatMap((line) => line.guests);
+  const partyTotal = day.lines.reduce((sum, line) => sum + line.parties.reduce((partySum, party) => partySum + party.count, 0), 0);
+  const total = guests.length || partyTotal;
+  const done = guests.filter((guest) => guest.checkedIn || guest.stage === "SENT" || guest.stage === "LOADING" || guest.stage === "SENT_DOWN").length;
+  const sample = total === 0;
 
   return (
-    <div className="mx-auto max-w-lg px-4 pb-24 pt-4 text-white" data-testid={mode}>
-      {day.owner ? <Link href="/team" className="inline-block min-h-11 text-sm text-[#9ecbff]">← Owner hub</Link> : null}
-      {error ? <p role="alert" className="text-sm text-red-300">{error}</p> : null}
+    <div className="mx-auto max-w-lg space-y-4 px-4 pb-28 pt-4 text-white" data-testid={mode}>
+      {day.owner ? <Link href="/team" className="inline-block min-h-11 text-sm font-semibold text-[#4da3ff]">← Owner hub</Link> : null}
+      {error ? <p role="alert" className="text-sm text-[#ffb4b0]">{error}</p> : null}
+      <HeroCard kicker={day.program.name} title={day.person.postLabel || (mode === "dispatch" ? "Dispatch" : "Clipboard")} line={`${day.person.name} · Today's shift`} />
+      <ProgressRing done={sample ? 38 : done} total={sample ? 52 : total} label="guests picked up" sample={sample} />
       {mode === "clipboard" ? (
-        <Link href="/team/director" className="sticky top-0 z-10 block bg-[#090b10] py-3 text-sm font-semibold text-[#9ecbff]">Back to My Day</Link>
-      ) : <h1 className="py-3 text-2xl font-semibold">Dispatch</h1>}
+        <Link href="/team/director" className="sticky top-0 z-10 block bg-black py-3 text-sm font-semibold text-[#4da3ff]">Back to My Day</Link>
+      ) : <h2 className="text-2xl font-bold">Dispatch</h2>}
       {mode === "clipboard" ? (
         <div className="grid grid-cols-4 gap-1">
           {DAYS.map((item, index) => (
@@ -135,7 +146,7 @@ export function FlightDesk({ mode }: { mode: "clipboard" | "dispatch" }) {
         <FlightBlock key={line.flightCode} line={line} mode={mode} focus={focus === line.flightCode} query={query} picked={picked} setPicked={setPicked} act={act} />
       )) : null}
       {mode === "dispatch" && picked.length ? (
-        <div className="fixed inset-x-0 bottom-16 z-30 mx-auto max-w-lg space-y-2 border-t border-white/10 bg-[#090b10] p-3">
+        <div className="fixed inset-x-0 bottom-24 z-30 mx-auto max-w-lg space-y-2 rounded-t-[1.125rem] bg-black p-3 ring-1 ring-white/10">
           <button type="button" className="h-12 w-full rounded-xl bg-white/10 text-sm font-semibold" onClick={() => void act({ action: "load", paxIds: picked })}>Move to loading</button>
           <input className={field} aria-label="Vehicle" placeholder="Vehicle, optional" value={vehicle} onChange={(event) => setVehicle(event.target.value)} />
           <input className={field} aria-label="Destination" placeholder="Destination, optional" value={destination} onChange={(event) => setDestination(event.target.value)} />

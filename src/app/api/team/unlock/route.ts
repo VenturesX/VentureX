@@ -5,12 +5,11 @@ import { TRIP_COOKIE } from "@/lib/guest-session";
 import { db } from "@/lib/db";
 import {
   findClientProgram,
-  findCrewByDayCode,
   noteFailedTry,
   ownerCodeMatches,
   staffCodeMatches,
   tooManyTries,
-  masterDayMatches,
+  shiftsForDayCode,
 } from "@/lib/crew-access";
 import {
   CREW_COOKIE,
@@ -113,20 +112,23 @@ export async function POST(request: Request) {
     const gate = await readGateToken(store.get(PROGRAM_COOKIE)?.value || "");
     const portal = body?.portal || "";
     if (!gate) return NextResponse.json({ error: "Sign in required." }, { status: 401 });
-    if (!(await masterDayMatches(code))) {
-      await noteFailedTry(ip);
-      return NextResponse.json({ error: "That code didn't match." }, { status: 401 });
-    }
     if (gate.staffOnly && !STAFF_PORTALS.includes(portal)) return NextResponse.json({ error: "That desk is not on the staff side." }, { status: 403 });
-    const program = await db.lightProgram.findUnique({ where: { id: body?.programId || "" }, select: { id: true, name: true } });
-    if (!program) return NextResponse.json({ error: "Choose a program." }, { status: 404 });
+    const programLimit = gate.scope === "program" ? gate.programId : null;
+    const shifts = await shiftsForDayCode(code, programLimit);
+    const chosen = shifts.find((shift) => shift.programId === (body?.programId || ""));
+    if (!chosen || shifts.length < 2) {
+      await noteFailedTry(ip);
+      return NextResponse.json({ error: "Choose one of today's programs." }, { status: 401 });
+    }
+    const person = await db.lightRoster.findFirst({ where: { id: chosen.rosterId } });
+    if (!person) return NextResponse.json({ error: "That day code is not active." }, { status: 401 });
     const token = await signCrewToken({
       kind: portal === "lead" ? "lead" : "crew",
-      programId: program.id,
-      personId: "",
-      name: portal === "lead" ? "Program lead" : "Staff",
+      programId: person.programId,
+      personId: person.id,
+      name: person.name,
     });
-    const response = NextResponse.json({ ok: true, href: PORTALS[portal as keyof typeof PORTALS] });
+    const response = NextResponse.json({ ok: true, href: PORTALS[portal as keyof typeof PORTALS], dayCode: person.dayCode });
     response.cookies.set(CREW_COOKIE, token, cookieOptions(request, new Date(endOfShiftUnix() * 1000)));
     return response;
   }
@@ -140,13 +142,32 @@ export async function POST(request: Request) {
   if (gate.staffOnly && !STAFF_PORTALS.includes(portal)) {
     return NextResponse.json({ error: "That desk is not on the staff side." }, { status: 403 });
   }
-  if (await masterDayMatches(code)) {
-    const programs = await db.lightProgram.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } });
-    return NextResponse.json({ ok: true, chooseProgram: true, programs });
-  }
   const programLimit = gate.scope === "program" ? gate.programId : null;
   const href = PORTALS[portal as keyof typeof PORTALS];
   const expires = cookieOptions(request, new Date(endOfShiftUnix() * 1000));
+  if (portal !== "admin" && portal !== "client") {
+    const shifts = await shiftsForDayCode(code, programLimit);
+    if (shifts.length > 1) {
+      return NextResponse.json({
+        ok: true,
+        chooseProgram: true,
+        programs: shifts.map((shift) => ({ id: shift.programId, name: shift.programName, dayCode: shift.dayCode })),
+      });
+    }
+    if (shifts.length === 1) {
+      const person = await db.lightRoster.findFirst({ where: { id: shifts[0].rosterId } });
+      if (!person) return NextResponse.json({ error: "That day code is not active." }, { status: 401 });
+      const token = await signCrewToken({
+        kind: portal === "lead" ? "lead" : "crew",
+        programId: person.programId,
+        personId: person.id,
+        name: person.name,
+      });
+      const response = NextResponse.json({ ok: true, href, dayCode: person.dayCode });
+      response.cookies.set(CREW_COOKIE, token, expires);
+      return response;
+    }
+  }
 
   if (portal === "admin") {
     if (!(await ownerCodeMatches(code))) {
@@ -171,18 +192,6 @@ export async function POST(request: Request) {
     return response;
   }
 
-  const person = await findCrewByDayCode(programLimit, code);
-  if (!person) {
-    await noteFailedTry(ip);
-    return NextResponse.json({ error: "That code didn't match." }, { status: 401 });
-  }
-  const token = await signCrewToken({
-    kind: portal === "lead" ? "lead" : "crew",
-    programId: person.programId,
-    personId: person.id,
-    name: person.name,
-  });
-  const response = NextResponse.json({ ok: true, href });
-  response.cookies.set(CREW_COOKIE, token, expires);
-  return response;
+  await noteFailedTry(ip);
+  return NextResponse.json({ error: "That day code isn't assigned to a program today." }, { status: 401 });
 }

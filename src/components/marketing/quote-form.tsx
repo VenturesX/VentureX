@@ -355,7 +355,7 @@ export function QuoteForm({ initialMarket }: { initialMarket?: (typeof QUOTE_MAR
       <input type="hidden" name="unsureSteps" value="[]" />
 
       {formError ? <p className="text-sm text-rose-200">{formError}</p> : null}
-      <button type="submit" disabled={pending} className="h-12 w-full rounded-full bg-gradient-to-r from-[#1E90FF] to-[#8B5CF6] text-base font-semibold text-white disabled:opacity-60">
+      <button type="submit" disabled={pending} className="vd-press h-12 w-full rounded-full bg-white text-base font-bold text-black disabled:opacity-60">
         {pending ? "Sending…" : "Get my quote"}
       </button>
       <TalkLine />

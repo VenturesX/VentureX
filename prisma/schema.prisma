@@ -649,6 +649,10 @@ model LightProgram {
   greetMinMin      Int       @default(25)
   greetMaxMin      Int       @default(40)
   hotelLabel       String    @default("PORTOFINO BAY")
+  city             String    @default("")
+  jobKind          String    @default("")
+  demoDate         String    @default("")
+  demoTime         String    @default("")
   textingMode      String    @default("on")
   showLiveFlights  Boolean   @default(true)
   showLateAlerts   Boolean   @default(true)
@@ -822,9 +826,10 @@ model LightScheduleItem {
   spot       String           @default("")
   route      String           @default("")
   frequency  String           @default("")
-  flightCode String           @default("")
-  paxId      String           @default("")
-  groups     LightItemGroup[]
+  flightCode   String           @default("")
+  paxId        String           @default("")
+  guestVisible Boolean          @default(true)
+  groups       LightItemGroup[]
 
   @@index([programId])
 }

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { field } from "@/components/light/styles";
 
 type Group = { id: string; name: string; kind: string; memberIds: string[]; code: string };
-type Item = { id: string; title: string; kind: string; timeLabel: string; groupIds: string[]; paxId: string };
+type Item = { id: string; title: string; kind: string; timeLabel: string; groupIds: string[]; paxId: string; guestVisible?: boolean };
 type Guest = { id: string; name: string; flight: string; code: string };
 type Office = { clientManagesGroups: boolean; groups: Group[]; items: Item[]; guests: Guest[] };
 
@@ -107,9 +107,20 @@ export function GuestSetup({ programId, owner }: { programId: string; owner: boo
         <p className="font-semibold">Moves</p>
         <ul className="mt-2 space-y-2 text-sm">
           {data.items.map((item) => (
-            <li key={item.id} className="flex items-center justify-between gap-3">
-              <span>{item.timeLabel} {item.title}</span>
-              <button type="button" className="text-red-300" onClick={() => void act({ action: "delete-item", id: item.id })}>Remove</button>
+            <li key={item.id} className="space-y-2 rounded-xl bg-white/[0.03] p-3">
+              <div className="flex items-center justify-between gap-3">
+                <span>{item.timeLabel} {item.title}</span>
+                <button type="button" className="text-red-300" onClick={() => void act({ action: "delete-item", id: item.id })}>Remove</button>
+              </div>
+              <button type="button" className="min-h-11 rounded-full bg-white px-4 text-sm font-bold text-black" onClick={() => void act({ action: "show-guests", id: item.id, value: item.guestVisible === false ? "yes" : "no" })}>
+                Show to guests: {item.guestVisible === false ? "Off" : "On"}
+              </button>
+              <label className="block text-xs text-white/60">Only for group
+                <select className={`${field} mt-1`} aria-label={`${item.title} group`} value={item.groupIds[0] || ""} onChange={(event) => void act({ action: "only-group", id: item.id, groupId: event.target.value })}>
+                  <option value="">Everyone who has the trip code</option>
+                  {data.groups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}
+                </select>
+              </label>
             </li>
           ))}
         </ul>

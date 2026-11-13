@@ -38,6 +38,7 @@ const AIRLINE_NAMES: Record<string, string> = {
   F9: "Frontier",
   AS: "Alaska",
   AC: "Air Canada",
+  LA: "LATAM",
 };
 
 export function airlineCode(flight: string): string {

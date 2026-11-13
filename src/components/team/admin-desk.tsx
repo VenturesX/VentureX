@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { TextSim } from "@/components/light/text-sim";
+import { HeroCard } from "@/components/premium/hero-card";
+import { ProgressRing } from "@/components/premium/progress-ring";
 import { AdminOffice } from "@/components/team/admin-office";
 import { AdminQuotes } from "@/components/team/admin-quotes";
 import { GuestSetup } from "@/components/team/guest-setup";
@@ -21,6 +23,7 @@ export function AdminDesk() {
   const [level, setLevel] = useState<(typeof LEVELS)[number] | "">("");
   const [locked, setLocked] = useState(false);
   const [guestProgram, setGuestProgram] = useState("");
+  const [ownerProgram, setOwnerProgram] = useState("");
   const [panel, setPanel] = useState<"desk" | "quotes" | "setup">("desk");
   const [report, setReport] = useState<Report | null>(null);
 
@@ -28,6 +31,7 @@ export function AdminDesk() {
     if (new URLSearchParams(window.location.search).get("setup") === "1") setPanel("setup");
     void fetch("/api/team/session").then(async (response) => {
       const json = (await response.json()) as { signedIn?: { kind?: string; programId?: string; clientManagesGroups?: boolean } };
+      if (json.signedIn?.programId) setOwnerProgram(json.signedIn.programId);
       if (json.signedIn?.clientManagesGroups && json.signedIn.programId) setGuestProgram(json.signedIn.programId);
       if (json.signedIn?.kind === "client") {
         setLevel("Client");
@@ -84,10 +88,13 @@ export function AdminDesk() {
           </select>
         )}
       </div>
-      <header>
-        <p className="text-xs uppercase tracking-[0.16em] text-[#9ecbff] print:text-black">{level}</p>
-        <h1 className="text-3xl font-semibold">{report?.program.name ?? "Program"}</h1>
-      </header>
+      <HeroCard kicker={level} title={report?.program.name ?? "Program"} line="Today's shift">
+        {report ? (() => {
+          const manifest = report.sheet.reduce((sum, row) => sum + row.count, 0);
+          const sample = manifest === 0 && report.moved.pax === 0;
+          return <ProgressRing done={sample ? 38 : report.moved.pax} total={sample ? 52 : Math.max(manifest, report.moved.pax)} label="guests picked up" sample={sample} />;
+        })() : null}
+      </HeroCard>
       {level === "Lead" ? <Link href="/team/director" className="inline-flex min-h-11 items-center text-sm font-semibold text-[#9ecbff]">Open the day, staff board, and clipboard</Link> : null}
       {level === "Owner" ? (
         <div className="flex gap-2 print:hidden">
@@ -102,7 +109,7 @@ export function AdminDesk() {
         </div>
       ) : null}
       {panel === "quotes" && level === "Owner" ? <AdminQuotes /> : null}
-      {panel === "setup" && level === "Owner" ? <AdminOffice /> : null}
+      {panel === "setup" && level === "Owner" ? <><AdminOffice />{ownerProgram ? <GuestSetup programId={ownerProgram} owner /> : null}</> : null}
       {level === "Lead" ? <><AdminOffice lead />{guestProgram ? <GuestSetup programId={guestProgram} owner={false} /> : null}</> : null}
       {level === "Client" && guestProgram ? <GuestSetup programId={guestProgram} owner={false} /> : null}
       {panel === "desk" || level === "Client" ? <>

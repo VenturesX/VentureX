@@ -7,6 +7,13 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-vd-accent: var(--vd-accent);
+  --color-vd-green: var(--vd-green);
+  --color-vd-amber: var(--vd-amber);
+  --color-vd-red: var(--vd-red);
+  --color-vd-muted: var(--vd-muted);
+  --color-vd-card: var(--vd-card);
+  --color-vd-elevated: var(--vd-elevated);
   --font-sans: var(--font-sans);
   --font-mono: var(--font-geist-mono);
   --font-heading: var(--font-sans);
@@ -46,54 +53,65 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) * 1.4);
   --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-card: 1.125rem;
+  --radius-tile: 1.25rem;
+  --spacing-page: 1rem;
+  --spacing-stack: 1.25rem;
 }
 
 :root {
-  --background: #070b14;
-  --foreground: #f4f6fb;
-  --card: #121826;
-  --card-foreground: #f4f6fb;
-  --popover: #161d2c;
-  --popover-foreground: #f4f6fb;
-  --primary: #8b5cf6;
-  --primary-foreground: #f8f5ff;
-  --secondary: #1a2233;
-  --secondary-foreground: #e8edf7;
-  --muted: #1a2233;
-  --muted-foreground: #93a0b8;
-  --accent: #2a1f46;
-  --accent-foreground: #efe7ff;
-  --destructive: #f43f5e;
-  --border: #243047;
-  --input: #243047;
-  --ring: #8b5cf6;
-  --venture: #8b5cf6;
-  --navy: #0b1220;
-  --chart-1: #8b5cf6;
-  --chart-2: #38bdf8;
-  --chart-3: #f59e0b;
-  --chart-4: #34d399;
-  --chart-5: #fb7185;
-  --radius: 0.75rem;
-  --sidebar: #0b1220;
-  --sidebar-foreground: #f4f6fb;
-  --sidebar-primary: #8b5cf6;
-  --sidebar-primary-foreground: #f8f5ff;
-  --sidebar-accent: #1a2233;
-  --sidebar-accent-foreground: #f4f6fb;
-  --sidebar-border: #243047;
-  --sidebar-ring: #8b5cf6;
+  --background: #000000;
+  --foreground: #f5f5f7;
+  --card: #161618;
+  --card-foreground: #f5f5f7;
+  --popover: #1c1c1e;
+  --popover-foreground: #f5f5f7;
+  --primary: #f5f5f7;
+  --primary-foreground: #000000;
+  --secondary: #1c1c1e;
+  --secondary-foreground: #f5f5f7;
+  --muted: #1c1c1e;
+  --muted-foreground: #c7c7cc;
+  --accent: #1c1c1e;
+  --accent-foreground: #f5f5f7;
+  --destructive: #ff453a;
+  --border: rgba(255, 255, 255, 0.12);
+  --input: rgba(255, 255, 255, 0.16);
+  --ring: #4da3ff;
+  --venture: #4da3ff;
+  --navy: #000000;
+  --vd-accent: #4da3ff;
+  --vd-green: #30d158;
+  --vd-amber: #ff9f0a;
+  --vd-red: #ff453a;
+  --vd-muted: #c7c7cc;
+  --vd-card: #161618;
+  --vd-elevated: #1c1c1e;
+  --chart-1: #4da3ff;
+  --chart-2: #30d158;
+  --chart-3: #ff9f0a;
+  --chart-4: #ff453a;
+  --chart-5: #c7c7cc;
+  --radius: 1.125rem;
+  --sidebar: #000000;
+  --sidebar-foreground: #f5f5f7;
+  --sidebar-primary: #f5f5f7;
+  --sidebar-primary-foreground: #000000;
+  --sidebar-accent: #1c1c1e;
+  --sidebar-accent-foreground: #f5f5f7;
+  --sidebar-border: rgba(255, 255, 255, 0.12);
+  --sidebar-ring: #4da3ff;
 }
 
 .dark {
-  --background: #070b14;
-  --foreground: #f4f6fb;
-  --card: #121826;
-  --card-foreground: #f4f6fb;
-  --popover: #161d2c;
-  --popover-foreground: #f4f6fb;
-  --primary: #8b5cf6;
-  --primary-foreground: #f8f5ff;
+  --background: #000000;
+  --foreground: #f5f5f7;
+  --card: #161618;
+  --card-foreground: #f5f5f7;
+  --popover: #1c1c1e;
+  --popover-foreground: #f5f5f7;
+  --primary: #f5f5f7;
+  --primary-foreground: #000000;
 }
 
 @layer base {
@@ -102,13 +120,15 @@
   }
   html {
     @apply font-sans;
+    color-scheme: dark;
   }
   body {
     @apply bg-background text-foreground antialiased;
-    background-image:
-      radial-gradient(900px 420px at 12% -10%, rgba(139, 92, 246, 0.16), transparent 55%),
-      radial-gradient(700px 360px at 100% 0%, rgba(14, 165, 233, 0.08), transparent 50%);
-    background-attachment: fixed;
+    background-color: #000000;
+  }
+  :focus-visible {
+    outline: 2px solid #4da3ff;
+    outline-offset: 2px;
   }
 }
 
@@ -130,29 +150,68 @@
 .marketing,
 .staff-field {
   --background: #000000;
-  --foreground: #ffffff;
-  --card: #07080c;
-  --card-foreground: #ffffff;
-  --popover: #07080c;
-  --popover-foreground: #ffffff;
-  --primary: #1e90ff;
-  --primary-foreground: #ffffff;
-  --secondary: #111111;
-  --secondary-foreground: #ffffff;
-  --muted: #111111;
-  --muted-foreground: #c5ced8;
-  --accent: #1e90ff;
-  --accent-foreground: #ffffff;
-  --border: rgba(255, 255, 255, 0.14);
-  --input: rgba(255, 255, 255, 0.22);
-  --ring: #1e90ff;
-  color: #ffffff;
+  --foreground: #f5f5f7;
+  --card: #161618;
+  --card-foreground: #f5f5f7;
+  --popover: #1c1c1e;
+  --popover-foreground: #f5f5f7;
+  --primary: #f5f5f7;
+  --primary-foreground: #000000;
+  --secondary: #1c1c1e;
+  --secondary-foreground: #f5f5f7;
+  --muted: #1c1c1e;
+  --muted-foreground: #c7c7cc;
+  --accent: #1c1c1e;
+  --accent-foreground: #f5f5f7;
+  --border: rgba(255, 255, 255, 0.12);
+  --input: rgba(255, 255, 255, 0.16);
+  --ring: #4da3ff;
+  color: #f5f5f7;
   background-color: #000000;
-  background-image:
-    radial-gradient(640px 420px at 18% -10%, rgba(30, 144, 255, 0.16), transparent 62%),
-    radial-gradient(520px 360px at 100% 0%, rgba(139, 92, 246, 0.14), transparent 58%);
-  background-attachment: fixed;
+  background-image: none;
   min-height: 100dvh;
+}
+
+/* Public homepage only. Restores the production shell (Geist, #090b10, original radii) without changing shared tokens elsewhere. */
+.vd-marketing-classic {
+  --radius: 0.75rem;
+  background-color: #090b10;
+  color: #ffffff;
+  font-family: var(--font-marketing), ui-sans-serif, system-ui, sans-serif;
+}
+
+.vd-press {
+  transition: transform 160ms ease, background-color 160ms ease, opacity 160ms ease;
+}
+.vd-press:active {
+  transform: scale(0.97);
+}
+.vd-accordion {
+  transition: grid-template-rows 280ms ease;
+}
+.vd-swipe {
+  scrollbar-width: none;
+}
+.vd-swipe::-webkit-scrollbar {
+  display: none;
+}
+.vd-skeleton {
+  background: linear-gradient(90deg, #1c1c1e 0%, #2c2c30 45%, #1c1c1e 100%);
+  background-size: 200% 100%;
+  animation: vd-shimmer 1.2s ease-in-out infinite;
+}
+@keyframes vd-shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vd-press,
+  .vd-accordion,
+  .vd-skeleton,
+  .live-dot {
+    animation: none;
+    transition: none;
+  }
 }
 
 .marketing input,
